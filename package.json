@@ -13,6 +13,7 @@
     "sim:solve": "tsx tools/sim_solve.ts"
   },
   "devDependencies": {
+    "@types/node": "^26.6.6",
     "@types/three": "^0.170.0",
     "three": "^0.170.0",
     "tsx": "^4.23.15",
