@@ -4,7 +4,7 @@ export const UI: Record<string, [string, string]> = {
   'title.start': ['Начать ночь', 'Begin the night'], 'title.lang': ['Язык: Русский', 'Language: English'],
   'title.hint': ['WASD — ходьба · Shift — бег · C — красться · E/F/G — действия · Q — журнал · Tab — ускорить · мышь — камера', 'WASD move · Shift run · C sneak · E/F/G act · Q journal · Tab fast-forward · mouse camera'],
   'title.loading': ['Собираем набережную…', 'Assembling the quay…'],
-  'hud.time': ['Время', 'Time'], 'hud.hands': ['В руках', 'Hands'], 'hud.empty': ['пусто', 'empty'], 'hud.jumps': ['Прыжков', 'Jumps'], 'hud.speed': ['ускорено ×4', 'fast ×4'], 'hud.speed1': ['обычно', 'normal'],
+  'hud.time': ['Время', 'Time'], 'hud.hands': ['В руках', 'Hands'], 'hud.empty': ['пусто', 'empty'], 'hud.jumps': ['Прыжков', 'Jumps'], 'hud.speed': ['ускорено ×8', 'fast ×8'], 'hud.speed1': ['обычно', 'normal'],
   'hud.fast': ['Tab — ускорить', 'Tab — fast-forward'], 'hud.facts': ['Знаний', 'Facts'], 'hud.pocket': ['Карман Окна', 'Window pocket'],
   'hud.flicker': ['(двойник мерцает)', '(double flickers)'],
   'verb.inspect': ['Осмотреть', 'Inspect'], 'verb.take': ['Взять', 'Take'], 'verb.open': ['Открыть', 'Open'], 'verb.close': ['Закрыть', 'Close'], 'verb.sit': ['Сесть', 'Sit'], 'verb.hide': ['Спрятаться', 'Hide'],

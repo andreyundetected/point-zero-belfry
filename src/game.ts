@@ -91,7 +91,7 @@ export class Game {
     const w = this.w;
     if (this.started && !this.paused && !this.S.ended) {
       this.handleMovement(dt);
-      const scale = this.fast ? 16 : 4;
+      const scale = this.fast ? 8 : 1.2;
       const before = w.t;
       this.syncMove();
       this.S.advance(dt * scale);
