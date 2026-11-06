@@ -21,7 +21,7 @@ async function shotPreset(name: string) {
   game.ui.setBanner(''); game.ui.hint.textContent = ''; game.ui.toastEl.remove(); game.ui.banner.style.display = 'none';
   const cam = (p: number[], tg: number[]) => { game.freeCam = { p, t: tg }; };
   const present: Record<string, () => void> = {
-    plaza: () => { place(6, 6, 0, 60); game.camYaw = 0.75; game.camPitch = 0.5; game.camDist = 13; },
+    plaza: () => { place(2, 5, 0, 60); cam([11, 4.2, 12], [-8, 1.6, -6]); },
     quay: () => { place(20, 16, 0, 600); cam([27, 3.2, 24], [12, 1.5, 15]); game.camYaw = 0.3; },
     tavern: () => { place(-26.5, 0.8, 0, 700); game.camYaw = 0.35; game.camPitch = 1.05; game.camDist = 7.5; },
     window: () => { place(0, -28.6, 2, 5); game.camYaw = 0.2; game.camPitch = 0.6; game.camDist = 6; },
