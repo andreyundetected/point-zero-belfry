@@ -94,7 +94,8 @@ export class Game {
       const scale = this.fast ? 8 : 1.2;
       const before = w.t;
       this.syncMove();
-      this.S.advance(dt * scale);
+      this.simAcc = Math.min(this.simAcc + dt * scale, 8);
+      while (this.simAcc >= 0.5 && !this.S.ended) { this.S.advance(0.5); this.simAcc -= 0.5; }
       void before;
       this.afterSim();
     } else if (this.started && !this.paused) { this.handleMovement(dt * 0); }
@@ -239,7 +240,7 @@ export class Game {
     }
   }
 
-  fxT = 0; mothT = 0; winWorld: THREE.Vector3[] | null = null;
+  simAcc = 0; fxT = 0; mothT = 0; winWorld: THREE.Vector3[] | null = null;
   updateFx(dt: number, tm: number) {
     const w = this.w; this.fxT += dt; this.mothT += dt;
     const f = w.fire;
