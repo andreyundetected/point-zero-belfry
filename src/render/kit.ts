@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { StaticBatcher, spawn, loadModel, Place } from './assets';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export const W = 1.4;           // модуль Kenney town_kit → метры
 export const HEX = 2.3;         // hex-здания
@@ -57,6 +58,7 @@ export function house(ctx: Ctx, o: HouseOpts): House {
   const mixed = o.wall === 'mixed';
   const winKind = o.win ?? 'glass';
   const mats: THREE.Material[] = [];
+  const local: Promise<unknown>[] = [];
   const winSpots: WinSpot[] = [];
   for (const sd of sides) {
     const [nx, nz] = sd.n;
@@ -88,7 +90,7 @@ export function house(ctx: Ctx, o: HouseOpts): House {
             s.obj.userData.normal = [nx, nz];
             shell.add(s.obj);
           });
-          ctx.pending.push(pr);
+          ctx.pending.push(pr); local.push(pr);
         } else {
           // инстансно — в мировых координатах
           const c = Math.cos(rot), s = Math.sin(rot);
@@ -130,6 +132,7 @@ export function house(ctx: Ctx, o: HouseOpts): House {
   roof.traverse((c) => { const m = c as THREE.Mesh; if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
   roof.userData.isRoof = true; shell.add(roof); mats.push(roofMat);
   if (o.chimney) { ctx.pending.push(spawn('town_kit/chimney', { x: hw * 0.5, y: topY + 0.2, z: 0, sx: 1, sy: 1.4, sz: 1 }).then((s) => { s.obj.userData.isRoof = true; shell.add(s.obj); })); }
+  if (o.enterable) ctx.pending.push(Promise.all(local).then(() => mergeShell(shell)));
   const ang = rot; const bounds: Box = { x0: o.cx - (Math.abs(Math.cos(ang)) > 0.7 ? hw : hd) * W, z0: o.cz - (Math.abs(Math.cos(ang)) > 0.7 ? hd : hw) * W, x1: o.cx + (Math.abs(Math.cos(ang)) > 0.7 ? hw : hd) * W, z1: o.cz + (Math.abs(Math.cos(ang)) > 0.7 ? hd : hw) * W };
   const handle = { group, shell, winSpots, door: doorInfo, bounds, height: rows * ROW, mats } as House & { mats: THREE.Material[] };
   return handle;
@@ -153,3 +156,31 @@ export function fadeShell(h: House & { mats?: THREE.Material[] }, target: number
   });
 }
 export { loadModel };
+
+/** Склеивает кусочки стен оболочки по (сторона, материал): сотни мешей → десятки draw calls. */
+function mergeShell(shell: THREE.Group) {
+  shell.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(shell.matrixWorld).invert();
+  const groups = new Map<string, { geoms: THREE.BufferGeometry[]; mat: THREE.MeshStandardMaterial; normal: number[] }>();
+  const remove: THREE.Object3D[] = [];
+  for (const child of [...shell.children]) {
+    const normal = child.userData.normal as number[] | undefined; if (!normal) continue;
+    child.updateMatrixWorld(true);
+    child.traverse((o) => {
+      const m = o as THREE.Mesh; if (!m.isMesh) return;
+      let g = m.geometry.clone(); if (g.index) g = g.toNonIndexed();
+      for (const name of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(name)) g.deleteAttribute(name);
+      if (!g.attributes.uv) return;
+      g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld));
+      const mat = m.material as THREE.MeshStandardMaterial; const key = `${normal.join(',')}|${mat.map?.uuid}|${mat.color.getHex()}|${mat.roughness}`;
+      let grp = groups.get(key); if (!grp) { grp = { geoms: [], mat, normal }; groups.set(key, grp); }
+      grp.geoms.push(g);
+    });
+    remove.push(child);
+  }
+  for (const c of remove) shell.remove(c);
+  for (const grp of groups.values()) {
+    const geo = mergeGeometries(grp.geoms, false); if (!geo) continue;
+    const mesh = new THREE.Mesh(geo, grp.mat); mesh.castShadow = true; mesh.receiveShadow = true; mesh.userData.normal = grp.normal; shell.add(mesh);
+  }
+}

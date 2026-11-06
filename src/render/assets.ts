@@ -58,10 +58,12 @@ export async function spawn(p: string, place: Place = {}, shadows = true): Promi
 /** Пакетная расстановка статики: один InstancedMesh на (модель, часть). */
 export class StaticBatcher {
   private groups = new Map<string, { path: string; mats: THREE.Matrix4[] }>();
+  /** Группировка по ячейкам 40×40 м: instanced-меши получают осмысленный bounding sphere и отсекаются камерой и теневой камерой. */
   add(path: string, place: Place) {
     const o = new THREE.Object3D(); applyPlace(o, place); o.updateMatrix();
-    let g = this.groups.get(path);
-    if (!g) { g = { path, mats: [] }; this.groups.set(path, g); }
+    const key = `${path}|${Math.floor((place.x ?? 0) / 40)}|${Math.floor((place.z ?? 0) / 40)}`;
+    let g = this.groups.get(key);
+    if (!g) { g = { path, mats: [] }; this.groups.set(key, g); }
     g.mats.push(o.matrix.clone());
   }
   get count() { let n = 0; for (const g of this.groups.values()) n += g.mats.length; return n; }
@@ -84,7 +86,7 @@ export class StaticBatcher {
           if (c) im.setColorAt(i, c);
         });
         im.castShadow = true; im.receiveShadow = true; im.instanceMatrix.needsUpdate = true;
-        im.frustumCulled = false;
+        im.computeBoundingSphere(); im.frustumCulled = true;
         parent.add(im); out.push(im);
       });
     }));

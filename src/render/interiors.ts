@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Ctx, W } from './kit';
 import { LEVELS } from './levels';
 import { createPaved } from './atmosphere';
-import { Place, spawn, loadTexture } from './assets';
+import { Place, spawn, loadTexture, StaticBatcher } from './assets';
 
 export interface PropInst {
   id: string; kind: string; level: string; x: number; y: number; z: number; r: number; verbs: string; obj?: string; sit?: { x: number; z: number; ry: number };
@@ -25,16 +25,17 @@ export async function buildInteriors(ctx: Ctx, scene: THREE.Scene): Promise<Inte
   const I: Interior = { levels: {}, props: [], lights: [], gears: [], pendulum: null, lens: null, ks1Items: {}, worldItems: {}, colliders: [], hearth: null, fireGroup: new THREE.Group(), smoke: new THREE.Group(), kitchenSmoke: new THREE.Group(), candleLights: [] };
   for (const k of Object.keys(LEVELS)) { const g = new THREE.Group(); g.visible = false; scene.add(g); I.levels[k] = g; }
   const n: Record<string, number> = {};
+  const batches: Record<string, StaticBatcher> = {}; for (const k of Object.keys(LEVELS)) batches[k] = new StaticBatcher();
   /** Поставить модель; kind определяет имя/описание (obj.<kind>.*) */
   const put = (lv: string, kind: string, model: string, x: number, z: number, ry = 0, s = DS, y = 0, verbs = 'o', extra: Partial<PropInst> = {}, place: Place = {}) => {
     const info = LEVELS[lv]; const py = info.y + y;
     const id = `${kind}${n[kind] = (n[kind] ?? 0) + 1}`;
     const p: PropInst = { id, kind, level: lv, x, y: py, z, r: 1.6, verbs, floor: info.floor, ...extra };
-    ctx.real(model, { x, y: py, z, ry, s, ...place }, I.levels[lv]).then((o) => { p.node = o; });
+    batches[lv].add(model, { x, y: py, z, ry, s, ...place });
     if (verbs) I.props.push(p);
     return p;
   };
-  const deco = (lv: string, model: string, x: number, z: number, ry = 0, s = DS, y = 0, place: Place = {}) => { ctx.real(model, { x, y: LEVELS[lv].y + y, z, ry, s, ...place }, I.levels[lv]); };
+  const deco = (lv: string, model: string, x: number, z: number, ry = 0, s = DS, y = 0, place: Place = {}) => { batches[lv].add(model, { x, y: LEVELS[lv].y + y, z, ry, s, ...place }); };
   const wall = (lv: string, x0: number, z0: number, x1: number, z1: number, gaps: number[] = [], mat: 'wood' | 'stone' = 'wood', rows = 2) => {
     // перегородка из модулей town_kit между (x0,z0) и (x1,z1); gaps — индексы модулей-проёмов
     const len = Math.hypot(x1 - x0, z1 - z0); const cnt = Math.max(1, Math.round(len / W)); const ang = Math.atan2(-(z1 - z0), x1 - x0) + Math.PI / 2;
@@ -81,7 +82,7 @@ export async function buildInteriors(ctx: Ctx, scene: THREE.Scene): Promise<Inte
   // очаг
   put('tav0', 'hearth', 'nature/campfire_bricks', -34.4, 1.0, Math.PI / 2, 2.2, 0, 'of', { obj: 'hearth', r: 2.2 });
   deco('tav0', 'town_kit/chimney_base', -34.9, 1.0, Math.PI / 2, 1.6, 0); deco('tav0', 'hex_props/resource_lumber', -34.3, 2.4, 0.6, 1.6);
-  I.hearth = light('tav0', -34.0, 0.9, 1.0, 0xff7a2a, 9, 8.5, true, true);
+  I.hearth = light('tav0', -34.0, 0.9, 1.0, 0xff7a2a, 9, 8.5, true, false);
   // свет зала и стойки
   light('tav0', -28, 2.2, 0, 0xffa24a, 3, 9); light('tav0', -32, 2.0, -2.4, 0xffc880, 2.2, 6);
   // шкаф-полка, ковёр, вешалка, меню, картины, факелы
@@ -203,6 +204,7 @@ export async function buildInteriors(ctx: Ctx, scene: THREE.Scene): Promise<Inte
   put('tw2', 'armchair', 'dungeon/chair', 1.0, -27.2, Math.PI, DS * 1.1, 0, 'os', { sit: { x: 1.0, z: -27.2, ry: Math.PI } });
   light('tw2', 0, 2.8, -28.6, 0xffa24a, 3.0, 9); light('tw2', 0, 2.0, -29.8, 0x8fb2ff, 4.0, 7, false);
   void loadTexture;
+  await Promise.all(Object.entries(batches).map(([k, b]) => b.flush(I.levels[k])));
   await Promise.all(ctx.pending);
   // предметы мира (визуалы sim-предметов)
   const mkItem = async (id: string, model: string, s: number) => { const o = await spawn(model, { s }); o.obj.visible = false; scene.add(o.obj); I.worldItems[id] = o.obj; };

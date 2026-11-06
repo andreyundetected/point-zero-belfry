@@ -14,6 +14,7 @@ export function createEngine(host: HTMLElement): Engine {
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.setSize(innerWidth, innerHeight);
+  renderer.info.autoReset = false;
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
   host.appendChild(renderer.domElement);
@@ -36,8 +37,8 @@ export function createEngine(host: HTMLElement): Engine {
         onFrame.forEach((f) => f(dt, t));
         followMoon(moon, new THREE.Vector3(cam.position.x, 0, cam.position.z));
         rain.update(t, cam.position);
-        lamps.update(t, cam.position);
-        post.render(t);
+        lamps.setPx(renderer.domElement.height, cam.fov); lamps.update(t, cam.position);
+        renderer.info.reset(); post.render(t);
         requestAnimationFrame(loop);
       };
       loop();

@@ -36,3 +36,16 @@ describe('локализация', () => {
     for (const [k, [ru, en]] of Object.entries(TEXTS)) { if (k.includes('.n_')) continue; expect(ru.length, k).toBeGreaterThan(0); expect(en.length, k).toBeGreaterThan(0); }
   });
 });
+
+describe('«Вестник»', () => {
+  it('отражает состояние мира: ≥3 разных заголовка за ночь', () => {
+    const w = createWorld(1, { sealed: false }); const seen = new Set<string>();
+    while (w.t < T1) { step(w); if (w.tick % 20 === 0) seen.add(w.newsId); }
+    expect(seen.size).toBeGreaterThanOrEqual(3);
+  });
+  it('исходы различаются: пожар / золото', () => {
+    const a = createWorld(1, { sealed: false }); while (a.t < T1) step(a);
+    const b = createWorld(1, { sealed: false }); b.items.pass.loc = { k: 'npc', id: 'tilda' }; b.npcs.tilda.inv.push('pass'); while (b.t < T1) step(b);
+    expect(a.newsId.startsWith('news.fire')).toBe(true); expect(b.newsId).toBe('news.gold');
+  });
+});

@@ -48,7 +48,7 @@ export class Game {
     await Promise.all(Object.entries(NPC_VISUALS).map(async ([id, v]) => { const a = await createActor(v.model, v.kind, v.height, v.tint); this.npcs[id] = a; this.eng.scene.add(a.obj); a.play('idle'); }));
     tick();
     this.S = new Session(1);
-    for (let i = 0; i < 3; i++) { const l = new THREE.PointLight(0xff7a2a, 0, 14, 1.4); l.visible = false; this.eng.scene.add(l); this.fireLights.push(l); }
+    for (let i = 0; i < 4; i++) { const l = new THREE.PointLight(0xff7a2a, 0, 14, 1.4); l.visible = false; this.eng.scene.add(l); this.fireLights.push(l); }
     // моль у газовых фонарей, дымки из труб
     this.eng.onFrame.push((dt, tm) => this.frame(dt, tm));
     this.bindInput();
@@ -239,7 +239,7 @@ export class Game {
     }
   }
 
-  fxT = 0; mothT = 0;
+  fxT = 0; mothT = 0; winWorld: THREE.Vector3[] | null = null;
   updateFx(dt: number, tm: number) {
     const w = this.w; this.fxT += dt; this.mothT += dt;
     const f = w.fire;
@@ -257,14 +257,19 @@ export class Game {
         const st = f.zones[z]; if (st === undefined) continue; const k = Math.min(1, (w.t - st) / 40);
         const inside = this.levelKey() === (z === 'upper' ? 'tav1' : z === 'cellar' ? 'tav-1' : 'tav0');
         const inB = buildingAt(this.pos.x, this.pos.y)?.b === 'tavern';
-        const Lp = lamps[li++]; if (Lp) { Lp.visible = true; Lp.position.set(x, y + 0.6, zz); Lp.intensity = 14 * k * (0.8 + 0.2 * Math.sin(tm * 17 + x)); }
-        if ((inside || !inB) && hrand(11, w.tick, z) < 0.5 * k + 0.2) {
+        const Lp = li < 3 ? lamps[li++] : undefined; if (Lp) { Lp.visible = true; Lp.position.set(x, y + 0.6, zz); Lp.intensity = 14 * k * (0.8 + 0.2 * Math.sin(tm * 17 + x)); }
+        if (inside && hrand(11, w.tick, z) < 0.5 * k + 0.2) {
           const ox = (hrand(12, w.tick) - 0.5) * 4, oz = (hrand(13, w.tick) - 0.5) * 3;
-          if (inside) this.particles.spawn('flame', x + ox, y + hrand(14, w.tick) * 0.5, zz + oz, { vy: 1.0, size: 1.4 * k + 0.4, life: 0.9 });
-          else if (z !== 'cellar') this.particles.spawn('flame', -28 + ox * 2, 3 + hrand(15, w.tick) * 2.5, -2 + oz * 2, { vy: 1.4, size: 2.2 * k, life: 1.1 });
+          this.particles.spawn('flame', x + ox, y + hrand(14, w.tick) * 0.5, zz + oz, { vy: 1.0, size: 1.4 * k + 0.4, life: 0.9 });
         }
-        if (hrand(16, w.tick, z) < 0.35 * k) this.particles.spawn('dark', -28 + (hrand(17, w.tick) - 0.5) * 8, 5.2, -2 + (hrand(18, w.tick) - 0.5) * 5, { vy: 1.8, vx: 0.5, size: 2.6, life: 4 });
+        if (hrand(16, w.tick, z) < 0.35 * k) this.particles.spawn('dark', -28 + (hrand(17, w.tick) - 0.5) * 8, 7.4, -2 + (hrand(18, w.tick) - 0.5) * 5, { vy: 1.8, vx: 0.5, size: 3.2, life: 4.5 });
       }
+      // внешний вид пожара: огонь в окнах и над коньком, отсвет на фасаде
+      if (!this.winWorld) { const h = this.town.houses.F2; h.group.updateMatrixWorld(true); this.winWorld = h.winSpots.map((sp) => { const v = h.group.localToWorld(new THREE.Vector3(sp.x + sp.nx * 0.5, sp.y, sp.z + sp.nz * 0.5)); return v; }); }
+      const sinceIg = w.t - f.ignitedAt; const kk = Math.min(1, sinceIg / 60);
+      if (this.winWorld.length && hrand(19, w.tick) < 0.8 * kk) { const v = this.winWorld[Math.floor(hrand(20, w.tick) * this.winWorld.length)]; this.particles.spawn('flame', v.x, v.y, v.z, { vy: 1.2, size: 1.8 * kk + 0.4, life: 1.0 }); }
+      if (sinceIg > 50 && hrand(21, w.tick) < 0.7) this.particles.spawn('flame', -34 + hrand(22, w.tick) * 12, 6.6 + hrand(23, w.tick) * 1.4, -4 + hrand(24, w.tick) * 4, { vy: 1.5, size: 2.4, life: 1.1 });
+      const ext = this.fireLights[3]; ext.visible = true; ext.position.set(-19.5, 3.4, -1.5); ext.intensity = 20 * kk * (0.8 + 0.2 * Math.sin(tm * 13));
       this.eng.post.grade.uniforms.heat.value = Math.max(0, 1 - dist2d(this.pos.x, this.pos.y, -28, -2) / 18) * 0.8;
     } else this.eng.post.grade.uniforms.heat.value = 0;
   }

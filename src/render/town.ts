@@ -5,6 +5,7 @@ import { FACADES, BACKDROP } from './facades';
 import { createGround, createPaved, createWater, puddle } from './atmosphere';
 import { spawn, loadPNG, Place } from './assets';
 import { hrand } from '../sim/rng';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export interface Town {
   ctx: Ctx; houses: Record<string, House & { mats?: THREE.Material[] }>;
@@ -80,7 +81,7 @@ export async function buildTown(eng: Engine): Promise<Town> {
   P('town_kit/fence_gate', -38, 12, Math.PI / 2, 3.2);
   for (let z = 15.2; z < 19; z += 1.4) P('town_kit/fence', -38, z, Math.PI / 2, 1.4); for (let z = 8.8; z > 4; z -= 1.4) P('town_kit/fence', -38, z, Math.PI / 2, 1.4);
   col(-38.5, 4, -37.5, 9.2); col(-38.5, 14.8, -37.5, 19);
-  const fireB = await spawn('cemetery/kenney/fire_basket', { x: -36.2, z: 14.6, s: 1.8 }); scene.add(fireB.obj); lamps.add('gate_fire', -36.2, 1.4, 14.6, { gas: false, base: 12 });
+  P('cemetery/kenney/fire_basket', -36.2, 14.6, 0, 1.8); lamps.add('gate_fire', -36.2, 1.4, 14.6, { gas: false, base: 12 });
   // шкаф КШ-1 (код): ящик + манометр + два маховика
   const ks1 = new THREE.Group(); ks1.position.set(-33, 0, 15.5); scene.add(ks1);
   const cab = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.7, 0.8), new THREE.MeshStandardMaterial({ color: 0x3a4250, metalness: 0.5, roughness: 0.5 })); cab.position.y = 0.95; cab.castShadow = true; ks1.add(cab);
@@ -109,12 +110,12 @@ export async function buildTown(eng: Engine): Promise<Town> {
   // фонари: высокие газовые вдоль набережной (шаг ~12 м)
   let li = 0;
   for (let x = -36; x <= 90; x += 12.6) {
-    const z = 15.2; const s = await spawn('cemetery/kenney/lightpost_single', { x, z, s: 2.1, ry: Math.PI / 2 }); scene.add(s.obj);
+    const z = 15.2; P('cemetery/kenney/lightpost_single', x, z, Math.PI / 2, 2.1);
     lamps.add('emb' + li++, x + 0.0, 3.0, z + 0.5, { gas: true, base: 14 }); col(x - 0.2, z - 0.2, x + 0.2, z + 0.2);
   }
   // фонари площади
   for (const [x, z] of [[-3.4, -1.0], [3.6, -1.5], [-3.6, 5.5], [3.6, 6.2], [-0.2, -8.0], [8, 10], [-12, 3], [13, -4]]) {
-    const s = await spawn('town_kit/lantern', { x, z, s: 1.7 }); scene.add(s.obj); lamps.add('sq' + x + z, x, 2.5, z, { gas: true, base: 12 }); col(x - 0.2, z - 0.2, x + 0.2, z + 0.2);
+    P('town_kit/lantern', x, z, 0, 1.7); lamps.add('sq' + x + z, x, 2.5, z, { gas: true, base: 12 }); col(x - 0.2, z - 0.2, x + 0.2, z + 0.2);
   }
   // свет окон: тёплые плоскости за стеклом + фонарь у каждой двери (рецепт: тёплые точки против холодного тумана)
   const winTex = loadPNG('textures/procedural/window_warm_emissive.png');
@@ -123,16 +124,17 @@ export async function buildTown(eng: Engine): Promise<Town> {
   for (const f of FACADES) {
     const h = houses[f.id]; h.group.updateMatrixWorld(true);
     const gg = new THREE.Group(); scene.add(gg); glows[f.id] = gg;
+    const planes: THREE.BufferGeometry[] = [];
     h.winSpots.forEach((sp, i) => {
       if (rnd('win', f.id, i) < 0.22) return;
       const wp = h.group.localToWorld(new THREE.Vector3(sp.x + sp.nx * 0.08, sp.y, sp.z + sp.nz * 0.08));
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(0.8 * W, 0.8 * W), winMat);
-      const rot = h.group.rotation.y; m.position.copy(wp); m.rotation.y = Math.atan2(sp.nx * Math.cos(rot) + sp.nz * Math.sin(rot), -sp.nx * Math.sin(rot) + sp.nz * Math.cos(rot));
-      gg.add(m);
+      const g = new THREE.PlaneGeometry(0.8 * W, 0.8 * W); const rot = h.group.rotation.y;
+      g.rotateY(Math.atan2(sp.nx * Math.cos(rot) + sp.nz * Math.sin(rot), -sp.nx * Math.sin(rot) + sp.nz * Math.cos(rot))); g.translate(wp.x, wp.y, wp.z); planes.push(g);
     });
+    if (planes.length) { const mg = mergeGeometries(planes, false); if (mg) gg.add(new THREE.Mesh(mg, winMat)); }
     if (h.door) {
       const lx = h.door.x + h.door.nx * 0.6 - h.door.nz * 1.3, lz = h.door.z + h.door.nz * 0.6 + h.door.nx * 1.3;
-      const s = await spawn('town_kit/lantern', { x: lx, z: lz, s: 1.5 }); scene.add(s.obj); lamps.add('door_' + f.id, lx, 2.2, lz, { gas: false, base: 9, color: 0xffa24a });
+      P('town_kit/lantern', lx, lz, 0, 1.5); lamps.add('door_' + f.id, lx, 2.2, lz, { gas: false, base: 9, color: 0xffa24a });
     }
   }
   // рельсы + шпалы

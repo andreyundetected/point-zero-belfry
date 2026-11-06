@@ -90,56 +90,44 @@ export class Rain {
 }
 
 // ---------------- фонари ----------------
-export interface Lamp {
-  id: string; pos: THREE.Vector3; base: number; mesh: THREE.Mesh; halo: THREE.Sprite; phase: number; gas: boolean; color: THREE.Color;
-}
+export interface Lamp { id: string; pos: THREE.Vector3; base: number; phase: number; gas: boolean; color: THREE.Color; scale: number; idx: number }
+/** Фонари: пул PointLight на ближайшие + ОДИН Points-объект для всех ореолов и ламп (1 draw call). */
 export class LampSystem {
   lamps: Lamp[] = [];
   private pool: THREE.PointLight[] = [];
-  level = 1;           // давление → яркость
-  festive = 0;         // 0..1 праздничная подсветка
-  flicker = 0;         // 0..1 мерцание (низкое давление)
-  private haloTex = loadTexture('lamp_halo.png', { wrap: false });
-  private glowGeo = new THREE.SphereGeometry(0.11, 12, 8);
+  level = 1; festive = 0; flicker = 0;
+  private pts!: THREE.Points; private geo = new THREE.BufferGeometry(); private cap = 128;
+  private posA = new Float32Array(this.cap * 3); private sizeA = new Float32Array(this.cap); private kA = new Float32Array(this.cap);
   constructor(private scene: THREE.Scene, poolSize = 12) {
-    for (let i = 0; i < poolSize; i++) {
-      const L = new THREE.PointLight(0xffa850, 0, 11, 1.7); L.visible = false; scene.add(L); this.pool.push(L);
-    }
+    for (let i = 0; i < poolSize; i++) { const L = new THREE.PointLight(0xffa850, 0, 11, 1.7); L.visible = false; scene.add(L); this.pool.push(L); }
+    this.geo.setAttribute('position', new THREE.BufferAttribute(this.posA, 3)); this.geo.setAttribute('size', new THREE.BufferAttribute(this.sizeA, 1)); this.geo.setAttribute('k', new THREE.BufferAttribute(this.kA, 1));
+    const tex = loadTexture('lamp_halo.png', { wrap: false });
+    const mat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: { map: { value: tex }, scale: { value: 600 } },
+      vertexShader: `attribute float size; attribute float k; varying float vK; uniform float scale;
+        void main(){ vK=k; vec4 mv=modelViewMatrix*vec4(position,1.); gl_Position=projectionMatrix*mv; gl_PointSize=size*scale/(-mv.z); }`,
+      fragmentShader: `uniform sampler2D map; varying float vK;
+        void main(){ vec4 c=texture2D(map,gl_PointCoord); float core=smoothstep(.12,.0,length(gl_PointCoord-.5)); gl_FragColor=vec4(vec3(1.,.64,.3)*c.rgb*vK*1.05+vec3(1.,.85,.6)*core*vK*3.,c.a*min(1.,vK)); }`,
+    });
+    this.pts = new THREE.Points(this.geo, mat); this.pts.frustumCulled = false; scene.add(this.pts);
   }
   add(id: string, x: number, y: number, z: number, opts: { gas?: boolean; color?: number; scale?: number; base?: number } = {}) {
-    const color = new THREE.Color(opts.color ?? 0xffa850);
-    const mesh = new THREE.Mesh(this.glowGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffb866).multiplyScalar(5) }));
-    mesh.position.set(x, y, z); mesh.scale.setScalar(opts.scale ?? 1);
-    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.haloTex, color: color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.8, fog: false }));
-    halo.scale.setScalar(2.3 * (opts.scale ?? 1)); halo.position.set(x, y, z);
-    this.scene.add(mesh, halo);
-    const lamp: Lamp = { id, pos: new THREE.Vector3(x, y, z), base: opts.base ?? 14, mesh, halo, phase: this.lamps.length * 3.1, gas: opts.gas ?? true, color };
-    this.lamps.push(lamp);
-    return lamp;
+    const lamp: Lamp = { id, pos: new THREE.Vector3(x, y, z), base: opts.base ?? 14, phase: this.lamps.length * 3.1, gas: opts.gas ?? true, color: new THREE.Color(opts.color ?? 0xffa850), scale: opts.scale ?? 1, idx: this.lamps.length };
+    this.lamps.push(lamp); this.posA.set([x, y, z], lamp.idx * 3); this.geo.setDrawRange(0, this.lamps.length); (this.geo.attributes.position as THREE.BufferAttribute).needsUpdate = true; return lamp;
   }
+  setPx(h: number, fov: number) { (this.pts.material as THREE.ShaderMaterial).uniforms.scale.value = h / (2 * Math.tan((fov * Math.PI) / 360)); }
   update(t: number, cam: THREE.Vector3) {
     const sorted = this.lamps.map((l) => ({ l, d: l.pos.distanceToSquared(cam) })).sort((a, b) => a.d - b.d);
-    this.pool.forEach((L, i) => {
-      const s = sorted[i];
-      if (!s || s.d > 1600) { L.visible = false; L.intensity = 0; return; }
-      L.visible = true; L.position.copy(s.l.pos); L.color.copy(s.l.color);
-      L.intensity = this.intensityOf(s.l, t);
-    });
-    for (const l of this.lamps) {
-      const k = this.factor(l, t);
-      (l.mesh.material as THREE.MeshBasicMaterial).color.setRGB(1.0 * 5 * k, 0.72 * 5 * k, 0.4 * 5 * k);
-      (l.halo.material as THREE.SpriteMaterial).opacity = Math.min(1, 0.8 * k);
-      l.halo.scale.setScalar((2.3 + this.festive * 0.8) * (l.mesh.scale.x) * (0.8 + 0.2 * k));
-    }
+    this.pool.forEach((L, i) => { const s = sorted[i]; if (!s || s.d > 1600) { L.visible = false; L.intensity = 0; return; } L.visible = true; L.position.copy(s.l.pos); L.color.copy(s.l.color); L.intensity = s.l.base * this.factor(s.l, t); });
+    for (const l of this.lamps) { const k = this.factor(l, t); this.kA[l.idx] = k; this.sizeA[l.idx] = (2.3 + this.festive * 0.8) * l.scale * (0.8 + 0.2 * Math.min(1.2, k)); }
+    (this.geo.attributes.k as THREE.BufferAttribute).needsUpdate = true; (this.geo.attributes.size as THREE.BufferAttribute).needsUpdate = true;
   }
   private factor(l: Lamp, t: number) {
-    let k = l.gas ? this.level : 1;
-    const fl = l.gas ? this.flicker : 0;
+    let k = l.gas ? this.level : 1; const fl = l.gas ? this.flicker : 0;
     k *= 0.93 + 0.07 * Math.sin(t * 9 + l.phase) + 0.03 * Math.sin(t * 23 + l.phase);
     if (fl > 0) k *= 1 - fl * (0.5 + 0.5 * Math.sin(t * 31 + l.phase * 2.3)) * 0.8;
     return k * (1 + this.festive * 0.25);
   }
-  private intensityOf(l: Lamp, t: number) { return l.base * this.factor(l, t); }
 }
 
 // ---------------- вода ----------------

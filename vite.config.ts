@@ -32,5 +32,5 @@ export default defineConfig({
   plugins: [serveAssets()],
   publicDir: false,
   server: { host: true, port: 5173 },
-  build: { target: 'es2022', chunkSizeWarningLimit: 2000 },
+  build: { target: 'es2022', chunkSizeWarningLimit: 2000, assetsDir: 'bundle' },
 });

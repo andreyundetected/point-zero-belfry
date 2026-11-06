@@ -139,5 +139,5 @@ export function stepSystems(w: World, dt: number) {
   if (w.t >= TIMES.kioskClose && w.kioskOpen) { w.kioskOpen = false; emit(w, 'KIOSK_CLOSED', ['mira'], []); }
   if (w.t >= TIMES.cordon && w.towerOpen) { w.towerOpen = false; emit(w, 'TOWER_CORDON', ['klara'], []); }
   stepTram(w, dt); stepDock(w, dt); stepGas(w, dt); stepFire(w, dt); perception(w);
-  if (w.tick % 10 === 0) w.newsId = headline(w);
+  if (w.tick % 10 === 0 || w.t >= 2398) w.newsId = headline(w);
 }
