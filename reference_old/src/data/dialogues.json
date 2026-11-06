@@ -1,0 +1,2351 @@
+{
+ "npcs": {
+  "lea": {
+   "start": [
+    [
+     "event:incident_filed loc:substation",
+     "paper"
+    ],
+    [
+     "lost_pass loc:market",
+     "lost"
+    ],
+    [
+     "loc:substation",
+     "atwork"
+    ],
+    [
+     "always",
+     "hello"
+    ]
+   ],
+   "nodes": {
+    "lost": {
+     "lines": [
+      [
+       "narr",
+       "lea.k1"
+      ],
+      [
+       "npc",
+       "lea.k2"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "lea.k3",
+       "to": "help"
+      },
+      {
+       "k": "lea.k4",
+       "to": "why"
+      },
+      {
+       "k": "lea.k5",
+       "check": [
+        "logic",
+        4
+       ],
+       "to": "walk",
+       "fail": "walk_f"
+      }
+     ]
+    },
+    "help": {
+     "lines": [
+      [
+       "npc",
+       "lea.k6"
+      ]
+     ],
+     "choices": [],
+     "trust": 1
+    },
+    "why": {
+     "lines": [
+      [
+       "npc",
+       "lea.k7"
+      ],
+      [
+       "emp",
+       "lea.k8"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "lea.k9",
+       "to": "help"
+      }
+     ],
+     "fact": [
+      "pike_badge",
+      "lea"
+     ]
+    },
+    "walk": {
+     "lines": [
+      [
+       "logic",
+       "lea.k10"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "walk_time",
+      "x"
+     ]
+    },
+    "walk_f": {
+     "lines": [
+      [
+       "logic",
+       "lea.k11"
+      ]
+     ],
+     "choices": []
+    },
+    "hello": {
+     "lines": [
+      [
+       "npc",
+       "lea.k12"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "lea.k13",
+       "to": "dad"
+      },
+      {
+       "k": "lea.k213",
+       "to": "noodles"
+      }
+     ]
+    },
+    "dad": {
+     "lines": [
+      [
+       "npc",
+       "lea.k14"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "pike_badge",
+      "lea"
+     ]
+    },
+    "atwork": {
+     "lines": [
+      [
+       "npc",
+       "lea.k15"
+      ],
+      [
+       "obs",
+       "lea.k16"
+      ]
+     ],
+     "choices": []
+    },
+    "paper": {
+     "lines": [
+      [
+       "npc",
+       "lea.k162"
+      ]
+     ],
+     "choices": []
+    },
+    "noodles": {
+     "lines": [
+      [
+       "npc",
+       "lea.k214"
+      ]
+     ],
+     "choices": [],
+     "trust": 1
+    }
+   }
+  },
+  "pike": {
+   "start": [
+    [
+     "event:fake_call loc:substation",
+     "call"
+    ],
+    [
+     "blackout loc:substation",
+     "after"
+    ],
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "narr",
+       "pike.k17"
+      ],
+      [
+       "npc",
+       "pike.k18"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "pike.k19",
+       "check": [
+        "cool",
+        4
+       ],
+       "to": "calm",
+       "fail": "tense"
+      },
+      {
+       "k": "pike.k20",
+       "to": "switch"
+      },
+      {
+       "k": "pike.k21",
+       "if": "fact:pike_badge",
+       "to": "daughter"
+      },
+      {
+       "k": "pike.k198",
+       "to": "long"
+      }
+     ]
+    },
+    "calm": {
+     "lines": [
+      [
+       "npc",
+       "pike.k22"
+      ],
+      [
+       "logic",
+       "pike.k23"
+      ]
+     ],
+     "choices": [],
+     "trust": 1,
+     "fact": [
+      "pike_obeys",
+      "x"
+     ]
+    },
+    "tense": {
+     "lines": [
+      [
+       "cool",
+       "pike.k24"
+      ]
+     ],
+     "choices": []
+    },
+    "switch": {
+     "lines": [
+      [
+       "npc",
+       "pike.k25"
+      ],
+      [
+       "emp",
+       "pike.k26"
+      ]
+     ],
+     "choices": []
+    },
+    "daughter": {
+     "lines": [
+      [
+       "npc",
+       "pike.k27"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "yan_regulation",
+      "x"
+     ]
+    },
+    "after": {
+     "lines": [
+      [
+       "npc",
+       "pike.k28"
+      ],
+      [
+       "emp",
+       "pike.k29"
+      ]
+     ],
+     "choices": []
+    },
+    "call": {
+     "lines": [
+      [
+       "npc",
+       "pike.k170"
+      ]
+     ],
+     "choices": []
+    },
+    "long": {
+     "lines": [
+      [
+       "npc",
+       "pike.k199"
+      ],
+      [
+       "emp",
+       "pike.k200"
+      ]
+     ],
+     "choices": [],
+     "trust": 1
+    }
+   }
+  },
+  "yan": {
+   "start": [
+    [
+     "event:incident_filed loc:substation",
+     "incident"
+    ],
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "npc",
+       "yan.k30"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "yan.k31",
+       "to": "reg"
+      },
+      {
+       "k": "yan.k32",
+       "check": [
+        "cool",
+        4
+       ],
+       "to": "debt",
+       "fail": "debt_f"
+      },
+      {
+       "k": "yan.k33",
+       "check": [
+        "obs",
+        4
+       ],
+       "to": "feeders"
+      }
+     ]
+    },
+    "reg": {
+     "lines": [
+      [
+       "npc",
+       "yan.k34"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "yan_regulation",
+      "x"
+     ]
+    },
+    "debt": {
+     "lines": [
+      [
+       "npc",
+       "yan.k35"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "mok_collectors",
+      "x"
+     ]
+    },
+    "debt_f": {
+     "lines": [
+      [
+       "npc",
+       "yan.k36"
+      ]
+     ],
+     "choices": [],
+     "trust": -1
+    },
+    "feeders": {
+     "lines": [
+      [
+       "npc",
+       "yan.k37"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "feeders",
+      "x"
+     ]
+    },
+    "incident": {
+     "lines": [
+      [
+       "npc",
+       "yan.k158"
+      ],
+      [
+       "logic",
+       "yan.k159"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "mok": {
+   "start": [
+    [
+     "event:collectors_sent",
+     "sent"
+    ],
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "narr",
+       "mok.k38"
+      ],
+      [
+       "npc",
+       "mok.k39"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "mok.k40",
+       "to": "debtors"
+      },
+      {
+       "k": "mok.k41",
+       "to": "shelves"
+      },
+      {
+       "k": "mok.k42",
+       "to": "chip"
+      },
+      {
+       "k": "mok.k43",
+       "if": "fact:dana_debt !flag:mok_rumor",
+       "to": "rumor"
+      },
+      {
+       "k": "mok.k195",
+       "to": "job"
+      }
+     ]
+    },
+    "debtors": {
+     "lines": [
+      [
+       "npc",
+       "mok.k44"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "dana_debt",
+      "x"
+     ]
+    },
+    "shelves": {
+     "lines": [
+      [
+       "narr",
+       "mok.k45"
+      ],
+      [
+       "npc",
+       "mok.k46"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "pawn_shelves",
+      "x"
+     ]
+    },
+    "chip": {
+     "lines": [
+      [
+       "npc",
+       "mok.k47"
+      ],
+      [
+       "logic",
+       "mok.k48"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "chip_time",
+      "x"
+     ]
+    },
+    "rumor": {
+     "lines": [
+      [
+       "npc",
+       "mok.k49"
+      ]
+     ],
+     "choices": [],
+     "act": "rumor_mok"
+    },
+    "sent": {
+     "lines": [
+      [
+       "npc",
+       "mok.k157"
+      ]
+     ],
+     "choices": []
+    },
+    "job": {
+     "lines": [
+      [
+       "npc",
+       "mok.k196"
+      ],
+      [
+       "logic",
+       "mok.k197"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "ro": {
+   "start": [
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "npc",
+       "ro.k50"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "ro.k51",
+       "to": "gossip"
+      },
+      {
+       "k": "ro.k52",
+       "check": [
+        "emp",
+        3
+       ],
+       "to": "wife"
+      },
+      {
+       "k": "ro.k53",
+       "if": "trust>=1",
+       "to": "hart"
+      },
+      {
+       "k": "ro.k173",
+       "to": "mok"
+      },
+      {
+       "k": "ro.k174",
+       "if": "trust>=1",
+       "to": "grid"
+      }
+     ]
+    },
+    "gossip": {
+     "lines": [
+      [
+       "npc",
+       "ro.k54"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "dana_debt",
+      "x"
+     ]
+    },
+    "wife": {
+     "lines": [
+      [
+       "npc",
+       "ro.k55"
+      ],
+      [
+       "emp",
+       "ro.k56"
+      ]
+     ],
+     "choices": [],
+     "trust": 1
+    },
+    "hart": {
+     "lines": [
+      [
+       "npc",
+       "ro.k57"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "hart_info",
+      "x"
+     ]
+    },
+    "mok": {
+     "lines": [
+      [
+       "npc",
+       "ro.k175"
+      ],
+      [
+       "emp",
+       "ro.k176"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "ro.k177",
+       "to": "mok2"
+      }
+     ]
+    },
+    "mok2": {
+     "lines": [
+      [
+       "npc",
+       "ro.k178"
+      ]
+     ],
+     "choices": []
+    },
+    "grid": {
+     "lines": [
+      [
+       "npc",
+       "ro.k179"
+      ],
+      [
+       "mem",
+       "ro.k180"
+      ]
+     ],
+     "choices": [],
+     "trust": 1
+    }
+   }
+  },
+  "nisa": {
+   "start": [
+    [
+     "flag:nisa_deal",
+     "done"
+    ],
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "narr",
+       "nisa.k58"
+      ],
+      [
+       "npc",
+       "nisa.k59"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "nisa.k60",
+       "to": "skills"
+      },
+      {
+       "k": "nisa.k61",
+       "to": "price"
+      },
+      {
+       "k": "nisa.k62",
+       "if": "has:memory_chip",
+       "to": "deal"
+      },
+      {
+       "k": "nisa.k181",
+       "check": [
+        "emp",
+        4
+       ],
+       "to": "who",
+       "fail": "who_f"
+      },
+      {
+       "k": "nisa.k182",
+       "check": [
+        "mem",
+        4
+       ],
+       "to": "window",
+       "fail": "who_f"
+      }
+     ]
+    },
+    "skills": {
+     "lines": [
+      [
+       "hack",
+       "nisa.k63"
+      ],
+      [
+       "npc",
+       "nisa.k64"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "nisa_services",
+      "x"
+     ]
+    },
+    "price": {
+     "lines": [
+      [
+       "npc",
+       "nisa.k65"
+      ]
+     ],
+     "choices": []
+    },
+    "deal": {
+     "lines": [
+      [
+       "npc",
+       "nisa.k66"
+      ]
+     ],
+     "choices": [],
+     "act": "deal_nisa",
+     "next": "done"
+    },
+    "done": {
+     "lines": [
+      [
+       "npc",
+       "nisa.k67"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "nisa.k68",
+       "act": "get_loop"
+      },
+      {
+       "k": "nisa.k69",
+       "act": "get_port"
+      },
+      {
+       "k": "nisa.k70",
+       "act": "order_vent"
+      },
+      {
+       "k": "nisa.k71",
+       "act": "order_police"
+      },
+      {
+       "k": "nisa.k72",
+       "to": "loopinfo"
+      }
+     ]
+    },
+    "loopinfo": {
+     "lines": [
+      [
+       "npc",
+       "nisa.k73"
+      ]
+     ],
+     "choices": []
+    },
+    "who": {
+     "lines": [
+      [
+       "npc",
+       "nisa.k183"
+      ]
+     ],
+     "choices": [],
+     "trust": 1
+    },
+    "who_f": {
+     "lines": [
+      [
+       "npc",
+       "nisa.k184"
+      ]
+     ],
+     "choices": []
+    },
+    "window": {
+     "lines": [
+      [
+       "npc",
+       "nisa.k185"
+      ],
+      [
+       "mem",
+       "nisa.k186"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "window_truth",
+      "x"
+     ]
+    }
+   }
+  },
+  "osip": {
+   "start": [
+    [
+     "event:osip_stays",
+     "stay"
+    ],
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "npc",
+       "osip.k74"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "osip.k75",
+       "check": [
+        "emp",
+        3
+       ],
+       "to": "mara",
+       "fail": "mara_f"
+      },
+      {
+       "k": "osip.k76",
+       "check": [
+        "obs",
+        5
+       ],
+       "to": "omega",
+       "fail": "omega_f"
+      },
+      {
+       "k": "osip.k77",
+       "to": "feld"
+      },
+      {
+       "k": "osip.k191",
+       "if": "trust>=1",
+       "to": "worse"
+      },
+      {
+       "k": "osip.k192",
+       "check": [
+        "cool",
+        5
+       ],
+       "to": "route",
+       "fail": "mara_f"
+      }
+     ]
+    },
+    "mara": {
+     "lines": [
+      [
+       "npc",
+       "osip.k78"
+      ],
+      [
+       "emp",
+       "osip.k79"
+      ]
+     ],
+     "choices": [],
+     "trust": 1,
+     "fact": [
+      "osip_loyalty",
+      "x"
+     ]
+    },
+    "mara_f": {
+     "lines": [
+      [
+       "npc",
+       "osip.k80"
+      ]
+     ],
+     "choices": []
+    },
+    "omega": {
+     "lines": [
+      [
+       "npc",
+       "osip.k81"
+      ],
+      [
+       "logic",
+       "osip.k82"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "omega_protocol",
+      "x"
+     ]
+    },
+    "omega_f": {
+     "lines": [
+      [
+       "npc",
+       "osip.k83"
+      ]
+     ],
+     "choices": []
+    },
+    "feld": {
+     "lines": [
+      [
+       "npc",
+       "osip.k84"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "feld_strict",
+      "x"
+     ]
+    },
+    "stay": {
+     "lines": [
+      [
+       "npc",
+       "osip.k152"
+      ],
+      [
+       "emp",
+       "osip.k153"
+      ]
+     ],
+     "choices": []
+    },
+    "worse": {
+     "lines": [
+      [
+       "npc",
+       "osip.k193"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "feld_strict",
+      "x"
+     ]
+    },
+    "route": {
+     "lines": [
+      [
+       "npc",
+       "osip.k194"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "route_rule",
+      "x"
+     ]
+    }
+   }
+  },
+  "sol": {
+   "start": [
+    [
+     "event:patients_wake",
+     "word"
+    ],
+    [
+     "blackout",
+     "gen"
+    ],
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "npc",
+       "sol.k85"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "sol.k86",
+       "to": "mara"
+      },
+      {
+       "k": "sol.k87",
+       "check": [
+        "obs",
+        4
+       ],
+       "to": "band"
+      },
+      {
+       "k": "sol.k203",
+       "to": "pay"
+      }
+     ]
+    },
+    "mara": {
+     "lines": [
+      [
+       "npc",
+       "sol.k88"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "clinic_gen",
+      "x"
+     ]
+    },
+    "band": {
+     "lines": [
+      [
+       "npc",
+       "sol.k89"
+      ],
+      [
+       "mem",
+       "sol.k90"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "test_loop",
+      "x"
+     ]
+    },
+    "gen": {
+     "lines": [
+      [
+       "npc",
+       "sol.k163"
+      ]
+     ],
+     "choices": []
+    },
+    "word": {
+     "lines": [
+      [
+       "npc",
+       "sol.k164"
+      ],
+      [
+       "mem",
+       "sol.k165"
+      ]
+     ],
+     "choices": []
+    },
+    "pay": {
+     "lines": [
+      [
+       "npc",
+       "sol.k204"
+      ],
+      [
+       "emp",
+       "sol.k205"
+      ]
+     ],
+     "choices": [],
+     "trust": 1
+    }
+   }
+  },
+  "kay": {
+   "start": [
+    [
+     "event:kay_dispersed",
+     "dispersed"
+    ],
+    [
+     "event:documents_shown",
+     "shown"
+    ],
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "npc",
+       "kay.k91"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "kay.k263",
+       "check": [
+        "emp",
+        2
+       ],
+       "to": "small",
+       "fail": "small_f",
+       "if": "!trust>=1"
+      },
+      {
+       "k": "kay.k92",
+       "to": "docs"
+      },
+      {
+       "k": "kay.k93",
+       "to": "plan"
+      },
+      {
+       "k": "kay.k94",
+       "to": "ila",
+       "if": "trust>=1"
+      },
+      {
+       "k": "kay.k187",
+       "to": "help"
+      },
+      {
+       "k": "kay.k188",
+       "check": [
+        "logic",
+        4
+       ],
+       "to": "why"
+      }
+     ]
+    },
+    "docs": {
+     "lines": [
+      [
+       "npc",
+       "kay.k95"
+      ]
+     ],
+     "choices": []
+    },
+    "plan": {
+     "lines": [
+      [
+       "npc",
+       "kay.k96"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "kay_plan",
+      "x"
+     ]
+    },
+    "ila": {
+     "lines": [
+      [
+       "npc",
+       "kay.k97"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "office_empty",
+      "x"
+     ]
+    },
+    "shown": {
+     "lines": [
+      [
+       "npc",
+       "kay.k154"
+      ]
+     ],
+     "choices": []
+    },
+    "dispersed": {
+     "lines": [
+      [
+       "npc",
+       "kay.k155"
+      ],
+      [
+       "logic",
+       "kay.k156"
+      ]
+     ],
+     "choices": []
+    },
+    "help": {
+     "lines": [
+      [
+       "npc",
+       "kay.k189"
+      ]
+     ],
+     "choices": [],
+     "trust": 1,
+     "fact": [
+      "kay_plan",
+      "x"
+     ]
+    },
+    "why": {
+     "lines": [
+      [
+       "npc",
+       "kay.k190"
+      ]
+     ],
+     "choices": []
+    },
+    "small": {
+     "lines": [
+      [
+       "npc",
+       "kay.k261"
+      ]
+     ],
+     "choices": [],
+     "trust": 1
+    },
+    "small_f": {
+     "lines": [
+      [
+       "npc",
+       "kay.k262"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "ila": {
+   "start": [
+    [
+     "event:documents_shown",
+     "thanks"
+    ],
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "npc",
+       "ila.k98"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "ila.k99",
+       "check": [
+        "emp",
+        4
+       ],
+       "to": "fear",
+       "fail": "fear_f"
+      },
+      {
+       "k": "ila.k100",
+       "to": "kay"
+      }
+     ]
+    },
+    "fear": {
+     "lines": [
+      [
+       "npc",
+       "ila.k101"
+      ],
+      [
+       "logic",
+       "ila.k102"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "password_rule",
+      "x"
+     ],
+     "trust": 1
+    },
+    "fear_f": {
+     "lines": [
+      [
+       "npc",
+       "ila.k103"
+      ]
+     ],
+     "choices": []
+    },
+    "kay": {
+     "lines": [
+      [
+       "npc",
+       "ila.k104"
+      ]
+     ],
+     "choices": []
+    },
+    "thanks": {
+     "lines": [
+      [
+       "npc",
+       "ila.k167"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "dana": {
+   "start": [
+    [
+     "event:mok_calls_dana",
+     "call"
+    ],
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "npc",
+       "dana.k105"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "dana.k106",
+       "check": [
+        "cool",
+        7
+       ],
+       "to": "route",
+       "fail": "route_f"
+      },
+      {
+       "k": "dana.k107",
+       "if": "fact:dana_debt",
+       "to": "debt"
+      },
+      {
+       "k": "dana.k108",
+       "check": [
+        "obs",
+        3
+       ],
+       "to": "badge"
+      },
+      {
+       "k": "dana.k206",
+       "check": [
+        "cool",
+        8
+       ],
+       "to": "badge2",
+       "fail": "badge_f"
+      }
+     ]
+    },
+    "route": {
+     "lines": [
+      [
+       "npc",
+       "dana.k109"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "route_rule",
+      "x"
+     ]
+    },
+    "route_f": {
+     "lines": [
+      [
+       "npc",
+       "dana.k110"
+      ]
+     ],
+     "choices": [],
+     "trust": -1
+    },
+    "debt": {
+     "lines": [
+      [
+       "npc",
+       "dana.k111"
+      ]
+     ],
+     "choices": [],
+     "trust": -1
+    },
+    "badge": {
+     "lines": [
+      [
+       "obs",
+       "dana.k112"
+      ]
+     ],
+     "choices": []
+    },
+    "call": {
+     "lines": [
+      [
+       "npc",
+       "dana.k160"
+      ],
+      [
+       "obs",
+       "dana.k161"
+      ]
+     ],
+     "choices": []
+    },
+    "badge2": {
+     "lines": [
+      [
+       "npc",
+       "dana.k207"
+      ]
+     ],
+     "choices": []
+    },
+    "badge_f": {
+     "lines": [
+      [
+       "npc",
+       "dana.k208"
+      ]
+     ],
+     "choices": [],
+     "trust": -2
+    }
+   }
+  },
+  "burn": {
+   "start": [
+    [
+     "blackout",
+     "busy"
+    ],
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "npc",
+       "burn.k113"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "burn.k278",
+       "check": [
+        "cool",
+        2
+       ],
+       "to": "small",
+       "fail": "small_f",
+       "if": "!trust>=1"
+      },
+      {
+       "k": "burn.k114",
+       "to": "sched",
+       "if": "trust>=1"
+      }
+     ]
+    },
+    "sched": {
+     "lines": [
+      [
+       "npc",
+       "burn.k115"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "burn_schedule",
+      "x"
+     ]
+    },
+    "busy": {
+     "lines": [
+      [
+       "npc",
+       "burn.k169"
+      ]
+     ],
+     "choices": []
+    },
+    "small": {
+     "lines": [
+      [
+       "npc",
+       "burn.k276"
+      ]
+     ],
+     "choices": [],
+     "trust": 1
+    },
+    "small_f": {
+     "lines": [
+      [
+       "npc",
+       "burn.k277"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "hart": {
+   "start": [
+    [
+     "flag:loop",
+     "loop"
+    ],
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "narr",
+       "hart.k116"
+      ],
+      [
+       "logic",
+       "hart.k117"
+      ]
+     ],
+     "choices": []
+    },
+    "loop": {
+     "lines": [
+      [
+       "narr",
+       "hart.k172"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "gas": {
+   "start": [
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "npc",
+       "gas.k118"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "gas.k119",
+       "to": "pillar"
+      },
+      {
+       "k": "gas.k120",
+       "to": "leave"
+      },
+      {
+       "k": "gas.k211",
+       "to": "hart"
+      }
+     ]
+    },
+    "pillar": {
+     "lines": [
+      [
+       "npc",
+       "gas.k121"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "billboard",
+      "x"
+     ]
+    },
+    "leave": {
+     "lines": [
+      [
+       "npc",
+       "gas.k122"
+      ]
+     ],
+     "choices": []
+    },
+    "hart": {
+     "lines": [
+      [
+       "npc",
+       "gas.k212"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "hart_info",
+      "x"
+     ]
+    }
+   }
+  },
+  "yuna": {
+   "start": [
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "npc",
+       "yuna.k123"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "yuna.k266",
+       "check": [
+        "emp",
+        2
+       ],
+       "to": "small",
+       "fail": "small_f",
+       "if": "!trust>=1"
+      },
+      {
+       "k": "yuna.k124",
+       "to": "lea"
+      },
+      {
+       "k": "yuna.k125",
+       "to": "meet",
+       "if": "trust>=1"
+      },
+      {
+       "k": "yuna.k201",
+       "to": "rec"
+      }
+     ]
+    },
+    "lea": {
+     "lines": [
+      [
+       "npc",
+       "yuna.k126"
+      ]
+     ],
+     "choices": []
+    },
+    "meet": {
+     "lines": [
+      [
+       "npc",
+       "yuna.k127"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "office_empty",
+      "x"
+     ]
+    },
+    "rec": {
+     "lines": [
+      [
+       "npc",
+       "yuna.k202"
+      ]
+     ],
+     "choices": []
+    },
+    "small": {
+     "lines": [
+      [
+       "npc",
+       "yuna.k264"
+      ]
+     ],
+     "choices": [],
+     "trust": 1
+    },
+    "small_f": {
+     "lines": [
+      [
+       "npc",
+       "yuna.k265"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "todd": {
+   "start": [
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "npc",
+       "todd.k128"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "todd.k129",
+       "to": "song"
+      }
+     ]
+    },
+    "song": {
+     "lines": [
+      [
+       "narr",
+       "todd.k130"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "courier": {
+   "start": [
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "npc",
+       "courier.k131"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "courier.k132",
+       "to": "guilt"
+      }
+     ]
+    },
+    "guilt": {
+     "lines": [
+      [
+       "npc",
+       "courier.k133"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "vera": {
+   "start": [
+    [
+     "event:false_call",
+     "false"
+    ],
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "npc",
+       "vera.k134"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "vera.k272",
+       "check": [
+        "emp",
+        2
+       ],
+       "to": "small",
+       "fail": "small_f",
+       "if": "!trust>=1"
+      },
+      {
+       "k": "vera.k135",
+       "to": "calls",
+       "if": "trust>=1"
+      },
+      {
+       "k": "vera.k209",
+       "to": "shift"
+      }
+     ]
+    },
+    "calls": {
+     "lines": [
+      [
+       "npc",
+       "vera.k136"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "false_calls",
+      "x"
+     ]
+    },
+    "false": {
+     "lines": [
+      [
+       "npc",
+       "vera.k166"
+      ]
+     ],
+     "choices": []
+    },
+    "shift": {
+     "lines": [
+      [
+       "npc",
+       "vera.k210"
+      ]
+     ],
+     "choices": []
+    },
+    "small": {
+     "lines": [
+      [
+       "npc",
+       "vera.k270"
+      ]
+     ],
+     "choices": [],
+     "trust": 1
+    },
+    "small_f": {
+     "lines": [
+      [
+       "npc",
+       "vera.k271"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "emil": {
+   "start": [
+    [
+     "event:tram_stalled",
+     "stalled"
+    ],
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "npc",
+       "emil.k137"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "emil.k275",
+       "check": [
+        "emp",
+        2
+       ],
+       "to": "small",
+       "fail": "small_f",
+       "if": "!trust>=1"
+      },
+      {
+       "k": "emil.k138",
+       "to": "part",
+       "if": "trust>=1"
+      }
+     ]
+    },
+    "part": {
+     "lines": [
+      [
+       "npc",
+       "emil.k139"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "tram_stall",
+      "x"
+     ]
+    },
+    "stalled": {
+     "lines": [
+      [
+       "npc",
+       "emil.k168"
+      ]
+     ],
+     "choices": []
+    },
+    "small": {
+     "lines": [
+      [
+       "npc",
+       "emil.k273"
+      ]
+     ],
+     "choices": [],
+     "trust": 1
+    },
+    "small_f": {
+     "lines": [
+      [
+       "npc",
+       "emil.k274"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "lior": {
+   "start": [
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "npc",
+       "lior.k140"
+      ]
+     ],
+     "choices": [
+      {
+       "k": "lior.k269",
+       "check": [
+        "emp",
+        2
+       ],
+       "to": "small",
+       "fail": "small_f",
+       "if": "!trust>=1"
+      },
+      {
+       "k": "lior.k141",
+       "to": "lost",
+       "if": "trust>=1"
+      },
+      {
+       "k": "lior.k142",
+       "to": "part"
+      }
+     ]
+    },
+    "lost": {
+     "lines": [
+      [
+       "npc",
+       "lior.k143"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "jeton_time",
+      "x"
+     ]
+    },
+    "part": {
+     "lines": [
+      [
+       "npc",
+       "lior.k144"
+      ]
+     ],
+     "choices": [],
+     "fact": [
+      "tram_stall",
+      "x"
+     ]
+    },
+    "small": {
+     "lines": [
+      [
+       "npc",
+       "lior.k267"
+      ]
+     ],
+     "choices": [],
+     "trust": 1
+    },
+    "small_f": {
+     "lines": [
+      [
+       "npc",
+       "lior.k268"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "feld": {
+   "start": [
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "npc",
+       "feld.k145"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "mara": {
+   "start": [
+    [
+     "event:mara_critical",
+     "crit"
+    ],
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "narr",
+       "mara.k146"
+      ]
+     ],
+     "choices": []
+    },
+    "crit": {
+     "lines": [
+      [
+       "narr",
+       "mara.k171"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "lash": {
+   "start": [
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "narr",
+       "lash.k147"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "ro_wife": {
+   "start": [
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "narr",
+       "ro_wife.k148"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "collector1": {
+   "start": [
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "narr",
+       "collector1.k149"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "collector2": {
+   "start": [
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "narr",
+       "collector2.k150"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  },
+  "convoy": {
+   "start": [
+    [
+     "always",
+     "main"
+    ]
+   ],
+   "nodes": {
+    "main": {
+     "lines": [
+      [
+       "narr",
+       "convoy.k151"
+      ]
+     ],
+     "choices": []
+    }
+   }
+  }
+ },
+ "barks": {
+  "trader": [
+   "bark.k215",
+   "bark.k216"
+  ],
+  "noodle": [
+   "bark.k217",
+   "bark.k218"
+  ],
+  "shopper": [
+   "bark.k219",
+   "bark.k220"
+  ],
+  "clerk": [
+   "bark.k221",
+   "bark.k222"
+  ],
+  "guard": [
+   "bark.k223",
+   "bark.k224"
+  ],
+  "cleaner": [
+   "bark.k225"
+  ],
+  "engineer": [
+   "bark.k226",
+   "bark.k227"
+  ],
+  "nurse": [
+   "bark.k228",
+   "bark.k229"
+  ],
+  "orderly": [
+   "bark.k230"
+  ],
+  "patron": [
+   "bark.k231",
+   "bark.k232"
+  ],
+  "pawnclerk": [
+   "bark.k233"
+  ],
+  "student": [
+   "bark.k234",
+   "bark.k235"
+  ],
+  "teacher": [
+   "bark.k236"
+  ],
+  "taxi": [
+   "bark.k237",
+   "bark.k238"
+  ],
+  "mechanic": [
+   "bark.k239"
+  ],
+  "dispatcher": [
+   "bark.k240"
+  ],
+  "crew": [
+   "bark.k241"
+  ],
+  "depotman": [
+   "bark.k242"
+  ],
+  "neighbor": [
+   "bark.k243",
+   "bark.k244"
+  ],
+  "busker": [
+   "bark.k245"
+  ],
+  "drifter": [
+   "bark.k246",
+   "bark.k247"
+  ],
+  "lookout": [
+   "bark.k248"
+  ],
+  "dronetech": [
+   "bark.k249"
+  ],
+  "commuter": [
+   "bark.k250",
+   "bark.k251"
+  ],
+  "resident": [
+   "bark.k252",
+   "bark.k253"
+  ]
+ },
+ "ctx": {
+  "blackout": [
+   "bark.k254",
+   "bark.k255",
+   "bark.k256"
+  ],
+  "rain": [
+   "bark.k257",
+   "bark.k258"
+  ],
+  "alarm": [
+   "bark.k259"
+  ],
+  "echo": [
+   "bark.k260"
+  ]
+ }
+}

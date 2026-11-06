@@ -1,0 +1,88 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Style test — Часовая Набережная</title>
+<style>html,body{margin:0;background:#05070c;overflow:hidden}canvas{display:block}</style></head><body>
+<script type="importmap">{"imports":{"three":"../../node_modules/three/build/three.module.js","three/addons/":"../../node_modules/three/examples/jsm/"}}</script>
+<script type="module">
+// Proof that the CC0 pack can look good: wet night street, warm lamps vs cold fog, bloom, rain. ~200 lines, no game logic.
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {EXRLoader} from 'three/addons/loaders/EXRLoader.js';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
+import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+const A='../../assets/';
+const q=new URLSearchParams(location.search); const SHOT=q.get('shot')||'a';
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.05; document.body.appendChild(renderer.domElement);
+const scene=new THREE.Scene(); const FOG=0x101a2e; scene.background=new THREE.Color(FOG); scene.fog=new THREE.FogExp2(FOG,0.034);
+const cam=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,0.1,200);
+const loader=new GLTFLoader(); const cache=new Map();
+const load=async p=>{ if(!cache.has(p)) cache.set(p,loader.loadAsync(A+'models/'+p+'.glb')); return cache.get(p); };
+async function put(p,x,y,z,ry=0,s=1,parent=scene){ const g=await load(p); const o=SkeletonUtils.clone(g.scene); o.position.set(x,y,z); o.rotation.y=ry; o.scale.setScalar(s);
+  o.traverse(m=>{ if(m.isMesh){ m.castShadow=true; m.receiveShadow=true; if(m.material&&m.material.isMeshStandardMaterial){ m.material=m.material.clone(); m.material.roughness=Math.min(1,m.material.roughness*0.9);} } }); parent.add(o); return {o,g}; }
+// ---- lighting: cold moon + warm practicals
+scene.add(new THREE.HemisphereLight(0x5a7fc0,0x2a2018,0.8));
+const moon=new THREE.DirectionalLight(0x8fb2ff,1.1); moon.position.set(-14,22,-10); moon.castShadow=true; moon.shadow.mapSize.set(2048,2048);
+Object.assign(moon.shadow.camera,{left:-22,right:22,top:22,bottom:-22,near:1,far:70}); moon.shadow.bias=-0.0006; scene.add(moon);
+new EXRLoader().load(A+'hdri/night_512.exr',t=>{t.mapping=THREE.EquirectangularReflectionMapping; scene.environment=t; scene.environmentIntensity=0.35;});
+// ---- wet cobblestone ground
+const tl=new THREE.TextureLoader(); const T=n=>{const t=tl.load(A+'textures/procedural/'+n); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(34,34); t.anisotropy=8; return t;};
+const alb=T('cobble_albedo.png'); alb.colorSpace=THREE.SRGBColorSpace;
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.MeshStandardMaterial({map:alb,normalMap:T('cobble_normal.png'),normalScale:new THREE.Vector2(0.9,0.9),roughnessMap:T('cobble_roughness.png'),roughness:0.42,metalness:0.0,envMapIntensity:1.6}));
+ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
+// puddles: near-mirror dark patches that catch lamp light
+const pud=new THREE.MeshPhysicalMaterial({color:0x04070d,roughness:0.02,metalness:0.0,clearcoat:1,envMapIntensity:1.0,transparent:true,opacity:0.82});
+[[ -2.2,0.01,3.4,2.2,1.1],[2.4,0.01,-1.2,1.6,0.9],[0.2,0.01,-5.5,2.8,1.3],[-3.5,0.01,-2,1.2,0.8]].forEach(([x,y,z,w,h])=>{const m=new THREE.Mesh(new THREE.CircleGeometry(1,28),pud); m.scale.set(w,h,1); m.rotation.x=-Math.PI/2; m.position.set(x,y,z); scene.add(m);});
+// ---- street furniture + buildings
+const lamps=[];
+async function lamp(x,z,ry=0){ await put('town_kit/lantern',x,0,z,ry,1.7); const L=new THREE.PointLight(0xffa850,14,11,1.7); L.position.set(x,2.5,z); scene.add(L); lamps.push(L);
+  const g=new THREE.Mesh(new THREE.SphereGeometry(0.11,12,8),new THREE.MeshBasicMaterial({color:new THREE.Color(0xffb866).multiplyScalar(5)})); g.position.copy(L.position); scene.add(g);
+  const h=new THREE.Sprite(new THREE.SpriteMaterial({map:tl.load(A+'textures/procedural/lamp_halo.png'),color:0xffa24a,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:0.8,fog:false})); h.scale.setScalar(2.3); h.position.copy(L.position); scene.add(h); }
+const S=2.3; // hex buildings scale to street scale
+const jobs=[
+ ()=>put('buildings_hex/building_home_a_red',-7.5,0,-3.5,Math.PI/2,S), ()=>put('buildings_hex/building_home_b_blue',-7.6,0,0.6,Math.PI/2,S),
+ ()=>put('buildings_hex/building_market_red',-7.8,0,5.0,Math.PI/2,S), ()=>put('buildings_hex/building_home_a_green',7.2,0,-4.2,-Math.PI/2,S),
+ ()=>put('buildings_hex/building_blacksmith_yellow',7.6,0,0.2,-Math.PI/2,S), ()=>put('buildings_hex/building_home_b_yellow',7.3,0,4.6,-Math.PI/2,S),
+ ()=>put('buildings_hex/building_church_blue',0,0,-14,0,S*1.5), ()=>put('buildings_hex/building_home_a_blue',-6,0,-10,0.4,S), ()=>put('buildings_hex/building_home_b_red',6.5,0,-10,-0.3,S),
+ ()=>put('town_kit/fountain_round',0,0,0.5,0,1.6), ()=>put('town_kit/stall_red',-3.8,0,2.2,Math.PI/2,1.4), ()=>put('town_kit/stall_green',3.8,0,3.0,-Math.PI/2,1.4),
+ ()=>put('town_kit/cart',2.8,0,-3.0,0.5,1.5), ()=>put('town_kit/cart_high',-3.0,0,-4.2,-0.6,1.5),
+ ()=>put('hex_props/barrel',-4.6,0,3.0,0,1.4), ()=>put('hex_props/crate_a_big',-4.7,0,1.6,0.3,1.4), ()=>put('hex_props/crate_b_small',-4.5,0,1.2,0.9,1.4), ()=>put('hex_props/barrel',4.6,0,4.5,0,1.4),
+ ()=>put('hex_props/sack',4.6,0,2.1,0.4,1.4), ()=>put('hex_props/wheelbarrow',-1.8,0,-6.5,0.8,1.6), ()=>put('nature/tree_default_dark',9.5,0,-7,0,2), ()=>put('nature/tree_oak_dark',-10,0,-7,0,2),
+ ()=>lamp(-3.4,-1.0), ()=>lamp(3.6,-1.5), ()=>lamp(-3.6,5.5), ()=>lamp(3.6,6.2), ()=>lamp(-0.2,-8.0), ()=>lamp(2,-12.5)
+];
+await Promise.all(jobs.map(j=>j()));
+// ---- people
+const mixers=[];
+async function npc(name,x,z,ry,anim='idle',s=1.35){ const {o,g}=await put('characters/'+name,x,0,z,ry,s); if(g.animations.length){ const m=new THREE.AnimationMixer(o); const c=THREE.AnimationClip.findByName(g.animations,anim)||g.animations[0]; m.clipAction(c).play(); m.update(Math.random()*2); mixers.push(m);} return o; }
+await Promise.all([ npc('npc_mini_male_c',-1.6,3.4,2.4,'idle'), npc('npc_mini_female_b',-3.0,3.2,-1.2,'idle'), npc('npc_mini_male_b',3.3,4.2,-1.8,'idle'), npc('npc_mini_female_e',1.5,-2.2,0.4,'walk'),
+  npc('npc_mini_male_d',-0.6,-4.2,3.0,'walk'), npc('npc_mini_female_c',2.2,1.2,2.7,'idle'), npc('npc_mini_male_f',-2.2,-0.2,-0.6,'sit'),
+  npc('hero_rogue_hooded',0.2,2.2,0.15,'Idle',0.62) ]);
+await npc('animal_cat',-3.0,-2.0,1.0,'Idle',0.9).catch(()=>{});
+// ---- rain
+const N=2600, pos=new Float32Array(N*6); const box={x:26,y:14,z:30}; const seed=new Float32Array(N*3);
+for(let i=0;i<N;i++){seed[i*3]=(Math.random()-.5)*box.x; seed[i*3+1]=Math.random()*box.y; seed[i*3+2]=(Math.random()-.5)*box.z-4;}
+const rg=new THREE.BufferGeometry(); rg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+const rain=new THREE.LineSegments(rg,new THREE.LineBasicMaterial({color:0x9db8e6,transparent:true,opacity:0.32,fog:true})); rain.frustumCulled=false; scene.add(rain);
+function stepRain(t){ for(let i=0;i<N;i++){ const x=seed[i*3], z=seed[i*3+2]; const y=((seed[i*3+1]-t*14)%box.y+box.y)%box.y; const k=i*6; pos[k]=x;pos[k+1]=y;pos[k+2]=z; pos[k+3]=x-0.04;pos[k+4]=y+0.55;pos[k+5]=z; } rg.attributes.position.needsUpdate=true; }
+// ---- post
+const comp=new EffectComposer(renderer); comp.addPass(new RenderPass(scene,cam));
+const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.75,0.7,0.82); comp.addPass(bloom);
+comp.addPass(new ShaderPass({uniforms:{tDiffuse:{value:null},time:{value:0}},vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+ fragmentShader:`uniform sampler2D tDiffuse;uniform float time;varying vec2 vUv;
+ float h(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
+ void main(){vec4 c=texture2D(tDiffuse,vUv); vec2 d=vUv-.5; float v=smoothstep(.95,.25,length(d)*1.15); c.rgb*=mix(.55,1.,v);
+  float l=dot(c.rgb,vec3(.299,.587,.114)); c.rgb=mix(vec3(l),c.rgb,1.12); c.rgb=mix(c.rgb*vec3(.92,.98,1.1),c.rgb*vec3(1.08,1.0,.9),smoothstep(.15,.8,l)); // teal shadows, amber highlights
+  c.rgb=max(c.rgb-.012,0.); c.rgb+=(h(vUv*vec2(1920.,1080.)+time)-.5)*.022; gl_FragColor=c;}`}));
+comp.addPass(new OutputPass());
+const camPresets={a:[[6.5,2.4,10.5],[0,1.4,-2.5]],b:[[-2.0,1.0,6.5],[1.0,1.5,-3]],c:[[8.5,4.2,2.0],[-2.5,1.2,0.5]]};
+const [cp,ct]=camPresets[SHOT]||camPresets.a; cam.position.set(...cp); cam.lookAt(...ct);
+const clock=new THREE.Clock(); let t=0;
+function frame(){ const dt=Math.min(clock.getDelta(),0.05); t+=dt; mixers.forEach(m=>m.update(dt)); stepRain(t); lamps.forEach((L,i)=>L.intensity=14*(0.93+0.07*Math.sin(t*9+i*3.1)+0.03*Math.sin(t*23+i)));
+  comp.passes[2].uniforms.time.value=t; comp.render(); requestAnimationFrame(frame); }
+window.READY=false; frame(); setTimeout(()=>window.READY=true,2500);
+addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);comp.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();});
+</script></body></html>
