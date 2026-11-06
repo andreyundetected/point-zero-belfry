@@ -77,7 +77,7 @@ export const OBJS: Record<string, ObjDef> = {
   bureau_journal: { id: 'bureau_journal', node: 'bur_in', x: 83, z: 8.5, r: 3 },
   tav_door: { id: 'tav_door', node: 'tav_door', x: -19, z: -1, r: 3 },
   bar: { id: 'bar', node: 'tav_bar', x: -31, z: -3, r: 2.6 },
-  tilda_shelf: { id: 'tilda_shelf', node: 'tilda_in', x: -23, z: -22, r: 3 },
+  tilda_shelf: { id: 'tilda_shelf', node: 'tilda_in', x: -23.4, z: -24, r: 2.6 },
 };
 export const nodePos = (id: string) => NODES[id];
 export const dist2d = (ax: number, az: number, bx: number, bz: number) => Math.hypot(ax - bx, az - bz);

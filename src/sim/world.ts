@@ -177,7 +177,7 @@ function stepNpc(w: World, n: Npc, dt: number) {
   if (n.m.escort) {
     const p = w.player; const d = dist2d(n.x, n.z, p.x, p.z);
     if (d > 1.4) { const k = Math.min(1.0 * dt, d - 1.2) / d; n.x += (p.x - n.x) * k; n.z += (p.z - n.z) * k; n.face = Math.atan2(p.x - n.x, p.z - n.z); }
-    n.floor = p.floor; return;
+    n.floor = p.floor; n.node = nearestNode(n.x, n.z, p.floor); return;
   }
   const tk = n.task;
   if (!tk) return;

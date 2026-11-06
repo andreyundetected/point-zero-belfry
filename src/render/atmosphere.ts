@@ -7,7 +7,7 @@ export const FOG_COLOR = 0x101a2e;
 export function setupAtmosphere(scene: THREE.Scene) {
   scene.background = new THREE.Color(FOG_COLOR);
   scene.fog = new THREE.FogExp2(FOG_COLOR, 0.034);
-  const hemi = new THREE.HemisphereLight(0x5a7fc0, 0x2a2018, 0.8);
+  const hemi = new THREE.HemisphereLight(0x5a7fc0, 0x2a2018, 1.0);
   scene.add(hemi);
   const moon = new THREE.DirectionalLight(0x8fb2ff, 1.1);
   moon.position.set(-14, 22, -10);
@@ -50,7 +50,7 @@ export function createPaved(x0: number, x1: number, z0: number, z1: number, tex:
   return m;
 }
 
-const pudMat = new THREE.MeshPhysicalMaterial({ color: 0x04070d, roughness: 0.02, metalness: 0, clearcoat: 1, envMapIntensity: 1.0, transparent: true, opacity: 0.82 });
+const pudMat = new THREE.MeshPhysicalMaterial({ color: 0x0b1424, roughness: 0.02, metalness: 0.1, clearcoat: 1, envMapIntensity: 2.2, transparent: true, opacity: 0.7 });
 export function puddle(x: number, z: number, w: number, h: number, rot = 0) {
   const m = new THREE.Mesh(new THREE.CircleGeometry(1, 28), pudMat);
   m.scale.set(w, h, 1); m.rotation.set(-Math.PI / 2, 0, rot); m.position.set(x, 0.035, z);
