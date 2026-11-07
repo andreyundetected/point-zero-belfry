@@ -1,19 +1,19 @@
-# style_test — доказательство, что пак даёт красивую картинку
+# style_test — эталон картинки v3
 
-Две автономные страницы (без игровой логики):
-- `index.html` — ночная мокрая улица (`?shot=a|b|c` — три ракурса).
-- `tavern_interior.html` — разрез входимого интерьера таверны.
+`noir.html` — улица Затона ночью, вид от первого лица:
+- 20% цвета, красный акцент через маску (дверь, ключ на бочке, цифры Створки)
+- неровная мостовая (`groundH`), бордюр из отдельных камней, рельсы, люк, камешки, лужи только в низинах
+- газовые фонари с ореолами, окна светятся изнутри
+- люди `people/modular` в перекраске 1940-х, шляпы кодом
+- Створка в левой руке
 
 ## Запуск
 Из корня репо:
 ```bash
-npm i three            # нужен только three
-npx vite --open /tools/style_test/index.html
-# или: python3 -m http.server 8000  → http://localhost:8000/tools/style_test/index.html
+npm i three
+npx vite --open /tools/style_test/noir.html
 ```
-Импорт-мап в страницах указывает на `../../node_modules/three`, ассеты — на `../../assets/`. Не перекладывай файлы.
+Импорт-мап указывает на `../../node_modules/three`, ассеты — на `../../assets/`. Клик — захват мыши, WASD — ходить. `?shot=a|b|c|d`, `?dbg=1` — маска акцента.
 
 ## Что копировать в игру
-Блок «lighting», «ground», «puddles», «rain», «post» из `index.html`. Масштабы: town_kit ×1.4, hex-здания ×2.3, мини-NPC ×1.35, герой ×0.62.
-
-Эталонные скриншоты: `docs/screenshots/proof_*.png`.
+Блоки `groundH`, ground, curb, puddles, lamps, house (окна), people/hat, device, rain, mask, post. Подробно: `docs/03_ASSET_GUIDE.md` §7.

@@ -1,0 +1,29 @@
+{
+  "name": "okno-zaton",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "«Окно» — ночь в Затоне, 1947. Стелс-детектив с перемещением во времени.",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 3000",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 3000",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "sim:baseline": "tsx tools/sim_baseline.ts",
+    "sim:solve": "tsx tools/sim_solve.ts",
+    "sim:hash": "tsx tools/sim_hash.ts",
+    "shot": "node tools/shot_game.cjs"
+  },
+  "dependencies": {
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0",
+    "playwright": "^1.65.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0"
+  }
+}
