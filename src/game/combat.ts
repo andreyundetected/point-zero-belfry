@@ -10,7 +10,7 @@ export interface Dyn { x: number; y: number; z: number; ry: number; a: string; h
 const HOSTILE_ROLES = new Set(['cord', 'guard']);
 const HOSTILE_IDS = new Set(['ignat', 'lovchiy', 'scar', 'cord']);
 export class Combat {
-  dyn = new Map<string, Dyn>(); aiming = false; reloadT = 0; fireCool = 0; suspicion = new Map<string, number>(); hits = 0; muzzle = 0;
+  dyn = new Map<string, Dyn>(); aiming = false; lastShooter = ''; reloadT = 0; fireCool = 0; suspicion = new Map<string, number>(); hits = 0; muzzle = 0;
   constructor(public g: Game) {
     addEventListener('mousedown', e => { if (!document.pointerLockElement) return; if (e.button === 2) this.aiming = true; if (e.button === 0) this.shoot(); });
     addEventListener('mouseup', e => { if (e.button === 2) this.aiming = false; });
@@ -56,7 +56,7 @@ export class Combat {
     for (const [id, d] of this.dyn) {
       if (d.mode !== 'hunt') continue; const dx = b.x - d.x, dz = b.z - d.z, dist = Math.hypot(dx, dz); d.ry = Math.atan2(dx, dz);
       if (dist > 6) { const sp = 2.6 * dt; d.x += dx / dist * sp; d.z += dz / dist * sp; d.a = 'run'; } else d.a = 'shoot';
-      d.cool -= dt; if (d.cool <= 0 && dist < 18) { d.cool = 1.6 + (hashId(id) % 5) * 0.2; const lit = this.litAt(b.x, b.z); const hitP = 0.35 * lit * (g.player.crouching ? 0.6 : 1); g.snd.shot(); if (Math.random() < hitP) { this.hits++; g.hurt(0.8); if (this.hits >= 2) { s.dead = true; g.finish('dead'); } } }
+      d.cool -= dt; if (d.cool <= 0 && dist < 18) { d.cool = 1.6 + (hashId(id) % 5) * 0.2; const lit = this.litAt(b.x, b.z); const hitP = 0.35 * lit * (g.player.crouching ? 0.6 : 1); g.snd.shot(); if (Math.random() < hitP) { this.hits++; this.lastShooter = id; g.hurt(0.8); if (this.hits >= 2) { s.dead = true; g.finish('dead'); } } }
     }
     // suspicion by vision cones (50 deg, 4-14 m depending on light)
     if (!s.flags.has('alarm')) for (const d of NPCS) { if (!this.hostile(d)) continue; const p = g.npcs.pose(d.id); if (!p || p.hidden || p.a === 'die') continue;

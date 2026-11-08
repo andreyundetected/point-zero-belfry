@@ -5,7 +5,7 @@ import { buildCanal, buildPiers, buildWater } from './canal';
 import { blocks, initCity, placed, put, row } from './city';
 import { world } from './colliders';
 import { buildGround } from './ground';
-import { lamp } from './lamps';
+import { lamp, finalizeLamps } from './lamps';
 import { BOUNDS, BRIDGE, QUAY_Z, ROADS } from './layout';
 import { PropField } from './props';
 import { buildInteriors, makeDoor, makeWorldDoor } from './interiors';
@@ -135,6 +135,7 @@ export function buildZaton(scene: THREE.Scene): Zaton {
     props.add('village_q/rock_' + (1 + (i % 3)), x, z, { ry: hash(i, 34) * 6, s: 0.06 + hash(i, 35) * 0.1 });
     void rd;
   }
+  finalizeLamps(scene);
   bt.flush(scene);
   buildGround(scene); buildWater(scene); buildDecor(scene, props);
   const ready = Promise.all([props.build(scene), interiorProps.build(scene)]).then(() => {});

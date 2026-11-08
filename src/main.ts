@@ -37,7 +37,7 @@ if (q.get('y')) player.body.y = q.get('y') === 'roof' ? ROOF_Y() : +q.get('y')!;
 if (q.get('gun')) { game.s.hasGun = true; game.s.mag = 6; game.s.ammo = 18; }
 const clock = new THREE.Clock(); let t = 0;
 declare global { interface Window { done?: boolean; info?: string; FREEZE?: boolean; player?: Player; game?: Game; dbg?: any } }
-window.player = player; window.game = game; window.dbg = { createPerson, scene, THREE, fmt };
+window.player = player; window.game = game; (window as any).renderer = renderer; window.dbg = { createPerson, scene, THREE, fmt };
 let lastShown = '';
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05); t += dt;

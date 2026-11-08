@@ -12,6 +12,8 @@ import { orven, orvenKey, tildaAlley, tildaPier, ned, nedAfter, fern, lidia, ste
 import { agataAfter, agataBefore, agataFight, ignatTable, scarHunt, fomaDoor, fomaCaught, fomaAfter } from './d_tavern';
 import { gaylWounded, gaylWindow, guardGate, agnia, anna, anka, guardCart, safeConv } from './d_east';
 import { placed } from '../world/city';
+import * as THREE from 'three';
+import { addMark } from '../world/marks';
 import { lukyan, lukyanDying, tikhonDoor, guardPier } from './d_pier';
 import { finale } from './d_finale';
 
@@ -69,6 +71,16 @@ export const SCENES: Scene[] = [
 const shown = new Set<number>();
 
 export function registerWorldItems(g: Game) {
+  // visible stakes on the players' table, and the red accent on whatever the current thread points at
+  { const steel = new THREE.MeshStandardMaterial({ color: 0x8a8a88, metalness: 0.8, roughness: 0.35 }), brass = new THREE.MeshStandardMaterial({ color: 0xb89a50, metalness: 0.8, roughness: 0.3 }), cop = new THREE.MeshStandardMaterial({ color: 0xb87333, metalness: 0.8, roughness: 0.35 });
+    const mk = (geo: THREE.BufferGeometry, mat: THREE.Material, dx: number, dz: number, ry = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(tableTop.x + dx, tableTop.y + 0.012, tableTop.z + dz); m.rotation.y = ry; g.scene.add(m); return m; };
+    addMark(mk(new THREE.BoxGeometry(0.17, 0.02, 0.045), steel, 0.6, 0.1, 0.4), c => c.s.knows('saw_key_lost') || c.s.knows('know_safe'), c => c.s.t >= at(22, 4, 32) && c.s.t < at(22, 12) && !c.s.worldItems.has('key') && c.s.pocket !== 'key');
+    addMark(mk(new THREE.CylinderGeometry(0.035, 0.035, 0.01, 14), cop, 0, 0.4), c => c.s.knows('saw_token_table'), c => c.s.t >= at(22, 4, 32) && c.s.t < at(22, 6, 12) && !c.s.worldItems.has('jeton'));
+    addMark(mk(new THREE.CylinderGeometry(0.03, 0.03, 0.014, 14), brass, -1.0, 0), c => false, c => c.s.t >= at(22, 2, 25) && c.s.t < at(22, 12) && !c.s.worldItems.has('watch')); }
+  { const cp = loc('tikhon', -2.6, -0.8), hook = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.09, 14), new THREE.MeshStandardMaterial({ color: 0x1c1c1e })); hook.position.set(cp.x, floorY('tikhon') + 1.55, cp.z); g.scene.add(hook); addMark(hook, c => c.s.thread === 'pier3' || c.s.thread === 'tikhon', c => !c.s.worldItems.has('cap') && c.s.pocket !== 'cap'); }
+  addMark(world2.bookMesh, c => c.s.thread === 'anna' || c.s.thread === 'wagon', () => true);
+  addMark(world2.safeMesh, c => c.s.pocket === 'key' || c.s.thread === 'safe' || c.s.thread === 'safe_early', () => true);
+  { const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.3, 8), new THREE.MeshStandardMaterial({ color: 0x555555 })); pin.rotation.z = Math.PI / 2; pin.position.set(52.2, groundH(52.2, -57.3) + 0.5, -57.3); g.scene.add(pin); addMark(pin, c => c.s.thread === 'wagon' || c.s.knows('know_guard_smoke'), c => !c.s.flags.has('wagonPinPulled') && c.s.t >= at(22, 15) && c.s.t < at(22, 44)); }
   const need = (c: Game, id: string) => !c.s.worldItems.has(id);
   const take = (c: Game, id: string, item: 'watch' | 'jeton' | 'key' | 'cap' | 'note', label: string, flag?: () => void) => { c.s.worldItems.add(id); if (c.s.pocket && c.s.pocket !== item) c.hud.toast(`В Кармане уже было: ${c.s.pocket}. Оно останется здесь.`, 3); c.give(item); flag?.(); c.hud.bark(label, true); };
   const watchCheck = (c: Game): boolean => { // is somebody at the table looking at you? (spec 8.2)

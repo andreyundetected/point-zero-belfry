@@ -27,6 +27,7 @@ import { getLang, pick, setLang } from './strings';
 import { CONVS, pickConv, registerWorldItems, onBark } from '../content';
 import { Combat } from './combat';
 import { Pilot } from './pilot';
+import { updateMarks } from '../world/marks';
 import { addInteract } from '../world/interiors';
 
 export class Game implements StvHost, Ctx {
@@ -86,7 +87,7 @@ export class Game implements StvHost, Ctx {
     for (let r = 0.3; r <= 1.5; r += 0.3) for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (ok(px, pz, y)) return { x: px, z: pz, y }; }
     return null;
   }
-  paused = false; hadLock = false; holdT = 0; holding = false;
+  markT = 0; paused = false; hadLock = false; holdT = 0; holding = false;
   /** spec 2.2: hold the jump button for 1 real second = preview; released earlier = cancel; held through = jump */
   holdBegin() { if (this.holding || this.jumpBusy) return; this.holding = true; this.holdT = 0; this.showGhosts(this.targetT); }
   holdEnd() { if (!this.holding) return; this.holding = false; this.hideGhosts(); }
@@ -199,7 +200,7 @@ export class Game implements StvHost, Ctx {
     updateDoors(dt);
     // npcs
     this.npcs.update(s.t, b.x, b.z, dt, b.y, undefined, id => this.combat.override(id));
-    this.combat.update(dt); this.pilot.update(dt);
+    this.combat.update(dt); this.pilot.update(dt); this.markT -= dt; if (this.markT <= 0) { this.markT = 0.25; updateMarks(this); }
     if (this.shakeT > 0) { this.shakeT -= dt; const k = this.shakeA * Math.max(0, this.shakeT); this.cam.position.x += (Math.random() - 0.5) * 0.12 * k; this.cam.position.y += (Math.random() - 0.5) * 0.12 * k; }
     // events seen
     for (const e of EVENTS) if (s.t >= e.t && s.t < e.t + 30 && !s.seenEvents.has(e.id) && Math.hypot(e.x - b.x, e.z - b.z) < (e.r ?? 55)) { s.seenEvents.add(e.id); onBark(this, 'event:' + e.id); }
@@ -217,6 +218,7 @@ export class Game implements StvHost, Ctx {
     return null;
   }
   finish(ending: string) { this.s.ended = ending; this.frozen = true; document.exitPointerLock?.(); this.hud.fade(true, 1200); setTimeout(() => this.showEnding(ending), 1300); }
+  placeName(): string { const m: Record<string, string> = { tavern: 'таверна «Якорь»', orven: 'лавка Орвена', foma: 'лавка Фомы', contora: 'курьерская контора', priyut: 'приют св. Лукии', tikhon: 'дом Тихона', cellar: 'подвал башни' }; return m[this.sceneInside] ?? 'Затон'; }
   /** the final screen (spec 13.3 / 15.3): neutral facts, no judgement */
   facts(): string[] {
     const f = this.s.flags, ru = getLang() === 'ru'; const L: string[] = []; const has = (n: any) => f.has(n);
@@ -238,7 +240,7 @@ export class Game implements StvHost, Ctx {
       otlozhen: ['Отложен', ru ? 'Катер у пирса 7. Выстрел. Тьма. Дождь.' : 'The launch at pier 7. A shot. Darkness. Rain.'],
       utro: ['Утро', ru ? 'Катер уходит в гавань. Город горит. Рассвет нескоро.' : 'The launch leaves for the harbour. The city burns. Dawn is far.'],
     };
-    const [h, p] = T[ending] ?? [ending, '']; const facts = ending === 'otlozhen' || ending === 'utro' ? `<h3 style="font-weight:400;color:#8d887c">${ru ? 'Что изменилось этой ночью' : 'What changed tonight'}</h3><ul>${this.facts().map(x => `<li>${x}</li>`).join('')}</ul>` : `<p>${fmt(this.s.t, true)}</p>`;
+    const [h, p] = T[ending] ?? [ending, '']; const facts = ending === 'otlozhen' || ending === 'utro' ? `<h3 style="font-weight:400;color:#8d887c">${ru ? 'Что изменилось этой ночью' : 'What changed tonight'}</h3><ul>${this.facts().map(x => `<li>${x}</li>`).join('')}</ul>` : `<p>${fmt(this.s.t, true)}${ending === 'dead' ? ` · ${this.placeName()} · ${ru ? 'стрелял' : 'shot by'}: ${this.combat.lastShooter ? (NPCS.find(n => n.id === this.combat.lastShooter) ? pick(NPCS.find(n => n.id === this.combat.lastShooter)!.name) : this.combat.lastShooter) : '—'}` : ''}</p>`;
     e.innerHTML = `<h1>${h}</h1><p>${p}</p>${facts}<p><a href="" style="color:#e01818">${ru ? 'Новая игра' : 'New game'}</a></p>`;
   }
 }

@@ -87,6 +87,8 @@ function clothe(root: THREE.Object3D, o: Look): THREE.SkinnedMesh {
   for (let i = 0; i < p2.count; i++) { const f = off[region[i]] * unit; p2.setXYZ(i, p2.getX(i) + nor.getX(i) * f, p2.getY(i) + nor.getY(i) * f, p2.getZ(i) + nor.getZ(i) * f); }
   sh.setIndex([...groups[0], ...groups[1], ...groups[2]]); sh.clearGroups(); sh.addGroup(0, groups[0].length, 0); sh.addGroup(groups[0].length, groups[1].length, 1); sh.addGroup(groups[0].length + groups[1].length, groups[2].length, 2);
   const shell = new THREE.SkinnedMesh(sh, mats); shell.bind(sk, b.bindMatrix); shell.castShadow = true; shell.frustumCulled = false; b.parent!.add(shell);
+  // the original body keeps only skin that shows (head, neck, hands): the clothed parts are covered by the shell, so halve the triangle count
+  { const keep: number[] = []; for (let t = 0; t < idx.length; t += 3) if (!region[idx[t]] && !region[idx[t + 1]] && !region[idx[t + 2]]) keep.push(idx[t], idx[t + 1], idx[t + 2]); const hg = geo.clone(); hg.setIndex(keep); hg.clearGroups(); b.geometry = hg; }
   root.traverse((m: any) => { if (m.isSkinnedMesh && m !== b && m !== shell && !/Hair|hair|lash/.test(m.material?.name || '')) m.visible = false; });
   // body skin stays the model's own; tint hair if asked
   if (o.hair !== undefined) root.traverse((m: any) => { if (m.isMesh && /Hair|hair/.test(m.material?.name || '')) { m.material = m.material.clone(); m.material.color.setHex(o.hair!); } });

@@ -105,6 +105,7 @@ export function buildInteriors(scene: THREE.Scene, bt: Batcher, pf: PropField) {
     F.light('contora', -1.0, -4.0, 0, 2.4, 0xffd9a0, 7, 10); F.light('contora', 0.5, -5.0, 1, 2.4, 0xffd9a0, 6, 9);
     F.box(wood, 1.8, 0.78, 0.9, -2.2, -6.2, 1); F.prop('dungeon/chair', -2.2, -7.0, 1, { h: 0.95, rot: Math.PI, collide: false });
     const safe = F.box(iron, 0.9, 1.1, 0.8, -4.2, -7.0, 1); world2.safe = safe;
+    { const m = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.6), iron); const sp = loc('contora', -3.7, -7.0); m.position.set(sp.x, safe.y - 0.55, sp.z); m.rotation.y = SITES.contora.ry; scene.add(m); world2.safeMesh = m; }
     F.box(wood, 1.2, 1.9, 0.4, 0.5, -7.7, 1); F.box(wood, 0.7, 1.5, 0.5, 4.2, -7.7, 1);
   }
   // ---------------- PRIYUT
@@ -113,7 +114,8 @@ export function buildInteriors(scene: THREE.Scene, bt: Batcher, pf: PropField) {
     // partition between the hall and mother Agnia's office (doorway at lz -2.0)
     F.box(M.plaster, 0.25, 3.0, 1.05, -2.5, -0.85, 0, 0); F.box(M.plaster, 0.25, 3.0, 6.0, -2.5, -5.65, 0, 0);
     F.box(wood, 1.8, 0.78, 0.9, -7, -5.2); F.prop('dungeon/chair', -7, -6.1, 0, { h: 0.95, collide: false, rot: Math.PI }); F.box(wood, 2.2, 1.9, 0.45, -10.3, -8.4);
-    const book = F.box(new THREE.MeshStandardMaterial({ color: 0x2a2018, roughness: 0.9 }), 0.55, 0.07, 0.4, -7, -5.1, 0, 0.78, { collide: false }); world2.book = book;
+    const book = F.box(new THREE.MeshStandardMaterial({ color: 0x2a2018, roughness: 0.9 }), 0.01, 0.01, 0.01, -7, -5.1, 0, 0.78, { collide: false }); world2.book = book;
+    { const m = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.07, 0.4), new THREE.MeshStandardMaterial({ color: 0x2a2018, roughness: 0.9 })); m.position.set(book.x, book.y + 0.03, book.z); m.rotation.y = SITES.priyut.ry; scene.add(m); world2.bookMesh = m; }
     F.light('priyut', -7, -4.5, 0, 2.3, 0xffc890, 6, 8); F.light('priyut', 3.5, -4.0, 0, 2.3, 0xffd0a0, 6, 10);
     for (const lz of [-4.2, -6.5]) F.box(wood, 3.5, 0.45, 0.5, 8.8, lz, 0, 0); // hall benches
     // dormitory (storey 1): 7 bunks = 14 beds, a candle

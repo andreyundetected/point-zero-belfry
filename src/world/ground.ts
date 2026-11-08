@@ -24,17 +24,15 @@ export function buildGround(scene: THREE.Scene) {
   const nx = Math.round((x1 - x0) / CS), nz = Math.round((z1 - z0) / CS);
   const H = new Float32Array((nx + 1) * (nz + 1));
   for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) H[j * (nx + 1) + i] = groundH(x0 + i * CS, z0 + j * CS);
-  const mats: Record<string, { mat: THREE.Material; tile: number; pos: number[]; uv: number[] }> = {
-    road: { mat: M.setts, tile: 3.2, pos: [], uv: [] }, plaza: { mat: M.setts, tile: 3.2, pos: [], uv: [] },
-    walk: { mat: M.flags, tile: 2.4, pos: [], uv: [] }, flags: { mat: M.flags, tile: 2.4, pos: [], uv: [] },
-    yard: { mat: yardMat, tile: 3, pos: [], uv: [] }, grass: { mat: grassMat, tile: 3, pos: [], uv: [] },
-  };
+  const MAT: Record<string, { mat: THREE.Material; tile: number }> = { road: { mat: M.setts, tile: 3.2 }, plaza: { mat: M.setts, tile: 3.2 }, walk: { mat: M.flags, tile: 2.4 }, flags: { mat: M.flags, tile: 2.4 }, yard: { mat: yardMat, tile: 3 }, grass: { mat: grassMat, tile: 3 } };
+  const mats: Record<string, { mat: THREE.Material; tile: number; pos: number[]; uv: number[] }> = {}; // one bucket per material and 32 m chunk (frustum culling)
+  const bucket = (k: string, cx: number, cz: number) => { const key = k + '|' + Math.floor(cx / 32) + '|' + Math.floor(cz / 32); return mats[key] ??= { ...MAT[k], pos: [], uv: [] }; };
   for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
     const cx = x0 + (i + 0.5) * CS, cz = z0 + (j + 0.5) * CS;
     let s: Surface = surfaceAt(cx, cz); if (s === 'water') continue;
     if (world.inside(cx, cz, ['building'], -0.3)) continue;
     const key = s === 'yard' && H[j * (nx + 1) + i] > 1.2 ? 'grass' : s;
-    const m = mats[key], a = j * (nx + 1) + i, b = a + 1, c = a + nx + 1, d = c + 1;
+    const m = bucket(key, cx, cz), a = j * (nx + 1) + i, b = a + 1, c = a + nx + 1, d = c + 1;
     const xa = x0 + i * CS, xb = xa + CS, za = z0 + j * CS, zb = za + CS;
     const t = m.tile;
     m.pos.push(xa, H[a], za, xa, H[c], zb, xb, H[b], za, xb, H[b], za, xa, H[c], zb, xb, H[d], zb);

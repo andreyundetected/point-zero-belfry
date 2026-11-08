@@ -7,6 +7,7 @@ import { floorY, SITES, loc } from '../sim/sites';
 import { groundH, hash } from './terrain';
 import { putGroup } from './city';
 import { addInteract, makeDoor, roomLights } from './interiors';
+import { addMark } from './marks';
 
 // Foma's pawnshop and its neighbour D8: intact shells (22:00-22:39) and charred ruins (22:40+) that you can walk through (spec 6.4).
 export const groups: Record<string, THREE.Object3D> = {};
@@ -40,7 +41,7 @@ export function buildFomaAndD8(scene: THREE.Scene) {
   box(M.wood, 5.2, 1.0, 0.5, -0.4, -2.6); for (let k = 0; k < 14; k++) box(M.iron, 0.03, 1.2, 0.03, -2.9 + k * 0.4, -2.6, 1.0, false); box(M.iron, 5.2, 0.03, 0.03, -0.4, -2.6, 2.1, false);  // counter with the grille
   box(M.plaster, 3.9, 3.0, 0.25, -1.1, -5.15); box(M.plaster, 1.1, 3.0, 0.25, 2.8, -5.15);                                                               // partition, doorway at lx 1.35..2.25
   for (const lx of [-2.6, -0.8, 1.0]) box(M.wood, 1.5, 2.0, 0.4, lx, -4.8, 0); box(M.wood, 0.9, 0.5, 0.6, 2.8, -7.2); box(M.wood, 0.8, 1.7, 0.4, 0.2, -7.4);
-  const board = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.05, 0.4), new THREE.MeshStandardMaterial({ color: 0x6a5a40, roughness: 1 })); const bp = FOMA_SPOT(); board.position.set(bp.x, fy + 0.03, bp.z); gi.add(board);
+  const board = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.05, 0.4), new THREE.MeshStandardMaterial({ color: 0x6a5a40, roughness: 1 })); const bp = FOMA_SPOT(); board.position.set(bp.x, fy + 0.03, bp.z); gi.add(board); addMark(board, (c: any) => c.s.thread === 'gun' || c.s.knows('know_gun_under_floor'), (c: any) => !c.s.flags.has('gunTaken'));
   roomLights.push({ room: 'foma', x: L(0, -2.2).x, y: fy + 2.4, z: L(0, -2.2).z, color: 0xffc080, intensity: 6, dist: 8, on: (t: number, fl: any) => t < 29 * 60 && !fl.has('lampsShot') });
   bF.flush(gi); world.tagFrom(i0, 'fomaIntact');
   const pf = new PropField(); const sh = (p: string, lx: number, lz: number, o: any) => { const q = L(lx, lz); pf.add(p, q.x, q.z, { collide: false, ...o }); };
