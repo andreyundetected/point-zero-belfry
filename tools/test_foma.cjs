@@ -4,7 +4,7 @@ const { chromium } = require('playwright'); const { createServer } = require('vi
   const srv = await createServer({ server: { port: 5192, host: '127.0.0.1' }, logLevel: 'error' }); await srv.listen();
   const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] }); const p = await b.newPage({ viewport: { width: 400, height: 300 } });
   const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
-  await p.goto('http://127.0.0.1:5192/?noprologue=1&t=45:00&at=-40,-17,-40,-21'); await p.waitForFunction('window.done', null, { timeout: 300000 });
+  await p.addInitScript(() => { try { localStorage.setItem('okno.lang', 'ru'); } catch (e) {} }); await p.goto('http://127.0.0.1:5192/?noprologue=1&t=45:00&at=-40,-17,-40,-21'); await p.waitForFunction('window.done', null, { timeout: 300000 });
   const r = await p.evaluate(async () => {
     const g = window.game, P = window.player, o = {}; const spot = { x: -40 + 0 }; for (let i = 0; i < 30; i++) g.update(1 / 60);
     o.ruin = g.fomaRuin; o.t0 = g.s.t.toFixed(0);

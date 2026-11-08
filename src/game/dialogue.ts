@@ -1,6 +1,8 @@
 import { GameState, ItemId } from './state';
 import { FlagName } from '../sim/flags';
 import { getLang, tr } from './strings';
+import { EN } from '../content/en';
+const en = (ru: string, e?: string) => (getLang() === 'en' ? (e ?? EN[ru] ?? ru) : ru);
 
 // ---------- content types
 export interface Line { who: string; ru: string; en?: string; act?: boolean; }
@@ -49,7 +51,7 @@ export class DialogueUI {
   show(l: Line): Promise<void> {
     this.open = true; this.root.style.display = 'block';
     const who = l.act ? '' : `<div class="who">${nameOf(l.who)}</div>`;
-    this.root.innerHTML = `${who}<div class="txt${l.act ? ' act' : ''}">${(getLang() === 'en' && l.en) || l.ru}</div><div class="more">${tr('continue')} ▸</div>`;
+    this.root.innerHTML = `${who}<div class="txt${l.act ? ' act' : ''}">${en(l.ru, l.en)}</div><div class="more">${tr('continue')} ▸</div>`;
     return new Promise(r => { this.resolve = r; });
   }
   choose(cs: { text: string; glyph?: string }[]): Promise<number> {
@@ -74,7 +76,7 @@ export class DialogueRunner {
       if (n.choices && n.choices.length) {
         const vis: Choice[] = n.choices.filter(c => !(c.hide && used.has(node + ':' + c.ru)) && (!c.if || c.if(this.ctx)) && (!c.know || this.ctx.knows(c.know)));
         if (!vis.length) break;
-        const i: number = await this.ui.choose(vis.map((c: Choice) => ({ text: (getLang() === 'en' && c.en) || c.ru, glyph: c.know ? c.kt ?? '' : undefined })));
+        const i: number = await this.ui.choose(vis.map((c: Choice) => ({ text: en(c.ru, c.en), glyph: c.know ? c.kt ?? '' : undefined })));
         const c: Choice = vis[i]; used.add(node + ':' + c.ru); c.fx?.(this.ctx);
         // the player's own line is spoken aloud
         await this.ui.show({ who: 'tik', ru: c.ru, en: c.en }); this.ctx.advance(3);

@@ -23,7 +23,7 @@ import { groundH } from '../world/terrain';
 import { NPCS } from '../sim/npcs';
 import { VEHICLES } from '../sim/vehicles';
 import { Vehicles } from './vehicles';
-import { getLang, pick } from './strings';
+import { getLang, pick, setLang } from './strings';
 import { CONVS, pickConv, registerWorldItems, onBark } from '../content';
 import { Combat } from './combat';
 import { Pilot } from './pilot';
@@ -128,6 +128,7 @@ export class Game implements StvHost, Ctx {
     if (this.ui.open || this.s.ended) return;
     if (e.code === 'Tab') { e.preventDefault(); this.toggleStvorka(); return; }
     if (this.open) { if (e.code === 'Enter' && !e.repeat) this.holdBegin(); if (e.code === 'KeyB') { this.s.bookmarks.push({ t: this.s.t, label: fmt(this.s.t) }); this.stv.render(); } if (e.code === 'Escape') this.toggleStvorka(); return; }
+    if (e.code === 'KeyL') { setLang(getLang() === 'ru' ? 'en' : 'ru'); this.hud.toast(getLang() === 'ru' ? 'Язык: русский' : 'Language: English', 1.5); this.hud.refresh(); }
     if (e.code === 'KeyT') this.waitHeld = true;
     if (e.code === 'KeyB') { this.s.bookmarks.push({ t: this.s.t, label: fmt(this.s.t) }); this.hud.toast('Закладка ' + fmt(this.s.t), 1.5); }
     if (e.code === 'KeyE') this.useNearest();

@@ -4,7 +4,7 @@ const { chromium } = require('playwright'); const { createServer } = require('vi
   const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] }); const p = await b.newPage({ viewport: { width: 480, height: 300 } });
   const errs = []; p.on('pageerror', e => errs.push('PAGEERR ' + e.message)); p.on('console', m => { if (m.type() === 'error') errs.push('console.error ' + m.text()); });
   p.on('response', r => { if (r.status() >= 400) errs.push('HTTP ' + r.status() + ' ' + r.url()); });
-  await p.goto('http://127.0.0.1:5196/?noprologue=1'); await p.waitForFunction('window.done', null, { timeout: 300000 });
+  await p.addInitScript(() => { try { localStorage.setItem('okno.lang', 'ru'); } catch (e) {} }); await p.goto('http://127.0.0.1:5196/?noprologue=1'); await p.waitForFunction('window.done', null, { timeout: 300000 });
   const out = await p.evaluate(async () => { const g = window.game, P = window.player; window.FREEZE = true; const o = {};
     for (let i = 0; i < 120; i++) g.update(1 / 60);
     o.start = [P.body.x.toFixed(1), P.body.y.toFixed(2), P.body.z.toFixed(1), g.s.t.toFixed(1)];

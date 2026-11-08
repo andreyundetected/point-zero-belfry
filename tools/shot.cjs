@@ -11,7 +11,7 @@ const { chromium } = require('playwright'); const { createServer } = require('vi
     const p = await b.newPage({ viewport: { width: 1600, height: 700 } });
     p.on('response', r => { if (r.status() >= 400) console.log('HTTP', r.status(), r.url()); });
     p.on('pageerror', e => console.log('ERR', e.message)); p.on('console', m => { const t = m.text(); if (!/vite|deprecated|PCFSoft/.test(t)) console.log('console', t); });
-    await p.goto('http://127.0.0.1:5199' + url);
+    await p.addInitScript(() => { try { localStorage.setItem('okno.lang', 'ru'); } catch (e) {} }); await p.goto('http://127.0.0.1:5199' + url);
     await p.waitForFunction('window.done', null, { timeout: 300000 });
     await p.waitForTimeout(+(process.env.SHOT_WAIT||7000)); await p.evaluate('window.FREEZE=true'); await p.waitForTimeout(600);
     const data = await p.evaluate(() => document.querySelector('canvas').toDataURL('image/png'));

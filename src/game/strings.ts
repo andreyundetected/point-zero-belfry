@@ -1,7 +1,7 @@
 // All UI strings are keys. Russian is the source language; English is kept short and conversational.
 export type Lang = 'ru' | 'en';
 export const UI: Record<string, { ru: string; en: string }> = {
-  'hint.controls': { ru: 'WASD ходить · Shift бег · Пробел прыжок · C присесть · E действие · Tab Створка · T ждать', en: 'WASD move · Shift run · Space jump · C crouch · E use · Tab Device · T wait' },
+  'hint.controls': { ru: 'WASD ходить · Shift бег · Пробел прыжок · C присесть · E действие · Tab Створка · T ждать · L язык', en: 'WASD move · Shift run · Space jump · C crouch · E use · Tab Device · T wait · L language' },
   'tab.time': { ru: 'Время', en: 'Time' }, 'tab.thread': { ru: 'Нить', en: 'Thread' }, 'tab.people': { ru: 'Люди', en: 'People' },
   'tab.map': { ru: 'Карта', en: 'Map' }, 'tab.pocket': { ru: 'Карман', en: 'Pocket' }, 'tab.messages': { ru: 'Сообщения', en: 'Messages' }, 'tab.branch': { ru: 'Эта ветка', en: 'This branch' },
   'jump': { ru: 'Прыжок', en: 'Jump' }, 'jump.hold': { ru: 'Удерживай — предпросмотр', en: 'Hold to preview' },
@@ -21,8 +21,8 @@ export const UI: Record<string, { ru: string; en: string }> = {
   'continue': { ru: 'Дальше', en: 'Continue' },
   'cant.wait': { ru: 'Рядом враг — ждать нельзя', en: 'An enemy is watching — no waiting' },
 };
-let lang: Lang = 'ru';
-export const setLang = (l: Lang) => { lang = l; };
+let lang: Lang = ((): Lang => { try { return (localStorage.getItem('okno.lang') as Lang) || (navigator.language.startsWith('ru') ? 'ru' : 'en'); } catch { return 'ru'; } })();
+export const setLang = (l: Lang) => { lang = l; try { localStorage.setItem('okno.lang', l); } catch { /* ignore */ } };
 export const getLang = () => lang;
 export const tr = (k: string) => UI[k]?.[lang] ?? UI[k]?.ru ?? k;
 export const pick = (o: { ru: string; en: string }) => o[lang] || o.ru;

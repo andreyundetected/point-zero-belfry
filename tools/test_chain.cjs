@@ -4,7 +4,7 @@ const { chromium } = require('playwright'); const { createServer } = require('vi
   const srv = await createServer({ server: { port: 5190, host: '127.0.0.1' }, logLevel: 'error' }); await srv.listen();
   const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] }); const p = await b.newPage({ viewport: { width: 400, height: 300 } });
   const errs = []; p.on('pageerror', e => errs.push('PAGE ' + e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
-  await p.goto('http://127.0.0.1:5190/?noprologue=1&gun=1'); await p.waitForFunction('window.done', null, { timeout: 300000 });
+  await p.addInitScript(() => { try { localStorage.setItem('okno.lang', 'ru'); } catch (e) {} }); await p.goto('http://127.0.0.1:5190/?noprologue=1&gun=1'); await p.waitForFunction('window.done', null, { timeout: 300000 });
   const res = await p.evaluate(async () => {
     const g = window.game, P = window.player, out = [], k = c => window.dispatchEvent(new KeyboardEvent('keydown', { code: c }));
     const mm = (m, s = 0) => m * 60 + s; const tick = (n = 5) => { for (let i = 0; i < n; i++) g.update(1 / 60); };

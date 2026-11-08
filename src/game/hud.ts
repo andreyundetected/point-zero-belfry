@@ -22,4 +22,5 @@ export class Hud {
     if (this.threadT > 0 && (this.threadT -= dt) <= 0) $('thread').style.opacity = '0';
   }
   lang() { return getLang(); }
+  refresh() { $('hint').textContent = tr('hint.controls'); }
 }
