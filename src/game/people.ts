@@ -17,7 +17,7 @@ const ONCE = new Set(['die', 'hit', 'hit2', 'pickup', 'interact', 'punch', 'cons
 
 export interface Look {
   body: 'james' | 'remy' | 'liza' | 'michelle'; coat: number; trou?: number; long?: boolean; skirt?: boolean;
-  hat?: 'fedora' | 'cap' | 'scarf' | 'peaked' | 'veil' | 'nun' | 'none'; scale?: number; hair?: number; extra?: ('cane' | 'lantern' | 'case' | 'revolver' | 'apron' | 'ribbon' | 'badge' | 'scar' | 'beard')[]; skin?: number;
+  hat?: 'fedora' | 'cap' | 'scarf' | 'peaked' | 'veil' | 'nun' | 'none'; scale?: number; wide?: number; hair?: number; extra?: ('cane' | 'lantern' | 'case' | 'revolver' | 'apron' | 'ribbon' | 'badge' | 'scar' | 'beard')[]; skin?: number;
 }
 let ualData: Promise<{ skin: THREE.SkinnedMesh; clips: THREE.AnimationClip[] }> | undefined;
 const loadUal = () => ualData ??= Promise.all([gl('people/universal/anims/ual1'), gl('people/universal/anims/ual2')]).then(([a, b]) => {
@@ -56,7 +56,8 @@ export class Person {
   dispose() { this.root.removeFromParent(); this.mixer.stopAllAction(); this.meshMixer.stopAllAction(); }
 }
 
-export async function createPerson(look: Look, id = ''): Promise<Person> {
+export async function createPerson(look0: Look, id = ''): Promise<Person> {
+  const look: Look = look0.body === 'james' ? { ...look0, body: 'remy', wide: look0.wide ?? 1.1 } : look0.body === 'michelle' ? { ...look0, body: 'liza' } : look0; // james has a hoodie and headphones baked into one mesh: not 1947
   const p = new Person(look); p.id = id;
   const g = await gl('people/mixamo/' + look.body); const root = SU.clone(g.scene) as THREE.Group; p.root.add(root);
   root.traverse((m: any) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; } });
@@ -66,7 +67,7 @@ export async function createPerson(look: Look, id = ''): Promise<Person> {
   const hv = new THREE.Vector3(); head!.getWorldPosition(hv); const rv = new THREE.Vector3(); p.root.getWorldPosition(rv);
   const BODY_K: Record<string, number> = { james: 1, remy: 0.96, liza: 0.93, michelle: 0.8 };
   const k = (1.62 * (look.scale ?? 1) * BODY_K[look.body]) / Math.max(0.01, hv.y - rv.y); root.scale.multiplyScalar(k); p.root.updateMatrixWorld(true);
-  p.height = 1.75 * (look.scale ?? 1);
+  p.height = 1.75 * (look.scale ?? 1); if (look.wide) { root.scale.x *= look.wide; root.scale.z *= look.wide; p.root.updateMatrixWorld(true); }
   p.body = clothe(root, look); p.snapshot();
   p.mixer = new THREE.AnimationMixer(root); p.meshMixer = new THREE.AnimationMixer(p.body);
   return p;
@@ -74,28 +75,26 @@ export async function createPerson(look: Look, id = ''): Promise<Person> {
 
 function clothe(root: THREE.Object3D, o: Look): THREE.SkinnedMesh {
   let body: THREE.SkinnedMesh | null = null; root.traverse((m: any) => { if (m.isSkinnedMesh && (!body || m.geometry.attributes.position.count > body.geometry.attributes.position.count)) body = m; });
-  const b = body!; const sk = b.skeleton, bn = sk.bones.map(x => x.name), geo = b.geometry, pos = geo.attributes.position, nor = geo.attributes.normal, si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight;
-  root.updateMatrixWorld(true); geo.computeBoundingBox(); const unit = (geo.boundingBox!.max.y - geo.boundingBox!.min.y) > 10 ? 100 : 1;
-  const boneUnit = (bone: THREE.Object3D) => { const v = new THREE.Vector3(); bone.getWorldScale(v); return 1 / v.x; };
-  const region = new Int8Array(pos.count);
+  const b = body!; const sk = b.skeleton, bn = sk.bones.map(x => x.name), geo = b.geometry, pos = geo.attributes.position, si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight;
+  // Clothes are painted onto the body itself: every triangle is classed by the bone that drives it (skin / torso+arms / thigh / calf / foot),
+  // the class gets a flat cloth material. No extra shells, so no gaps and no floating parts.
+  const cls = new Int8Array(pos.count);
   for (let i = 0; i < pos.count; i++) { let best = 0, bi = 0; for (let k = 0; k < 4; k++) { const w = sw.getComponent(i, k); if (w > best) { best = w; bi = si.getComponent(i, k); } } const n = bn[bi] || '';
-    region[i] = /Head|Eye|Neck/.test(n) ? 0 : /Hand/.test(n) ? 0 : /Foot|Toe/.test(n) ? 3 : /UpLeg|Leg/.test(n) ? 2 : 1; }
-  const mats = [new THREE.MeshStandardMaterial({ color: o.coat, roughness: 0.92 }), new THREE.MeshStandardMaterial({ color: o.trou ?? 0x1c1c1e, roughness: 0.9 }), new THREE.MeshStandardMaterial({ color: 0x0d0c0c, roughness: 0.35 })];
-  const idx = geo.index ? geo.index.array : [...Array(pos.count).keys()]; const groups: number[][] = [[], [], []];
-  for (let t = 0; t < idx.length; t += 3) { const a = idx[t], bb = idx[t + 1], c = idx[t + 2]; if (!region[a] || !region[bb] || !region[c]) continue; groups[Math.max(region[a], region[bb], region[c]) - 1].push(a, bb, c); }
-  const sh = geo.clone(); const p2 = sh.attributes.position; const off = [0, 0.03, 0.022, 0.012];
-  for (let i = 0; i < p2.count; i++) { const f = off[region[i]] * unit; p2.setXYZ(i, p2.getX(i) + nor.getX(i) * f, p2.getY(i) + nor.getY(i) * f, p2.getZ(i) + nor.getZ(i) * f); }
-  sh.setIndex([...groups[0], ...groups[1], ...groups[2]]); sh.clearGroups(); sh.addGroup(0, groups[0].length, 0); sh.addGroup(groups[0].length, groups[1].length, 1); sh.addGroup(groups[0].length + groups[1].length, groups[2].length, 2);
-  const shell = new THREE.SkinnedMesh(sh, mats); shell.bind(sk, b.bindMatrix); shell.castShadow = true; shell.frustumCulled = false; b.parent!.add(shell);
-  // the original body keeps only skin that shows (head, neck, hands): the clothed parts are covered by the shell, so halve the triangle count
-  { const keep: number[] = []; for (let t = 0; t < idx.length; t += 3) if (!region[idx[t]] && !region[idx[t + 1]] && !region[idx[t + 2]]) keep.push(idx[t], idx[t + 1], idx[t + 2]); const hg = geo.clone(); hg.setIndex(keep); hg.clearGroups(); b.geometry = hg; }
-  root.traverse((m: any) => { if (m.isSkinnedMesh && m !== b && m !== shell && !/Hair|hair|lash/.test(m.material?.name || '')) m.visible = false; });
-  // body skin stays the model's own; tint hair if asked
+    cls[i] = /Head|Eye|Jaw|Neck/.test(n) ? 0 : /Hand/.test(n) ? 0 : /Foot|Toe/.test(n) ? 4 : /UpLeg/.test(n) ? 2 : /Leg/.test(n) ? 3 : 1; }
+  const skinMat = (Array.isArray(b.material) ? b.material[0] : b.material) as THREE.MeshStandardMaterial;
+  const coat = new THREE.MeshStandardMaterial({ color: o.coat, roughness: 0.92 }), trou = new THREE.MeshStandardMaterial({ color: o.trou ?? 0x1c1c1e, roughness: 0.9 }), shoe = new THREE.MeshStandardMaterial({ color: 0x0d0c0c, roughness: 0.35 });
+  const thigh = o.long ? coat : o.skirt ? new THREE.MeshStandardMaterial({ color: o.trou ?? 0x2e2c2a, roughness: 0.95 }) : trou;
+  const calf = o.skirt ? new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.6 }) : trou; // stockings under a skirt
+  const mats = [skinMat, coat, thigh, calf, shoe]; const idx = geo.index ? geo.index.array : [...Array(pos.count).keys()]; const groups: number[][] = [[], [], [], [], []];
+  for (let t = 0; t < idx.length; t += 3) { const a = idx[t], c1 = idx[t + 1], c2 = idx[t + 2]; const ca = cls[a], cb = cls[c1], cc = cls[c2]; const k = ca === cb || ca === cc ? ca : cb === cc ? cb : Math.max(ca, cb, cc); groups[k].push(a, c1, c2); }
+  const g2 = geo.clone(); g2.setIndex([...groups[0], ...groups[1], ...groups[2], ...groups[3], ...groups[4]]); g2.clearGroups(); let off = 0; groups.forEach((gr, i) => { g2.addGroup(off, gr.length, i); off += gr.length; });
+  b.geometry = g2; b.material = mats; b.castShadow = true;
+  // the model's own garments (shirt, pants, shorts, sneakers) stay but are re-dyed to the 1940s palette
+  root.traverse((m: any) => { if (m.isSkinnedMesh && m !== b && !/Hair|hair|lash/.test(m.material?.name || '')) { const n = m.name || ''; m.material = /Sneaker|Shoe/i.test(n) ? shoe : /Pants|Shorts/i.test(n) ? (o.skirt ? thigh : trou) : coat; m.castShadow = true; } });
   if (o.hair !== undefined) root.traverse((m: any) => { if (m.isMesh && /Hair|hair/.test(m.material?.name || '')) { m.material = m.material.clone(); m.material.color.setHex(o.hair!); } });
   const bone = (n: string) => sk.bones.find(x => x.name === n)!;
+  const boneUnit = (bone: THREE.Object3D) => { const v = new THREE.Vector3(); bone.getWorldScale(v); return 1 / v.x; };
   const hips = bone('mixamorigHips'), head = bone('mixamorigHead');
-  if (o.long || o.skirt) { const len = o.long ? 0.78 : 0.6, cg = new THREE.CylinderGeometry(0.2, o.long ? 0.3 : 0.27, len, 20, 1, true); cg.translate(0, -len / 2 + 0.06, 0);
-    const m = new THREE.Mesh(cg, (o.skirt && !o.long ? mats[1] : mats[0]).clone()); (m.material as THREE.Material).side = THREE.DoubleSide; m.castShadow = true; m.scale.setScalar(boneUnit(hips)); hips.add(m); }
   const hu = boneUnit(head), hm = new THREE.MeshStandardMaterial({ color: 0x161616, roughness: 0.8 }), hg = new THREE.Group(); let hasHat = true;
   switch (o.hat ?? 'fedora') {
     case 'fedora': { const br = new THREE.Mesh(new THREE.CylinderGeometry(0.175, 0.175, 0.012, 28), hm), cr = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.112, 0.12, 22), hm); cr.position.y = 0.065; const bd = new THREE.Mesh(new THREE.CylinderGeometry(0.113, 0.113, 0.028, 22), new THREE.MeshStandardMaterial({ color: 0x080808 })); bd.position.y = 0.02; hg.add(br, cr, bd); hg.position.set(0, 0.16, 0.01); hg.rotation.x = -0.1; break; }

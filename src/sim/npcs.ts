@@ -6,6 +6,16 @@ import { groundH } from '../world/terrain';
 import type { Look } from '../game/people';
 
 // ---------- who is who: the 4 Mixamo bodies x coat x hat x extras (spec 7, 3.5). `look` is data only: no THREE here.
+const hsh = (id: string) => { let h = 2166136261; for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+const pickH = <T,>(arr: T[], id: string, salt: number) => arr[(hsh(id + salt) >>> 3) % arr.length];
+const COATS = [0x2b2a28, 0x3a352e, 0x26292d, 0x4a4238, 0x1d1e20, 0x33302a, 0x2a2f33, 0x40392f, 0x252320, 0x38352f, 0x2d2a35, 0x4b463c];
+const TROUS = [0x1c1c1e, 0x2e2c2a, 0x252628, 0x34312c, 0x202226, 0x3a3631];
+const HAIRS = [0x2a2622, 0x3a2a1a, 0x5a4636, 0x7a7a72, 0x9a9a94, 0x1a1816, 0x6a5a48];
+const HATS_M: Look['hat'][] = ['fedora', 'cap', 'fedora', 'peaked', 'none', 'cap'];
+const HATS_F: Look['hat'][] = ['scarf', 'scarf', 'none', 'veil'];
+/** deterministic variety: no two ordinary people dress alike (coat, trousers, hat, hair, height, build) */
+const vary = (id: string, base: Look): Look => ({ ...base, coat: base.coat === undefined ? pickH(COATS, id, 1) : pickH(COATS, id, 1), trou: pickH(TROUS, id, 2), hat: pickH(base.body === 'liza' ? HATS_F : HATS_M, id, 3), hair: pickH(HAIRS, id, 4),
+  scale: 0.93 + ((hsh(id + 5) % 14) / 100), wide: 0.94 + ((hsh(id + 6) % 18) / 100), long: base.long ?? (hsh(id + 7) % 3 === 0), extra: [...(base.extra ?? []), ...((hsh(id + 8) % 5 === 0 && base.body !== 'liza') ? ['beard' as const] : [])] });
 const COAT = { a: 0x2b2a28, b: 0x3a352e, c: 0x26292d, d: 0x4a4238, e: 0x1d1e20, grey: 0x5a5a58, apron: 0x6b6358 };
 export interface NpcDef { id: string; name: { ru: string; en: string }; look: Look; sched: (f: Flags) => Kf[]; key?: boolean; interact?: string; civ?: boolean; role?: string; }
 
@@ -91,7 +101,7 @@ add({ id: 'ned', name: { ru: 'Нед', en: 'Ned' }, key: true, look: { body: 're
 add({ id: 'agata', name: { ru: 'Агата', en: 'Agata' }, key: true, look: { body: 'liza', coat: 0x6b6358, trou: 0x2e2c2a, skirt: true, long: true, hat: 'none', extra: ['apron'], scale: 1.0, hair: 0x6a5a48 },
   sched: () => { const b = inSite('tavern', -0.5, -8.0); const sc = s(b.x, b.z, Math.PI / 2 * -1, 'idle', 0, b.y); const sw = inSite('tavern', 2.4, -1.8);
     sc.wait(at(22, 14), 'idle', faceTo(b.x, b.z, TAV(0, -3).x, TAV(0, -3).z)).walk([[sw.x, sw.z]], 1, 'walk', sw.y).wait(at(22, 30), 'sweep', 0).walk([[b.x, b.z]], 1, 'walk', b.y).end('idle'); return sc.kfs; } });
-const cmLook = (i: number): Look => ({ body: i % 2 ? 'remy' : 'james', coat: [COAT.e, COAT.c, COAT.a, COAT.b][i % 4], trou: 0x1c1c1e, hat: i % 3 === 0 ? 'cap' : 'fedora', scale: 0.98 + (i % 3) * 0.02 });
+const cmLook = (i: number): Look => vary('cord' + i, { body: 'remy', coat: 0, long: i % 2 === 0 });
 add({ id: 'ignat', name: { ru: 'Игнат', en: 'Ignat' }, key: true, look: { body: 'james', coat: 0x2e2c2a, trou: 0x1c1c1e, hat: 'none', scale: 1.0, hair: 0x2a2622 },
   sched: f => { const p = seat(5); const sc = s(p.x, p.z, p.ry, 'sittalk', 0, p.y);
     if (f.has('ignatDead')) { sc.wait(f.at('ignatDead')!, 'sit').wait(f.at('ignatDead')! + 0.1, 'die'); return sc.end('die').kfs; }
@@ -137,7 +147,7 @@ KIDS.forEach((k, i) => add({ id: k.n, name: k.n === 'anka' ? { ru: 'Анка', e
   sched: () => { const bed = inSite('priyut', 4 + (i % 3) * 1.9, -3.2 - Math.floor(i / 3) * 3.3, 1); const sc = s(bed.x, bed.z, Math.PI / 2, i % 2 ? 'sit' : 'idle', 0, bed.y);
     const yard = { x: 51 + (i % 3) * 1.1, z: -57.4 + Math.floor(i / 3) * 1.1 };
     sc.wait(at(22, 30, i * 4), 'idle').walk([[loc('priyut', 5.7, -2).x, loc('priyut', 5.7, -2).z], [loc('priyut', 1.2, 0.8).x, loc('priyut', 1.2, 0.8).z], [yard.x, yard.z]], 1.1, 'walk').wait(at(22, 38), 'idle', Math.PI * 0.8).hide(at(22, 38, 30 + i)); return sc.done(); } }));
-for (let i = 0; i < 3; i++) add({ id: 'ggrd' + (i + 1), name: { ru: 'Охранник в сером', en: 'Grey-coated guard' }, role: 'guard', look: { body: i % 2 ? 'remy' : 'james', coat: COAT.grey, trou: 0x2e2c2a, hat: 'fedora', extra: ['revolver'], scale: 1.0 + i * 0.01 },
+for (let i = 0; i < 3; i++) add({ id: 'ggrd' + (i + 1), name: { ru: 'Охранник в сером', en: 'Grey-coated guard' }, role: 'guard', look: { ...vary('guard' + i, { body: 'remy', coat: 0 }), coat: COAT.grey, extra: ['revolver'] },
   sched: f => { const yard = { x: 46 + i * 3.4, z: -55 + (i % 2) * 1.2 }, gate = { x: 49.4 + i * 1.2, z: -48.5 };
     const sc = s(yard.x, yard.z, 0, 'idle', at(22, 20)); sc.ct = at(22, 20); sc.wait(at(22, 24), 'idle', 0.4 * i).walk([[gate.x, gate.z]], 1.2, 'walk').wait(at(22, 25, 10), 'consume', Math.PI)
       .walk([[yard.x, yard.z]], 1.2, 'walk').wait(at(22, 40), 'idle', i);
@@ -164,7 +174,7 @@ for (let i = 0; i < 3; i++) add({ id: 'dock' + (i + 1), name: { ru: 'Челов�
 add({ id: 'harrow', name: { ru: 'Виктор Харроу', en: 'Victor Harrow' }, key: true, look: { body: 'james', coat: 0xb8b2a4, trou: 0x3a3a38, long: true, hat: 'none', scale: 1.04, hair: 0xd0d0cc },
   sched: () => { const sc = s(-42, 82, 0, 'idle', 0); sc.hide(0); return sc.done(); } });
 // Bridge patrol (spec 8.3): only when the fuse was pulled (tapCut): two of Cord's men check a pass or a courier token from 22:18
-for (let i = 0; i < 2; i++) add({ id: 'patrol' + (i + 1), name: { ru: 'Патрульный Корда', en: "Cord's patrol" }, role: 'cord', look: { body: i ? 'remy' : 'james', coat: 0x1d1e20, hat: 'peaked', extra: ['revolver'], scale: 1.0 },
+for (let i = 0; i < 2; i++) add({ id: 'patrol' + (i + 1), name: { ru: 'Патрульный Корда', en: "Cord's patrol" }, role: 'cord', look: { ...vary('patrol' + i, { body: 'remy', coat: 0 }), coat: 0x1d1e20, hat: 'peaked', extra: ['revolver'] },
   sched: f => { const sc = s(-8.6, i ? 1.6 : -1.6, -Math.PI / 2, 'idle', 0); if (!f.has('tapCut')) return sc.hide(0).done(); const t0 = Math.max(f.at('tapCut')!, at(22, 18)); sc.hide(0).show(t0, -8.6, i ? 1.6 : -1.6, 'pistol', -Math.PI / 2).end('pistol', -Math.PI / 2); return sc.kfs; } });
 // ============ civilians (deterministic loops; alive on the streets and in the tavern)
 const CIVS: { id: string; body: Look['body']; coat: number; hat: Look['hat']; x: number; z: number; pts: [number, number][]; sp: number; ph: number; long?: boolean; skirt?: boolean }[] = [
@@ -177,9 +187,9 @@ const CIVS: { id: string; body: Look['body']; coat: number; hat: Look['hat']; x:
   { id: 'civ7', body: 'james', coat: COAT.d, hat: 'fedora', x: -30, z: 38.6, pts: [[-55, 38.6], [-20, 38.6]], sp: 1.1, ph: 15, long: true },
   { id: 'civ8', body: 'liza', coat: COAT.e, hat: 'scarf', x: 20, z: -12, pts: [[24, -22], [18, -6]], sp: 0.9, ph: 90, skirt: true, long: true },
 ];
-for (const c of CIVS) add({ id: c.id, name: { ru: 'Прохожий', en: 'Passer-by' }, civ: true, look: { body: c.body, coat: c.coat, trou: 0x1c1c1e, hat: c.hat, long: c.long, skirt: c.skirt, scale: 0.95 + (c.ph % 7) * 0.01 }, sched: () => walkLoop(c.x, c.z, c.pts, c.sp, c.ph) });
+for (const c of CIVS) add({ id: c.id, name: { ru: 'Прохожий', en: 'Passer-by' }, civ: true, look: { ...vary(c.id, { body: c.body === 'james' ? 'remy' : c.body, coat: 0, skirt: c.skirt }) }, sched: () => walkLoop(c.x, c.z, c.pts, c.sp, c.ph) });
 // tavern regulars
 const reg = [{ id: 'sailor', lx: -4.6, lz: -2.0, body: 'remy' as const, coat: COAT.c, hat: 'cap' as const }, { id: 'docker1', lx: -4.6, lz: -6.0, body: 'james' as const, coat: COAT.d, hat: 'cap' as const }, { id: 'docker2', lx: -3.9, lz: -6.6, body: 'remy' as const, coat: COAT.a, hat: 'cap' as const }, { id: 'oldman', lx: 3.0, lz: -7.0, body: 'james' as const, coat: COAT.b, hat: 'none' as const }];
-for (const r of reg) add({ id: r.id, name: { ru: 'Посетитель', en: 'Regular' }, civ: true, look: { body: r.body, coat: r.coat, hat: r.hat, scale: 0.95, hair: 0x8a8a84 },
+for (const r of reg) add({ id: r.id, name: { ru: 'Посетитель', en: 'Regular' }, civ: true, look: { ...vary(r.id, { body: r.body === 'james' ? 'remy' : r.body, coat: 0 }) },
   sched: () => { const p = inSite('tavern', r.lx, r.lz); const sc = s(p.x, p.z, faceTo(p.x, p.z, TAV(r.lx + 1, r.lz).x, TAV(r.lx + 1, r.lz).z), 'sit', 0, p.y); sc.wait(at(22, 12), 'sittalk').wait(at(23, 0), 'kneel', 0).end('kneel'); return sc.kfs; } });
 void SITES; void TAV_YARD; void SEATS;
