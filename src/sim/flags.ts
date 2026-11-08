@@ -2,7 +2,7 @@
 export type FlagName =
   | 'jetonStolen' | 'tapCut' | 'nedSaved' | 'wagonPinPulled' | 'tildaWarned' | 'annaWarned' | 'tikhonTurned' | 'tikhonThreatened'
   | 'tikhonHurt' | 'tikhonDead' | 'tikhonLocked' | 'gaylWarned' | 'ignatDead' | 'lovchiyDead' | 'scarAlert' | 'lampsShot' | 'safeOpened'
-  | 'officeOpen' | 'innerOpen' | 'gateOpen' | 'cartLooked' | 'tikhonKnock' | 'fomaWarned' | 'fomaPaid' | 'sternScared' | 'gunTaken' | 'raidSkipped' | 'ringGiven' | 'alarm' | 'tavernBrawl' | 'ferned' | 'lidiaTold';
+  | 'patrolPassed' | 'officeOpen' | 'innerOpen' | 'gateOpen' | 'cartLooked' | 'tikhonKnock' | 'fomaWarned' | 'fomaPaid' | 'sternScared' | 'gunTaken' | 'raidSkipped' | 'ringGiven' | 'alarm' | 'tavernBrawl' | 'ferned' | 'lidiaTold';
 export class Flags {
   private m = new Map<string, number>();
   set(n: FlagName, t: number) { if (!this.m.has(n)) this.m.set(n, t); }

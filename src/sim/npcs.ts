@@ -163,6 +163,9 @@ for (let i = 0; i < 3; i++) add({ id: 'dock' + (i + 1), name: { ru: 'Челов�
   sched: () => { const sc = s(-42 + (i - 1) * 1.1, 60 + (i % 2) * 2.2, 0.4, 'idle', 0); sc.hide(0).show(at(22, 34, 31), -39.5 - i, 54.5, 'walk', 0).walk([[-42 + (i - 1) * 1.1, 61 + (i % 2) * 2.2]], 1.3).wait(at(22, 40), 'idle', i).hide(at(22, 40, 20)); return sc.done(); } });
 add({ id: 'harrow', name: { ru: 'Виктор Харроу', en: 'Victor Harrow' }, key: true, look: { body: 'james', coat: 0xb8b2a4, trou: 0x3a3a38, long: true, hat: 'none', scale: 1.04, hair: 0xd0d0cc },
   sched: () => { const sc = s(-42, 82, 0, 'idle', 0); sc.hide(0); return sc.done(); } });
+// Bridge patrol (spec 8.3): only when the fuse was pulled (tapCut): two of Cord's men check a pass or a courier token from 22:18
+for (let i = 0; i < 2; i++) add({ id: 'patrol' + (i + 1), name: { ru: 'Патрульный Корда', en: "Cord's patrol" }, role: 'cord', look: { body: i ? 'remy' : 'james', coat: 0x1d1e20, hat: 'peaked', extra: ['revolver'], scale: 1.0 },
+  sched: f => { const sc = s(-8.6, i ? 1.6 : -1.6, -Math.PI / 2, 'idle', 0); if (!f.has('tapCut')) return sc.hide(0).done(); const t0 = Math.max(f.at('tapCut')!, at(22, 18)); sc.hide(0).show(t0, -8.6, i ? 1.6 : -1.6, 'pistol', -Math.PI / 2).end('pistol', -Math.PI / 2); return sc.kfs; } });
 // ============ civilians (deterministic loops; alive on the streets and in the tavern)
 const CIVS: { id: string; body: Look['body']; coat: number; hat: Look['hat']; x: number; z: number; pts: [number, number][]; sp: number; ph: number; long?: boolean; skirt?: boolean }[] = [
   { id: 'civ1', body: 'james', coat: COAT.a, hat: 'fedora', x: -60, z: -5.2, pts: [[-30, -5.2], [-45, -5.2]], sp: 1.2, ph: 0 },

@@ -14,11 +14,11 @@ import { gaylWounded, gaylWindow, guardGate, agnia, anna, anka, guardCart, safeC
 import { placed } from '../world/city';
 import * as THREE from 'three';
 import { addMark } from '../world/marks';
-import { lukyan, lukyanDying, tikhonDoor, guardPier } from './d_pier';
+import { lukyan, lukyanDying, tikhonDoor, guardPier, patrol } from './d_pier';
 import { finale } from './d_finale';
 
 tikhonDoor.start = c => (c.fl('tikhonKnock') ? 'in' : 'a');
-export const CONVS: Conv[] = [prologue, prologue2, orven, orvenKey, tildaAlley, tildaPier, ned, nedAfter, fern, lidia, stern, agataAfter, agataBefore, agataFight, ignatTable, scarHunt, fomaDoor, fomaCaught, fomaAfter, gaylWounded, gaylWindow, guardGate, agnia, anna, anka, guardCart, lukyan, lukyanDying, tikhonDoor, guardPier, finale, safeConv];
+export const CONVS: Conv[] = [prologue, prologue2, orven, orvenKey, tildaAlley, tildaPier, ned, nedAfter, fern, lidia, stern, agataAfter, agataBefore, agataFight, ignatTable, scarHunt, fomaDoor, fomaCaught, fomaAfter, gaylWounded, gaylWindow, guardGate, agnia, anna, anka, guardCart, lukyan, lukyanDying, tikhonDoor, guardPier, finale, safeConv, patrol];
 const P = (g: Game, id: string) => g.npcs.pose(id);
 const near = (g: Game, id: string, x: number, z: number, r: number) => { const p = P(g, id); return !!p && !p.hidden && Math.hypot(p.x - x, p.z - z) < r; };
 
@@ -43,6 +43,7 @@ export function pickConv(id: string, g: Game): string | null {
     case 'anka': return t >= at(22, 28) && t < at(22, 38, 30) ? 'anka' : null;
     case 'lukyan': return p.a === 'die' ? 'lukyan.dying' : (t < at(22, 33) ? 'lukyan' : null);
     case 'tikhon': return t < at(22, 36) && !f.has('tikhonTurned') && !f.has('tikhonHurt') && !f.has('tikhonDead') ? 'tikhon.door' : null;
+    case 'patrol1': case 'patrol2': return !f.has('patrolPassed') ? 'patrol' : null;
     case 'dock1': case 'dock2': case 'dock3': return t >= at(22, 35) && t < at(22, 40) ? 'guard.pier3' : null;
     default: return null;
   }

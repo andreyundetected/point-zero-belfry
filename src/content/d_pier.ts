@@ -43,3 +43,10 @@ export const guardPier: Conv = { id: 'guard.pier3', start: 'a', nodes: {
   v1: { say: [L('guard1', '(читает при фонаре) …Ладно. Заводи. Но я рядом сяду.')], fx: c => c.learn('helm_ok'), end: true },
   fight: { say: [L('guard1', 'Эй, ты не Тихон.')], fx: c => c.flag('scarAlert'), end: true },
 } };
+
+export const patrol: Conv = { id: 'patrol', start: 'a', nodes: {
+  a: { say: [L('guard', 'Стой. Мост закрыт. Пропуск или жетон курьера.')], choices: [{ ru: '(Показать жетон)', if: c => c.has('jeton'), next: 'ok' }, { ru: 'Мне по делу.', next: 'no' }, { ru: '(Уйти)', next: 'z' }] },
+  ok: { say: [L('guard', '(смотрит на номер) Семнадцатый. Проходи.')], fx: c => { c.flag('patrolPassed'); c.learn('know_patrol'); }, end: true },
+  no: { say: [L('guard', 'Дела днём. Назад.')], fx: c => { c.learn('know_patrol'); c.note('patrol', 'Мост перекрыт патрулём Корда: пропуск или жетон курьера.', 'The bridge is held by Cord\'s patrol: a pass or a courier token.', 'patrol1'); }, end: true },
+  z: { end: true },
+} };

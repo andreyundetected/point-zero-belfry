@@ -85,7 +85,10 @@ export function building(bt: Batcher, scene: THREE.Scene, o: BuildingOpts): Buil
       box(lt ? M.lit2 : M.glass, ww, wh, 0.02, cx, y0 + 0.55 + wh / 2, 0.09); box(M.frame, 0.05, wh, 0.06, cx, y0 + 0.55 + wh / 2, 0.11); continue;
     }
     if (isDoor) {
-      const dw = 1.15, dh = 2.35; box(M.stone, dw + 0.5, dh + 0.35, 0.16, cx, y0 + (dh + 0.35) / 2 - 0.05, 0.06, 1.2); if (!o.hollow) { box(M.dark, dw, dh, 0.05, cx, y0 + dh / 2, 0.1);
+      const dw = 1.15, dh = 2.35;
+      if (o.hollow) { for (const sx of [-1, 1]) box(M.stone, 0.28, dh + 0.35, 0.16, cx + sx * (dw / 2 + 0.2), y0 + (dh + 0.35) / 2 - 0.05, 0.06, 1.2); box(M.stone, dw + 0.68, 0.3, 0.16, cx, y0 + dh + 0.1, 0.06, 1.2); }
+      else box(M.stone, dw + 0.5, dh + 0.35, 0.16, cx, y0 + (dh + 0.35) / 2 - 0.05, 0.06, 1.2);
+      if (!o.hollow) { box(M.dark, dw, dh, 0.05, cx, y0 + dh / 2, 0.1);
       box(redDoor ? M.RED : M.wood, dw - 0.08, dh - 0.55, 0.06, cx, y0 + (dh - 0.55) / 2, 0.13, 1.0); }
       box(M.lit2, dw - 0.14, 0.38, 0.02, cx, y0 + dh - 0.25, 0.12); box(M.frame, dw + 0.1, 0.06, 0.1, cx, y0 + dh - 0.47, 0.14);
       box(M.stone, dw + 0.7, 0.16, 0.7, cx, y0 - 0.27, 0.35, 1.2); continue;

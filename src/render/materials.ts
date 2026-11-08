@@ -24,6 +24,6 @@ export const M = {
   cornice: pbr('stone_base', { tint: 0xbbbbbb }),
   dark: new THREE.MeshStandardMaterial({ color: 0x101010, roughness: 0.9 }),
   // the only way to get the red accent: a real red material (grade keeps it by hue)
-  RED: new THREE.MeshStandardMaterial({ color: 0xa00a0a, roughness: 0.45, emissive: 0x2a0000 }),
+  RED: new THREE.MeshStandardMaterial({ color: 0xa00a0a, roughness: 0.45, emissive: 0x3d0000 }),
 };
 export const WALLS = [M.brick, M.plaster, M.brickD, M.plaster2, M.plaster3];
