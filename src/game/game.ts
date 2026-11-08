@@ -34,7 +34,8 @@ export class Game implements StvHost, Ctx {
   pilot: Pilot; pool: LampPool; open = false; targetT = 0; previewing = false; cs!: CityState; lastCs = ''; locked = false; jumpBusy = false; ghosts: THREE.Group; fomaRuin = false;
   sinceThread = 0; sceneInside = ''; waitHeld = false; fadeBusy = false; time = 0; frozen = false; custom?: { update(dt: number): void; done?: boolean };
   seenLight = 1; stepT = 0; sub = ''; hintT = 0; hintStep = 0; shakeT = 0; shakeA = 0;
-  constructor(public scene: THREE.Scene, public cam: THREE.PerspectiveCamera, public player: Player, public moon: THREE.DirectionalLight, public hemi: THREE.HemisphereLight) {
+  portraitQ: string[] = []; rt?: THREE.WebGLRenderTarget; pcam = new THREE.PerspectiveCamera(28, 1, 0.05, 20);
+  constructor(public scene: THREE.Scene, public cam: THREE.PerspectiveCamera, public player: Player, public moon: THREE.DirectionalLight, public hemi: THREE.HemisphereLight, public renderer: THREE.WebGLRenderer) {
     this.sim = new SimWorld(this.s.flags); this.npcs = new NpcRuntime(scene, this.sim); this.fx = new Fx(scene); this.veh = new Vehicles(scene); this.combat = new Combat(this); this.pilot = new Pilot(this);
     this.pool = new LampPool(scene, 10); this.stv = new Stvorka(this); this.runner = new DialogueRunner(this.ui, this); this.runner.register(...CONVS);
     this.ghosts = new THREE.Group(); scene.add(this.ghosts); this.ghosts.visible = false;
@@ -44,7 +45,9 @@ export class Game implements StvHost, Ctx {
       if (!c.s.knows('helm_ok') && c.s.pocket !== 'cap') { c.hud.bark('Охрана не подпустит. Надо сказать «Я».', true); const d = c.npcs.pose('dock1'); if (d && !d.hidden) c.runner.start('guard.pier3'); return; }
       c.pilot.board(); } });
     addEventListener('keydown', e => this.key(e));
-    addEventListener('keyup', e => { if (e.code === 'KeyT') this.waitHeld = false; });
+    document.addEventListener('pointerlockchange', () => { const locked = !!document.pointerLockElement; if (locked) { this.hadLock = true; this.paused = false; document.getElementById('pause')!.style.display = 'none'; } else if (this.hadLock && !this.open && !this.ui.open && !this.s.ended && !this.jumpBusy) { this.paused = true; document.getElementById('pause')!.style.display = 'flex'; } });
+    document.getElementById('pause')!.addEventListener('click', () => { this.paused = false; document.getElementById('pause')!.style.display = 'none'; this.player.dom.requestPointerLock?.(); });
+    addEventListener('keyup', e => { if (e.code === 'KeyT') this.waitHeld = false; if (e.code === 'Enter') this.holdEnd(); });
     addEventListener('mousedown', () => this.snd.init()); addEventListener('keydown', () => this.snd.init(), { once: true });
     player.onRespawn = () => { this.hud.bark('Холодная вода. Вылез.', true); this.hurt(0.6); };
     this.applyUniverse(); this.hud.clock(0);
@@ -83,6 +86,10 @@ export class Game implements StvHost, Ctx {
     for (let r = 0.3; r <= 1.5; r += 0.3) for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (ok(px, pz, y)) return { x: px, z: pz, y }; }
     return null;
   }
+  paused = false; hadLock = false; holdT = 0; holding = false;
+  /** spec 2.2: hold the jump button for 1 real second = preview; released earlier = cancel; held through = jump */
+  holdBegin() { if (this.holding || this.jumpBusy) return; this.holding = true; this.holdT = 0; this.showGhosts(this.targetT); }
+  holdEnd() { if (!this.holding) return; this.holding = false; this.hideGhosts(); }
   async jumpTo(target: number, previewOnly: boolean) {
     if (this.jumpBusy) return;
     if (previewOnly) { this.showGhosts(target); this.previewing = true; return; }
@@ -120,7 +127,7 @@ export class Game implements StvHost, Ctx {
   key(e: KeyboardEvent) {
     if (this.ui.open || this.s.ended) return;
     if (e.code === 'Tab') { e.preventDefault(); this.toggleStvorka(); return; }
-    if (this.open) { if (e.code === 'Enter') { void this.jumpTo(this.targetT, false); } if (e.code === 'KeyB') { this.s.bookmarks.push({ t: this.s.t, label: fmt(this.s.t) }); this.stv.render(); } if (e.code === 'Escape') this.toggleStvorka(); return; }
+    if (this.open) { if (e.code === 'Enter' && !e.repeat) this.holdBegin(); if (e.code === 'KeyB') { this.s.bookmarks.push({ t: this.s.t, label: fmt(this.s.t) }); this.stv.render(); } if (e.code === 'Escape') this.toggleStvorka(); return; }
     if (e.code === 'KeyT') this.waitHeld = true;
     if (e.code === 'KeyB') { this.s.bookmarks.push({ t: this.s.t, label: fmt(this.s.t) }); this.hud.toast('Закладка ' + fmt(this.s.t), 1.5); }
     if (e.code === 'KeyE') this.useNearest();
@@ -143,7 +150,7 @@ export class Game implements StvHost, Ctx {
     for (const d of NPCS) { const po = this.npcs.pose(d.id); if (!po || po.hidden || d.civ && !pickConv(d.id, this)) continue; const cid = pickConv(d.id, this); if (!cid) continue; consider(po.x, po.y, po.z, 2.5, `Говорить: ${pick(d.name)}`, () => this.talk(d.id, cid)); }
     void cam; return best as { d: number; label: string; fn: () => void } | null;
   }
-  talk(npc: string, conv: string) { if (this.runner.active) return; this.s.met.add(npc); const p = this.npcs.pose(npc)!; this.player.yaw = Math.atan2(-(p.x - this.player.body.x), -(p.z - this.player.body.z)); this.runner.start(conv).then(() => this.afterTalk()); }
+  talk(npc: string, conv: string) { if (this.runner.active) return; if (!this.s.met.has(npc)) { this.s.met.add(npc); this.portraitQ.push(npc); const d = NPCS.find(n => n.id === npc)!; this.note('seen_' + npc, `Встретил ${fmt(this.s.t)}: ${pick(d.name)}`, `Met at ${fmt(this.s.t)}: ${pick(d.name)}`, npc, !!d.key); } this.s.met.add(npc); const p = this.npcs.pose(npc)!; this.player.yaw = Math.atan2(-(p.x - this.player.body.x), -(p.z - this.player.body.z)); this.runner.start(conv).then(() => this.afterTalk()); }
   afterTalk() { this.player.apply(); }
   useNearest() { if (this.runner.active || this.frozen) return; const n = this.findInteract(); n?.fn(); }
   // ---------------- per-frame
@@ -153,18 +160,34 @@ export class Game implements StvHost, Ctx {
     if (this.fomaRuin !== cs.rynokRuin || force) { this.fomaRuin = cs.rynokRuin; setFomaState(cs.rynokRuin); }
     this.veh.update(this.sim, t, cs, this.pilot.aboard);
   }
+  /** journal portrait: render the head of a person you just met, grey (red frame is drawn by the UI for key people) */
+  capturePortrait() {
+    const id = this.portraitQ.shift(); if (!id || this.s.portraits[id]) return; const per = this.npcs.active.get(id); if (!per) return;
+    let head: THREE.Object3D | undefined; per.root.traverse(o => { if (o.name === 'mixamorigHead') head = o; }); if (!head) return;
+    const hp = head.getWorldPosition(new THREE.Vector3()); const dir = new THREE.Vector3(Math.sin(per.root.rotation.y), 0, Math.cos(per.root.rotation.y));
+    this.pcam.position.copy(hp).addScaledVector(dir, 1.0).add(new THREE.Vector3(0, 0.12, 0)); this.pcam.lookAt(hp.x, hp.y + 0.1, hp.z); this.pcam.updateMatrixWorld(); this.pcam.aspect = 1; this.pcam.updateProjectionMatrix();
+    const rt = this.rt ??= new THREE.WebGLRenderTarget(96, 96); const buf = new Uint8Array(96 * 96 * 4);
+    const prevFog = this.scene.fog; this.scene.fog = null; const pl = new THREE.PointLight(0xffe0c0, 6, 4); pl.position.copy(this.pcam.position).add(new THREE.Vector3(0.3, 0.4, 0)); this.scene.add(pl);
+    this.renderer.setRenderTarget(rt); this.renderer.render(this.scene, this.pcam); this.renderer.readRenderTargetPixels(rt, 0, 0, 96, 96, buf); this.renderer.setRenderTarget(null); this.scene.remove(pl); this.scene.fog = prevFog;
+    const cv = document.createElement('canvas'); cv.width = cv.height = 96; const cx = cv.getContext('2d')!; const im = cx.createImageData(96, 96);
+    for (let y = 0; y < 96; y++) for (let x = 0; x < 96; x++) { const i = (y * 96 + x) * 4, j = ((95 - y) * 96 + x) * 4, l = Math.min(255, (buf[i] * 0.3 + buf[i + 1] * 0.59 + buf[i + 2] * 0.11) * 1.5); im.data[j] = im.data[j + 1] = im.data[j + 2] = l; im.data[j + 3] = 255; }
+    cx.putImageData(im, 0, 0); this.s.portraits[id] = cv.toDataURL('image/png');
+  }
   update(dt: number) {
     const s = this.s, p = this.player;
+    if (this.portraitQ.length && !this.open) this.capturePortrait();
     if (this.custom) this.custom.update(dt);
     const wasT = s.t; const talking = this.ui.open || this.runner.active;
-    if (!this.open && !talking && !this.jumpBusy && !this.frozen && !s.ended) {
+    if (!this.open && !talking && !this.jumpBusy && !this.frozen && !s.ended && !this.paused) {
       const wait = this.waitHeld && !this.combat.enemyWatching(); this.s.t += dt * (wait ? WAIT_SCALE : TIME_SCALE);
       if (this.waitHeld && !wait) { this.hud.toast('Рядом враг — ждать нельзя', 1.5); this.waitHeld = false; }
     }
     this.time += dt; s.clampT();
+    if (this.holding) { this.holdT += dt; if (this.holdT >= 1.0) { this.holding = false; this.hideGhosts(); this.previewing = false; void this.doJump(this.targetT); } }
     if (s.t >= WINDOW && !s.ended && !this.frozen) this.finish('empty');
-    p.frozen = this.open || talking || this.jumpBusy || this.frozen || this.pilot.aboard; if (!this.pilot.aboard) p.update(dt); else p.apply();
+    p.frozen = this.open || talking || this.jumpBusy || this.frozen || this.pilot.aboard || this.paused; if (!this.pilot.aboard) p.update(dt); else p.apply();
     this.hud.clock(s.t); this.hud.update(dt);
+    { const b0 = p.body, sp = Math.hypot(b0.vx, b0.vz); if (b0.grounded && sp > 0.8 && !p.frozen) { this.stepT -= dt * (sp > 4 ? 1.6 : 1); if (this.stepT <= 0) { this.stepT = 0.5; const kind = this.sceneInside || b0.y > 20 ? 'wood' : 'concrete'; this.snd.play(`impact/footstep_${kind}_00${(Math.random() * 5) | 0}`, p.crouching ? 0.12 : 0.28); } } }
     // city state + lights
     if (Math.floor(wasT) !== Math.floor(s.t) || this.lastCs === '') { this.lastCs = 'x'; this.applyCity(s.t); setClock(s.t); }
     else if (this.cs.lampsFlicker) this.applyCity(s.t);

@@ -51,7 +51,7 @@ export class Pilot {
     if (t >= at(22, 41) && offTrack && g.time - this.barked > 12 && this.barked >= 0) { this.barked = g.time; g.hud.sub('Охранник', 'Куда правишь? Маяк левее.', 3); g.s.learn('guard_asked'); }
     // Harrow comes into the wheelhouse at 22:45:30 and knocks
     if (t >= at(22, 45, 20) && !this.harrow) createPerson({ body: 'james', coat: 0xb8b2a4, long: true, hat: 'none', scale: 1.04, hair: 0xd0d0cc }, 'harrow').then(p => { this.harrow = p; p.root.position.set(0.55, 0.68, -0.6); p.root.rotation.y = Math.PI; this.mesh.add(p.root); p.anim('idle'); });
-    if (t >= at(22, 46) && !this.finaleStarted && !g.runner.active && this.harrow) { this.finaleStarted = true; g.s.learn('sync_held'); g.hud.sync(true); g.player.frozen = true; g.runner.start('finale'); }
+    if (t >= at(22, 46) && !this.finaleStarted && !g.runner.active && this.harrow) { this.finaleStarted = true; g.s.learn('sync_held'); g.hud.sync(true); g.s.messages.push({ t: g.s.t, ru: 'Синхронизация удержана. Без фокусов, Тимоша.', en: 'Synchronisation held. No tricks, Timosha.' }); g.player.frozen = true; g.runner.start('finale'); }
     for (const p of this.guards) p.update(dt); this.harrow?.update(dt);
     void fmt;
   }

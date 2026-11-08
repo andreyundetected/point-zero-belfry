@@ -11,6 +11,7 @@ import { PropField } from './props';
 import { buildInteriors, makeDoor, makeWorldDoor } from './interiors';
 import { buildTower } from './tower';
 import { buildFomaAndD8 } from './ruins';
+import { buildDecor } from './decor';
 import { groundH, hash } from './terrain';
 
 const RAD = Math.PI;
@@ -108,9 +109,11 @@ export function buildZaton(scene: THREE.Scene): Zaton {
   for (const id of ['bereg', 'rynok', 'nab', 'sklad', 'priyut', 'kanat', 'gavan', 'gavanE', 'bashn']) lampLine(id, 6, 20);
   for (const [x, z] of [[-76, -45], [-60, -45], [-76, -35], [-60, -35], [-14.6, 36], [-20, 2], [-46, -31.6], [20.5, 15], [19.5, 3]] as [number, number][]) lamp(scene, x, z);
 
+  // pier and barge lamps, a hanging lantern at the bend of the alley
+  for (const [x, z] of [[-11.8, 62], [-11.8, 72], [-40.4, 66], [-40.4, 78]] as [number, number][]) lamp(scene, x, z, -0.5);
   // ---------- props (instanced, with colliders)
   const props = new PropField();
-  const cluster = (path: string, cx: number, cz: number, n: number, spread: number, opts: { h?: number; l?: number; collide?: boolean }, seed = 1) => {
+  const cluster = (path: string, cx: number, cz: number, n: number, spread: number, opts: { h?: number; l?: number; collide?: boolean; y?: number }, seed = 1) => {
     for (let i = 0; i < n; i++) { const a = hash(seed, i) * 6.28, r = hash(i, seed) * spread; props.add(path, cx + Math.cos(a) * r, cz + Math.sin(a) * r, { ry: hash(i, i) * 6, ...opts }); }
   };
   // tavern: two barrel-bins at the door, firewood and crates in the yard
@@ -120,7 +123,7 @@ export function buildZaton(scene: THREE.Scene): Zaton {
   cluster('dungeon/box_small', 58, 21, 5, 2, { h: 0.9, collide: true }, 4); cluster('dungeon/barrel_small', 74, 21, 4, 1.5, { h: 0.9, collide: true }, 5);
   cluster('dungeon/box_small', 42, 36, 5, 2.5, { h: 0.9, collide: true }, 6); cluster('dungeon/crates_stacked', 46, 38, 1, 0, { h: 1.9, collide: true }, 7);
   cluster('dungeon/barrel_small', -5, 55, 4, 1.5, { h: 0.9, collide: true }, 8); cluster('dungeon/box_small', -12, 54, 4, 1.8, { h: 0.9, collide: true }, 9);
-  cluster('dungeon/barrel_small', -40, 54, 3, 1.2, { h: 0.9, collide: true }, 10);
+  cluster('dungeon/barrel_small', -40, 54, 3, 1.2, { h: 0.9, collide: true }, 10); cluster('dungeon/barrel_small', -8.8, 64, 4, 1.1, { h: 0.9, collide: true, y: -0.5 } as any, 11); cluster('dungeon/box_small', -8.4, 71, 3, 0.9, { h: 0.8, collide: true, y: -0.5 } as any, 12);
   // Rynok: market carts, benches only where people wait
   props.add('village_q/bench_1', -50, -3.2, { ry: 0, h: 0.9, collide: true });
   props.add('village_q/bench_1', -68, -45, { ry: -RAD / 2, h: 0.9, collide: true }); props.add('village_q/bench_1', -68, -35, { ry: RAD / 2, h: 0.9, collide: true });
@@ -133,7 +136,7 @@ export function buildZaton(scene: THREE.Scene): Zaton {
     void rd;
   }
   bt.flush(scene);
-  buildGround(scene); buildWater(scene);
+  buildGround(scene); buildWater(scene); buildDecor(scene, props);
   const ready = Promise.all([props.build(scene), interiorProps.build(scene)]).then(() => {});
   void BOUNDS; void BRIDGE; void placed;
   return { props, ready };

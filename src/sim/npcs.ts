@@ -83,7 +83,7 @@ add({ id: 'lukyan', name: { ru: 'Лукьян', en: 'Lukyan' }, key: true, look:
     sc.wait(at(22, 24), 'idle').walk([[-3.2, 66], [-3.0, 62.6]], 0.6, 'walk', -0.62).wait(at(22, 29, 40), 'talk', Math.PI * 0.9);
     if (!shot) return sc.end('idle').kfs;
     sc.walk([[-5.2, 61.6]], 1, 'walk').wait(at(22, 33), 'talk', Math.PI * 1.1); sc.walk([[-5.6, 61.2]], 0.8, 'hit').wait(at(22, 33, 5), 'die', Math.PI * 1.1).end('die'); return sc.kfs; } });
-add({ id: 'ned', name: { ru: 'Нед', en: 'Ned' }, key: true, look: { body: 'remy', coat: 0x3a352e, trou: 0x2e2c2a, hat: 'peaked', extra: ['badge'], scale: 0.97, hair: 0xb04a1a },
+add({ id: 'ned', name: { ru: 'Нед', en: 'Ned' }, key: true, look: { body: 'remy', coat: 0x3a352e, trou: 0x2e2c2a, hat: 'peaked', extra: ['badge'], scale: 0.97, hair: 0x8a5a3a },
   sched: f => { const p = seat(1); const rail = { x: 0.4, z: 2.3 };
     const sc = s(p.x, p.z, p.ry, 'sit', 0, p.y); sc.wait(at(22, 6), 'sittalk').walk([[TAV_DOOR.x, TAV_DOOR.z]], 1.3, 'walk', undefined).walk([[16, 9], [14, 0], [9, 0], [rail.x, rail.z]], 1.9, 'walk').wait(at(22, 16), 'rail', 0);
     if (!f.has('nedSaved')) { sc.wait(at(22, 16, 4), 'yell', 0).hide(at(22, 16, 6)); return sc.done(); }

@@ -22,7 +22,7 @@ export class GameState {
   jumps = 0; dead = false; ended: string | null = null; tickDone = new Set<string>();
   seenEvents = new Set<string>();
   messages: { t: number; ru: string; en: string }[] = [];
-  met = new Set<string>();
+  met = new Set<string>(); portraits: Record<string, string> = {};
   alive = true;
   hp = 2;
 

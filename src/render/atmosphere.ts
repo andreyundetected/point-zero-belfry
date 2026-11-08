@@ -19,11 +19,12 @@ export function makeRain(scene: THREE.Scene) {
   for (let i = 0; i < N; i++) { seed[i * 3] = (hash(i, 30) - .5) * bx.x; seed[i * 3 + 1] = hash(i, 31) * bx.y; seed[i * 3 + 2] = (hash(i, 32) - .5) * bx.z; }
   const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.BufferAttribute(rp, 3));
   const rain = new THREE.LineSegments(rg, new THREE.LineBasicMaterial({ color: 0xaec4ee, transparent: true, opacity: 0.16 })); rain.frustumCulled = false; scene.add(rain);
-  return (t: number, cx: number, cz: number) => {
+  const step = (t: number, cx: number, cz: number) => {
     for (let i = 0; i < N; i++) {
       const x = cx + seed[i * 3], z = cz + seed[i * 3 + 2]; const y = ((seed[i * 3 + 1] - t * 16) % bx.y + bx.y) % bx.y - 2; const k = i * 6;
       rp[k] = x; rp[k + 1] = y; rp[k + 2] = z; rp[k + 3] = x - 0.04; rp[k + 4] = y + 0.6; rp[k + 5] = z;
     }
     rg.attributes.position.needsUpdate = true;
   };
+  (step as any).mesh = rain; return step;
 }

@@ -26,7 +26,7 @@ const ITEM_TXT: Record<string, { ru: string; en: string; d: { ru: string; en: st
 export const itemName = (i: string) => pick(ITEM_TXT[i] ?? { ru: i, en: i });
 
 export interface StvHost {
-  s: GameState; open: boolean; targetT: number; getPos(): { x: number; z: number }; jumpTo(t: number, preview: boolean): void; previewing: boolean;
+  s: GameState; open: boolean; targetT: number; getPos(): { x: number; z: number }; jumpTo(t: number, preview: boolean): void; previewing: boolean; holdBegin(): void; holdEnd(): void;
   onClose?(): void; wait?: boolean;
 }
 export class Stvorka {
@@ -57,11 +57,11 @@ export class Stvorka {
     b.innerHTML = `<div style="display:flex;justify-content:space-between"><div>${tr('now')}: <b>${fmt(this.nowT, true)}</b></div><div>${tr('target')}: <b class="red" id="tsel">${fmt(this.host.targetT, true)}</b></div></div>
     <div class="tl"><div class="bar"></div>${marks}<div class="now" style="left:${x(this.nowT)}"></div><div class="sel" id="selmark" style="left:${x(this.host.targetT)}"></div>${hours}</div>
     <input id="rng" type="range" min="0" max="${WINDOW}" step="10" value="${Math.round(this.host.targetT / 10) * 10}">
-    <p><button class="go" id="jbtn">${tr('jump')}  [Enter]</button><button id="bm">${tr('bookmark')}</button><span class="dim">${tr('jump.hold')}</span></p>
+    <p><button class="go" id="jbtn">${tr('jump')} — ${lang === 'ru' ? 'держать 1 с' : 'hold 1 s'} [Enter]</button><button id="bm">${tr('bookmark')}</button><span class="dim">${tr('jump.hold')}</span></p>
     <div>${seen.sort((a, c) => a.t - c.t).map(m => `<div class="ev" data-t="${m.t}"><span class="dim">${fmt(m.t)}</span> ${m.big ? '<span class="red">●</span>' : '○'} ${m.label}</div>`).join('') || `<span class="dim">${lang === 'ru' ? 'Событий пока не видел.' : 'No events seen yet.'}</span>`}</div>`;
     const rng = $('rng') as HTMLInputElement; rng.oninput = () => this.setTarget(+rng.value);
     b.querySelectorAll('.ev').forEach(el => (el as HTMLElement).onclick = () => { this.setTarget(+(el as HTMLElement).dataset.t!); rng.value = String(this.host.targetT); });
-    const jb = $('jbtn'); jb.onmousedown = () => { this.hold = true; this.previewTimer = 0; this.host.jumpTo(this.host.targetT, true); }; jb.onmouseup = jb.onmouseleave = () => this.release();
+    const jb = $('jbtn'); jb.onmousedown = () => this.host.holdBegin(); jb.onmouseup = jb.onmouseleave = () => this.host.holdEnd();
     $('bm').onclick = () => { this.host.s.bookmarks.push({ t: this.nowT, label: fmt(this.nowT) }); this.render(); };
   }
   setTarget(t: number) { this.host.targetT = Math.max(0, Math.min(WINDOW, t)); this.sel = this.host.targetT; const e = document.getElementById('tsel'); if (e) e.textContent = fmt(this.host.targetT, true); const m = document.getElementById('selmark'); if (m) m.style.left = (this.host.targetT / WINDOW * 100) + '%'; }
@@ -71,7 +71,7 @@ export class Stvorka {
     const s = this.host.s; const rows = s.journal.filter(j => j.who);
     const who = new Map<string, typeof rows>(); for (const j of rows) (who.get(j.who!) ?? who.set(j.who!, []).get(j.who!)!).push(j);
     if (!who.size) { b.innerHTML = `<p class="dim">${tr('journal.none')}</p>`; return; }
-    b.innerHTML = [...who].map(([id, es]) => { const d = NPCS.find(n => n.id === id); const nm = d ? pick(d.name) : id; return `<div class="person ${d?.key ? 'key' : ''}"><div style="width:54px;height:64px;background:#17181a;border:1px solid ${d?.key ? '#6a1a1a' : '#333'};text-align:center;line-height:64px;font-size:26px;filter:grayscale(1)">${nm[0]}</div><div><b>${nm}</b>${es.map(e => `<div class="dim">${fmt(e.t)} — <span style="color:#d8d2c4">${pick(e)}</span></div>`).join('')}</div></div>`; }).join('');
+    b.innerHTML = [...who].map(([id, es]) => { const d = NPCS.find(n => n.id === id); const nm = d ? pick(d.name) : id; return `<div class="person ${d?.key ? 'key' : ''}">${s.portraits[id] ? `<img src="${s.portraits[id]}" style="width:64px;height:64px;border:2px solid ${d?.key ? '#a01010' : '#333'};filter:grayscale(1)">` : `<div style="width:60px;height:64px;background:#17181a;border:2px solid ${d?.key ? '#a01010' : '#333'};text-align:center;line-height:64px;font-size:26px">${nm[0]}</div>`}<div><b>${nm}</b>${es.map(e => `<div class="dim">${fmt(e.t)} — <span style="color:#d8d2c4">${pick(e)}</span></div>`).join('')}</div></div>`; }).join('');
   }
   /** schematic map (spec 2.5): canal, streets, houses, red markers for the current thread, player dot */
   drawMap() {

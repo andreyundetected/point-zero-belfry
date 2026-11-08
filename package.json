@@ -7,7 +7,13 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "shot": "node tools/shot.cjs"
+    "shot": "node tools/shot.cjs",
+    "sim:baseline": "tsx tests/baseline.ts",
+    "sim:solve": "tsx tests/solve.ts",
+    "sim:hash": "tsx tests/hash.ts",
+    "test": "npm run sim:baseline --silent > /dev/null && npm run sim:dialogues --silent && npm run sim:solve --silent && npm run sim:hash --silent",
+    "test:world": "node tools/test_physics.cjs && node tools/test_boot.cjs && node tools/test_flow.cjs && node tools/test_foma.cjs",
+    "sim:dialogues": "tsx tests/dialogues.ts"
   },
   "devDependencies": {
     "@types/three": "^0.187.0",

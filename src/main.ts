@@ -23,7 +23,7 @@ const dev = makeDevice(); cam.add(dev.obj);
 const rain = makeRain(scene);
 const { comp, grade } = makePost(renderer, scene, cam, W, H, SAT);
 const player = new Player(cam, renderer.domElement);
-const game = new Game(scene, cam, player, moon, hemi);
+const game = new Game(scene, cam, player, moon, hemi, renderer);
 
 // start: tower roof, 22:03:30 - the prologue (spec 11.1). ?at=x,z,lookX,lookZ&t=mm:ss for debug viewpoints
 const at4 = q.get('at')?.split(',').map(Number); const tq = q.get('t');
@@ -38,9 +38,10 @@ if (q.get('gun')) { game.s.hasGun = true; game.s.mag = 6; game.s.ammo = 18; }
 const clock = new THREE.Clock(); let t = 0;
 declare global { interface Window { done?: boolean; info?: string; FREEZE?: boolean; player?: Player; game?: Game; dbg?: any } }
 window.player = player; window.game = game; window.dbg = { createPerson, scene, THREE, fmt };
+let lastShown = '';
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05); t += dt;
-  game.update(dt); rain(t, cam.position.x, cam.position.z); grade.uniforms.time.value = t; comp.render();
+  game.update(dt); { const bm = (scene as any).__beam; if (bm) bm.material.opacity = 0.15 + 0.85 * Math.max(0, Math.sin(t * 0.9) ** 3); } const shown = fmt(game.s.t); if (shown !== lastShown) { lastShown = shown; dev.setTime(shown); } (rain as any).mesh.visible = !game.sceneInside; rain(t, cam.position.x, cam.position.z); grade.uniforms.time.value = t; comp.render();
   if (!window.FREEZE) requestAnimationFrame(frame);
 }
 frame();
