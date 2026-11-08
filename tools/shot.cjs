@@ -14,7 +14,7 @@ const { chromium } = require('playwright'); const { createServer } = require('vi
     await p.addInitScript(() => { try { localStorage.setItem('okno.lang', 'ru'); } catch (e) {} }); await p.goto('http://127.0.0.1:5199' + url);
     await p.waitForFunction('window.done', null, { timeout: 300000 });
     await p.waitForTimeout(+(process.env.SHOT_WAIT||7000)); await p.evaluate('window.FREEZE=true'); await p.waitForTimeout(600);
-    const data = await p.evaluate(() => document.querySelector('canvas').toDataURL('image/png'));
+    const data = await p.evaluate(() => window.renderer.domElement.toDataURL('image/png'));
     fs.writeFileSync(out, Buffer.from(data.split(',')[1], 'base64')); console.log('saved', out); await p.close();
   }
   await b.close(); await srv.close();

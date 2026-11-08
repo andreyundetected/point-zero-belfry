@@ -33,11 +33,27 @@ export function buildDecor(scene: THREE.Scene, props: PropField) {
   const link = (a: THREE.Vector3, b: THREE.Vector3) => { for (const off of [-0.6, 0, 0.6]) { const pts: THREE.Vector3[] = []; for (let i = 0; i <= 12; i++) { const t = i / 12, p = a.clone().lerp(b, t); p.y -= Math.sin(t * Math.PI) * 0.9; if (Math.abs(b.x - a.x) > Math.abs(b.z - a.z)) p.z += off; else p.x += off; pts.push(p); } scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wire)); } };
   const west = poles.filter(p => Math.abs(p.z + 5.6) < 0.1).sort((a, b) => a.x - b.x), shore = poles.filter(p => Math.abs(p.x + 9.6) < 0.1).sort((a, b) => a.z - b.z);
   for (let i = 0; i < west.length - 1; i++) link(west[i], west[i + 1]); for (let i = 0; i < shore.length - 1; i++) link(shore[i], shore[i + 1]);
-  // ---- poster columns (Tower square and by the bridge)
-  const poster = (text: string, sub: string) => { const c = document.createElement('canvas'); c.width = 256; c.height = 256; const g = c.getContext('2d')!; g.fillStyle = '#b9b1a0'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#1b1814'; g.font = 'bold 30px serif'; g.textAlign = 'center'; g.fillText(text, 128, 100); g.font = '20px serif'; g.fillText(sub, 128, 150); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 }); };
-  const col = (x: number, z: number, mat: THREE.Material) => { const y = groundH(x, z); const m = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 2.6, 16), mat); m.position.set(x, y + 1.3, z); m.castShadow = true; scene.add(m); const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.15, 16), M.iron); cap.position.set(x, y + 2.65, z); scene.add(cap); world.add(x, z, 0.55, 0.55, 0, y, y + 2.7, 'solid'); };
-  col(-74, -44, poster('ПРАЗДНИК УРОЖАЯ', '14 октября')); col(11.5, 4.2, poster('ТРЕБУЮТСЯ ГРУЗЧИКИ', 'Склад №2, смена Гейла'));
-  col(-60, -44, poster('ПОПЕЧИТЕЛЬСКИЙ СОВЕТ', 'Детям города · Э. Крайн'));
+  // ---- advertising columns (Morris-style): cast-iron body, domed cap, layered half-torn bills in period type
+  const posterTex = (bills: [string, string][], seed: number) => {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 256; const g = c.getContext('2d')!; const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = THREE.RepeatWrapping; tex.anisotropy = 4;
+    const draw = () => { g.fillStyle = '#6d695e'; g.fillRect(0, 0, 1024, 256);
+      bills.forEach(([title, sub], i) => { const x = 20 + i * (1000 / bills.length), w = 1000 / bills.length - 14, y = 12 + hash(i, seed) * 14, h = 220 - hash(seed, i) * 24; g.save(); g.translate(x + w / 2, y + h / 2); g.rotate((hash(i, seed + 3) - 0.5) * 0.05);
+        g.fillStyle = ['#cfc7b0', '#bdb59d', '#d6d0bf', '#b2ab98'][(i + seed) % 4]; g.beginPath(); g.moveTo(-w / 2, -h / 2); for (let k = 0; k <= 10; k++) g.lineTo(-w / 2 + k * w / 10, -h / 2 + hash(k, i + seed) * 7); for (let k = 0; k <= 10; k++) g.lineTo(w / 2 - hash(k, i) * 5, -h / 2 + k * h / 10); g.lineTo(w / 2, h / 2); g.lineTo(-w / 2 + hash(i, 9) * 14, h / 2 - hash(i, 8) * 12); g.lineTo(-w / 2, h / 2); g.closePath(); g.fill();
+        g.strokeStyle = '#2a2620'; g.lineWidth = 3; g.strokeRect(-w / 2 + 12, -h / 2 + 12, w - 24, h - 24); g.fillStyle = '#1b1814'; g.textAlign = 'center'; const fam = '"OldStd", Georgia, serif';
+        const words = title.split(' '); const lines = words.length > 2 ? [words.slice(0, Math.ceil(words.length / 2)).join(' '), words.slice(Math.ceil(words.length / 2)).join(' ')] : [title]; g.font = `bold ${Math.min(34, w / 9)}px ${fam}`; lines.forEach((ln, k) => g.fillText(ln, 0, -h * 0.18 + k * 36));
+        g.font = `italic ${Math.min(22, w / 14)}px ${fam}`; g.fillText(sub, 0, h * 0.28);
+        for (let k = 0; k < 7; k++) { g.fillStyle = `rgba(40,34,26,${0.05 + hash(k, i) * 0.08})`; g.beginPath(); g.ellipse((hash(k, i + 1) - 0.5) * w, (hash(i, k + 2) - 0.5) * h, 10 + hash(k, 5) * 30, 6 + hash(5, k) * 20, 0, 0, 7); g.fill(); } g.restore(); });
+      for (let k = 0; k < 120; k++) { g.fillStyle = `rgba(20,18,14,${hash(k, seed) * 0.08})`; g.fillRect(hash(k, 2) * 1024, hash(2, k) * 256, 2 + hash(k, 4) * 14, 1); } tex.needsUpdate = true; };
+    draw(); try { (document as any).fonts.load('700 30px OldStd').then(draw); } catch { /* font optional */ } return tex; };
+  const col = (x: number, z: number, bills: [string, string][], seed: number) => { const y = groundH(x, z); const iron = new THREE.MeshStandardMaterial({ color: 0x243028, roughness: 0.5, metalness: 0.6 });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.66, 0.4, 20), iron); body.position.set(x, y + 0.2, z); scene.add(body);
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.56, 1.7, 24, 1, true), new THREE.MeshStandardMaterial({ map: posterTex(bills, seed), roughness: 0.95, side: THREE.DoubleSide })); band.position.set(x, y + 1.25, z); band.castShadow = true; scene.add(band);
+    const mid = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.12, 20), iron); mid.position.set(x, y + 2.15, z); scene.add(mid);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.62, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), iron); dome.position.set(x, y + 2.2, z); dome.scale.y = 0.7; dome.castShadow = true; scene.add(dome);
+    const fin = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.3, 8), iron); fin.position.set(x, y + 2.8, z); scene.add(fin); world.add(x, z, 0.62, 0.62, 0, y, y + 2.9, 'solid'); };
+  col(-74, -44, [['ПРАЗДНИК УРОЖАЯ', '14 октября · ратуша'], ['ГАСТРОЛИ', 'варьете «Лира»'], ['ПОПЕЧИТЕЛЬСКИЙ СОВЕТ', 'детям города']], 1);
+  col(11.5, 4.2, [['ТРЕБУЮТСЯ ГРУЗЧИКИ', 'порт · смена Гейла'], ['РОЗЫСК', 'вознаграждение'], ['КАНАТНАЯ ФАБРИКА', 'набор рабочих']], 2);
+  col(-60, -44, [['ПОПЕЧИТЕЛЬСКИЙ СОВЕТ', 'Детям города · Э. Крайн'], ['ЗАЙМЫ', 'под залог · Фома'], ['ТРАМВАЙ', 'расписание']], 3);
   // ---- laundry over Kanatnaya and the orphanage yard
   const cloth = [0xd8d4cc, 0x8a8f96, 0xb8aa94, 0xcfc6ac];
   const line = (ax: number, az: number, bx: number, bz: number, y: number) => { const n = 6; const pts: THREE.Vector3[] = []; for (let i = 0; i <= 20; i++) { const t = i / 20; pts.push(new THREE.Vector3(ax + (bx - ax) * t, y - Math.sin(t * Math.PI) * 0.35, az + (bz - az) * t)); } scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wire));

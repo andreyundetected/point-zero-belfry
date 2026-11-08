@@ -15,7 +15,7 @@ const near = (id: string, tt: number, x: number, z: number, r: number) => { cons
 
 // 1. prologue: jump -3 min on the roof (we start at 22:03:30)
 t = at(22, 3, 30); jump(t - 180, 'prologue lesson'); know.add('prologue_done');
-ok(near('crane', at(22, 0, 40), -70.4, -60.6, 1) && near('lidia', at(22, 0, 40), -72.2, -57.4, 1.5), 'roof 22:00: Crane at the parapet, Lidia at the chest');
+ok(near('crane', at(22, 0, 40), -70, -64.2, 1) && near('lidia', at(22, 0, 40), -73.9, -59.3, 1.5), 'roof 22:00: Crane at the parapet, Lidia at the chest');
 // 2. late for Orven: shop locked at 22:13, jump back 5 minutes
 t = at(22, 13); ok(at_('orven', t).hidden, 'Orven is gone by 22:13 (shop locked)'); jump(at(22, 8, 40), 'Orven closes at 22:09');
 ok(!at_('orven', at(22, 9, 30)).hidden, 'Orven is at his door at 22:09:30 and talkable'); know.add('know_ned');

@@ -19,7 +19,7 @@ function build() {
   g.fillStyle = '#4a4538'; g.fillRect(px(-9), pz(-3), 18 * PPM, 6 * PPM);                                   // Old Bridge
   g.fillStyle = '#4a4538'; for (const p of [PIER3, PIER7]) g.fillRect(px(p.x - p.w / 2), pz(p.z0), p.w * PPM, (p.z1 - p.z0) * PPM);
   void DECK_Y;
-  for (const b of placed) { if (b.id === 'blk') continue; g.save(); g.translate(px(b.x), pz(b.z)); g.rotate(-b.ry); g.fillStyle = '#17181a'; g.strokeStyle = '#4a4a46'; g.lineWidth = 1; g.fillRect(-b.w / 2 * PPM, -b.depth * PPM, b.w * PPM, b.depth * PPM); g.strokeRect(-b.w / 2 * PPM, -b.depth * PPM, b.w * PPM, b.depth * PPM); g.restore(); }
+  for (const b of placed) { if (b.id === 'blk' || b.id === 'ob') continue; g.save(); g.translate(px(b.x), pz(b.z)); g.rotate(-b.ry); g.fillStyle = '#17181a'; g.strokeStyle = '#4a4a46'; g.lineWidth = 1; g.fillRect(-b.w / 2 * PPM, -b.depth * PPM, b.w * PPM, b.depth * PPM); g.strokeRect(-b.w / 2 * PPM, -b.depth * PPM, b.w * PPM, b.depth * PPM); g.restore(); }
   g.font = 'italic 15px "OldStd", Georgia, serif'; g.textAlign = 'center';
   const lab: [string, number, number][] = [['Башня-каланча', -70, -65], ['Башенная площадь', -68, -40], ['Лавка Орвена', -46, -39], ['Лавка Фомы', -40, -23], ['Почта', -22, -21], ['Рыночная ул.', -52, -5], ['Старый мост', 0, 9], ['Набережная Заречья', 22, -30], ['Таверна «Якорь»', 24, 2], ['Склад Харроу', 66, 46], ['Контора', 44, 33], ['Приют св. Лукии', 50, -80], ['Канатная ул.', -38, 33], ['Дом Тихона', -38, 48], ['Пристань №3', -42, 90], ['Пирс 7', -9, 82], ['Гавань', 40, 76], ['Канал', 0, -50]];
   for (const [t, x, z] of lab) { g.lineWidth = 4; g.strokeStyle = '#0a0b0d'; g.strokeText(t, px(x), pz(z)); g.fillStyle = '#a9a28f'; g.fillText(t, px(x), pz(z)); }

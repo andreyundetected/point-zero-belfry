@@ -6,6 +6,7 @@ import { Stvorka, StvHost, itemName } from './stvorka';
 import { DialogueRunner, DialogueUI, Ctx, nameOf, setNameKnown } from './dialogue';
 import { NpcRuntime } from './npcRuntime';
 import { Fx } from './fx';
+import { Burn } from './burn';
 import { Sound } from './audio';
 import { SimWorld, CityState } from '../sim/world';
 import { Flags, FlagName } from '../sim/flags';
@@ -16,7 +17,7 @@ import { LampPool, lamps, setLamp } from '../world/lamps';
 import { roomLights, doors, updateDoors, interactables, Interactable } from '../world/interiors';
 import { insideSite, SITES } from '../sim/sites';
 import { setFomaState } from '../world/ruins';
-import { setClock } from '../world/tower';
+import { setClock, updateTower } from '../world/tower';
 import { world } from '../world/colliders';
 import { R, HEIGHT, STEP, lineOfSight } from './physics';
 import { groundH } from '../world/terrain';
@@ -32,13 +33,13 @@ import { updateMarks } from '../world/marks';
 import { addInteract } from '../world/interiors';
 
 export class Game implements StvHost, Ctx {
-  s = new GameState(); sim: SimWorld; npcs: NpcRuntime; hud = new Hud(); stv: Stvorka; ui = new DialogueUI(); runner: DialogueRunner; fx: Fx; snd = new Sound(); veh: Vehicles; combat: Combat;
+  s = new GameState(); sim: SimWorld; npcs: NpcRuntime; hud = new Hud(); stv: Stvorka; ui = new DialogueUI(); runner: DialogueRunner; fx: Fx; burn: Burn; snd = new Sound(); veh: Vehicles; combat: Combat;
   pilot: Pilot; pool: LampPool; open = false; targetT = 0; previewing = false; cs!: CityState; lastCs = ''; locked = false; jumpBusy = false; ghosts: THREE.Group; fomaRuin = false;
   sinceThread = 0; sceneInside = ''; waitHeld = false; fadeBusy = false; time = 0; frozen = false; custom?: { update(dt: number): void; done?: boolean };
   seenLight = 1; stepT = 0; sub = ''; hintT = 0; hintStep = 0; shakeT = 0; shakeA = 0;
   portraitQ: string[] = []; rt?: THREE.WebGLRenderTarget; pcam = new THREE.PerspectiveCamera(28, 1, 0.05, 20);
   constructor(public scene: THREE.Scene, public cam: THREE.PerspectiveCamera, public player: Player, public moon: THREE.DirectionalLight, public hemi: THREE.HemisphereLight, public renderer: THREE.WebGLRenderer) {
-    this.sim = new SimWorld(this.s.flags); this.npcs = new NpcRuntime(scene, this.sim); this.fx = new Fx(scene); this.veh = new Vehicles(scene); this.combat = new Combat(this); this.pilot = new Pilot(this);
+    this.sim = new SimWorld(this.s.flags); this.npcs = new NpcRuntime(scene, this.sim); this.fx = new Fx(scene); this.burn = new Burn(scene); this.veh = new Vehicles(scene); this.combat = new Combat(this); this.pilot = new Pilot(this);
     this.pool = new LampPool(scene, 10); this.stv = new Stvorka(this); this.runner = new DialogueRunner(this.ui, this); this.runner.register(...CONVS);
     this.ghosts = new THREE.Group(); scene.add(this.ghosts); this.ghosts.visible = false;
     registerWorldItems(this);
@@ -85,14 +86,14 @@ export class Game implements StvHost, Ctx {
     const ok = (px: number, pz: number, py: number) => {
       for (const b of world.near(px, pz)) { if (b.off) continue; if (py + STEP >= b.y1 || py + HEIGHT <= b.y0) continue; const dx = px - b.cx, dz = pz - b.cz, lx = dx * b.cos - dz * b.sin, lz = dx * b.sin + dz * b.cos; const nx = Math.max(-b.hx, Math.min(b.hx, lx)), nz = Math.max(-b.hz, Math.min(b.hz, lz)); if ((lx - nx) ** 2 + (lz - nz) ** 2 < R * R) return false; }
       for (const d of NPCS) { const p = this.npcs.pose(d.id); if (!p || p.hidden) continue; if (Math.hypot(p.x - px, p.z - pz) < 0.6 && Math.abs(p.y - py) < 1.5) return false; }
-      for (const f of this.cs.fires) if (f.k > 0.3 && Math.hypot(px - f.x, pz - f.z) < f.r * 0.45) return false;
+      if (this.burn.fireAt(px, pz, this.tAt, this.s.flags)) return false;
       return true;
     };
     if (ok(x, z, y)) return { x, z, y };
     for (let r = 0.3; r <= 1.5; r += 0.3) for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (ok(px, pz, y)) return { x: px, z: pz, y }; }
     return null;
   }
-  meetT = 0; miniT = 0; bellShown = false; markT = 0; paused = false; hadLock = false; holdT = 0; holding = false;
+  tAt = 0; meetT = 0; miniT = 0; bellShown = false; markT = 0; paused = false; hadLock = false; holdT = 0; holding = false;
   /** spec 2.2: hold the jump button for 1 real second = preview; released earlier = cancel; held through = jump */
   holdBegin() { if (this.holding || this.jumpBusy) return; this.holding = true; this.holdT = 0; this.showGhosts(this.targetT); }
   holdEnd() { if (!this.holding) return; this.holding = false; this.hideGhosts(); }
@@ -106,10 +107,10 @@ export class Game implements StvHost, Ctx {
     const s = this.s; if (this.jumpBusy || s.dead || s.ended) return; if (s.knows('sync_held')) { this.hud.bark('Синхронизация удержана.', true); this.snd.play('digital/phaser_down1.ogg', 0.7); return; } this.jumpBusy = true;
     const b = this.player.body, oldT = s.t;
     // check the destination first (spec 2.2): occupied -> shift, impossible -> refuse
-    const keepFlags = s.flags; const tmp = new Flags(); this.sim.setFlags(tmp); this.cs = this.sim.city(target); this.applyCity(target, true);
+    this.tAt = target; const keepFlags = s.flags; const tmp = new Flags(); this.sim.setFlags(tmp); this.cs = this.sim.city(target); this.applyCity(target, true);
     this.npcs.update(target, b.x, b.z, 0, b.y);
-    const spot = this.freeSpot(b.x, b.z, b.y);
-    if (!spot) { this.sim.setFlags(keepFlags); this.cs = this.sim.city(oldT); this.applyCity(oldT, true); this.snd.play('digital/phaser_down1.ogg', 0.7); const fire = this.cs.fires.some(f => f.k > 0.3 && Math.hypot(b.x - f.x, b.z - f.z) < f.r * 0.5); this.hud.bark(fire ? 'Там горит.' : 'Там стена.', true); this.hud.toast(fire ? 'Там горит' : 'Там нельзя стоять', 2.5); this.jumpBusy = false; return; }
+    this.burn.rebuild(tmp); const spot = this.freeSpot(b.x, b.z, b.y);
+    if (!spot) { const fire = this.burn.fireAt(b.x, b.z, target, tmp); this.burn.rebuild(keepFlags); this.sim.setFlags(keepFlags); this.cs = this.sim.city(oldT); this.applyCity(oldT, true); this.snd.play('digital/phaser_down1.ogg', 0.7); this.hud.bark(fire ? 'Там горит.' : 'Там стена.', true); this.hud.toast(fire ? 'Там горит' : 'Там нельзя стоять', 2.5); this.jumpBusy = false; return; }
     this.snd.play('digital/phase_jump' + (1 + (s.jumps % 5)) + '.ogg', 0.9);
     this.hud.flash(1); this.hud.fade(true, 380); await new Promise(r => setTimeout(r, 700));
     // new universe: flags reset, knowledge + pocket stay
@@ -212,9 +213,10 @@ export class Game implements StvHost, Ctx {
     const b = p.body; const inside = this.insideRoom(); this.sceneInside = inside ?? ''; this.hemi.intensity = inside ? 0.12 : 0.7; this.moon.intensity = inside ? 0.0 : 1.0; this.snd.setMuffled(!!inside);
     const extra = roomLights.filter(l => l.on(s.t, s.flags) && !l.shot && (inside ? l.room === inside : Math.hypot(l.x - b.x, l.z - b.z) < 14 && (l.room !== 'cellar' || b.y < -2))).map(l => ({ x: l.x, y: l.y, z: l.z, color: l.color, intensity: l.intensity, dist: l.dist }));
     if (this.pilot.aboard) { const m = this.pilot.mesh.position, ry = this.pilot.s.ry; extra.push({ x: m.x + Math.sin(ry) * 1.2, y: m.y + 2.6, z: m.z + Math.cos(ry) * 1.2, color: 0xffd0a0, intensity: 6, dist: 9 }); }
-    const fl = this.fx.lights(this.cs.fires); this.pool.update(b.x, b.z, [...extra, ...fl], !!inside);
-    this.fx.update(dt, this.cs.fires, this.cs.glow); this.snd.setFire(this.cs.glow);
-    updateDoors(dt);
+    this.burn.update(s.t, s.flags, b.x, b.z, dt); const fl = this.burn.lights(this.time); this.pool.update(b.x, b.z, [...extra, ...fl], !!inside);
+    this.fx.update(dt, [], Math.max(this.cs.glow * 0.4, this.burn.share())); this.snd.setFire(this.burn.share());
+    { const f = this.scene.fog as THREE.FogExp2 | null; if (f) f.density = 0.035 - 0.026 * Math.max(0, Math.min(1, (b.y - 4) / 22)); }
+    updateDoors(dt); updateTower(dt, Math.hypot(b.x + 70, b.z + 58) < 70);
     // npcs
     this.npcs.update(s.t, b.x, b.z, dt, b.y, undefined, id => this.combat.override(id));
     this.combat.update(dt); this.pilot.update(dt); this.markT -= dt; if (this.markT <= 0) { this.markT = 0.08; updateMarks(this); }

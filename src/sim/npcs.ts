@@ -61,13 +61,13 @@ const add = (d: NpcDef) => { NPCS.push(d); return d; };
 
 // ============ WEST
 add({ id: 'crane', name: { ru: 'Эвелина Крайн', en: 'Evelina Crane' }, key: true, look: { body: 'liza', coat: 0x26292d, trou: 0x1c1c1e, long: true, hat: 'veil', extra: ['cane'], scale: 1.0 },
-  sched: () => { const y = roofY(); const sc = s(-70.4, -60.6, faceTo(-70.4, -60.6, -70, -55.5), 'idle', 0, y); sc.wait(at(22, 5), 'idle').walk([[-70, -55.6]], 1.3, 'walk', y).hide(sc.ct + 0.5);
+  sched: () => { const y = roofY(); const sc = s(-70, -64.2, faceTo(-70, -64.2, -70, -56), 'idle', 0, y); sc.wait(at(22, 5), 'idle').walk([[-70, -55.4]], 1.3, 'walk', y).hide(sc.ct + 0.5);
     sc.show(at(22, 5, 40), -70, -53.4, 'walk', Math.PI, undefined).walk([[-62, -50], [-57, -43]], 1.4).hide(at(22, 6)); return sc.done(); } });
 add({ id: 'lidia', name: { ru: 'Лидия', en: 'Lidia' }, key: true, look: { body: 'liza', coat: 0x4a4238, trou: 0x2e2c2a, skirt: false, hat: 'scarf', scale: 0.97, hair: 0x3a2a1a },
-  sched: () => { const y = roofY(); const sc = s(-72.2, -57.4, 0.6, 'fix', 0, y); sc.wait(at(22, 15), 'fix').walk([[-70, -55.6]], 1.2, 'walk', y).hide(sc.ct + 0.5);
+  sched: () => { const y = roofY(); const sc = s(-73.9, -59.3, 1.6, 'fix', 0, y); sc.wait(at(22, 15), 'fix').walk([[-70, -55.4]], 1.2, 'walk', y).hide(sc.ct + 0.5);
     sc.show(at(22, 40), -70, -51.6, 'cry', Math.PI, undefined); return sc.end().kfs; } });
 add({ id: 'fern', name: { ru: 'Ферн', en: 'Fern' }, key: true, look: { body: 'james', coat: 0x3a352e, trou: 0x252628, hat: 'cap', extra: ['lantern'], scale: 0.96, hair: 0xb8b8b0 },
-  sched: () => { const y = roofY(); const sc = s(-72.8, -55.3, 1.2, 'idle', 0, y); sc.wait(at(22, 5), 'idle').walk([[-70, -55.6]], 1, 'walk', y).hide(sc.ct + 0.5);
+  sched: () => { const y = roofY(); const sc = s(-65.4, -54.9, -1.6, 'idle', 0, y); sc.wait(at(22, 5), 'idle').walk([[-70, -55.4]], 1, 'walk', y).hide(sc.ct + 0.5);
     sc.show(at(22, 7), -71.4, -52.9, 'walk', 0).walk([[-67, -47]], 1.1).wait(at(22, 22), 'idle', 0).walk([[-68, -43.5]], 1, 'walk').wait(at(22, 22) + 40, 'lantern', faceTo(-68, -43.5, -70, -54)).end(); return sc.kfs; } });
 add({ id: 'stern', name: { ru: 'Штерн', en: 'Stern' }, key: true, look: { body: 'james', coat: 0x2b2a28, trou: 0x1c1c1e, hat: 'fedora', extra: ['case'] },
   sched: f => { const y = BASEMENT_Y(); const sc = s(-72.4, -60.4, 1.2, 'fix', 0, y);

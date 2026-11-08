@@ -13,6 +13,7 @@ import { buildTower } from './tower';
 import { buildFomaAndD8 } from './ruins';
 import { buildDecor } from './decor';
 import { buildNav } from './navbuild';
+import { buildOutskirts } from './outskirts';
 import { setNav } from '../sim/nav';
 import { groundH, hash } from './terrain';
 
@@ -140,7 +141,7 @@ export function buildZaton(scene: THREE.Scene): Zaton {
   { const bi = world.boxes.length; world.add(-7.8, 0, 0.3, 3.2, 0, 0, 3.2, 'patrol'); world.tagFrom(bi, 'patrol'); world.setOff('patrol', true); }
   finalizeLamps(scene);
   bt.flush(scene);
-  buildGround(scene); buildWater(scene); buildDecor(scene, props);
+  buildGround(scene); buildWater(scene); buildDecor(scene, props); buildOutskirts(scene);
   setNav(buildNav());
   const ready = Promise.all([props.build(scene), interiorProps.build(scene)]).then(() => { setNav(buildNav()); });
   void BOUNDS; void BRIDGE; void placed;
