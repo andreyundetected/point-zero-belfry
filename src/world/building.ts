@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { M } from '../render/materials';
 import { Batcher, mtx } from './batch';
 import { groundH, hash } from './terrain';
+import { world } from './colliders';
 
 export interface BuildingOpts {
   x: number; z: number; ry: number; w: number; floors: number; wall: THREE.Material;
@@ -17,13 +18,15 @@ export function signMesh(text: string, w: number, h: number) {
 }
 const UP = new THREE.Vector3(0, 1, 0);
 /** Procedural facade generator. Facade faces local +z. */
-export function building(bt: Batcher, scene: THREE.Scene, o: BuildingOpts) {
+export interface BuildingInfo { x: number; z: number; ry: number; w: number; depth: number; H: number; floors: number; base: number; door: { x: number; z: number; ry: number }; }
+export function building(bt: Batcher, scene: THREE.Scene, o: BuildingOpts): BuildingInfo {
   const { x, z, ry, w, floors, wall, lit = 0.25, shop = false, door = 0.5, roof = 'gable', seed = 1, redDoor = false, sign = null, depth = 9 } = o;
   const R = (a: number) => hash(seed * 13.1, a * 7.7);
   const FH = 3.1, H = floors * FH + 0.6, base = groundH(x, z) - 0.3;
   const P = (lx: number, ly: number, lz: number): [number, number, number] => { const v = new THREE.Vector3(lx, ly, lz).applyAxisAngle(UP, ry); return [x + v.x, base + ly, z + v.z]; };
   const box = (mat: THREE.Material, w_: number, h_: number, d_: number, lx: number, ly: number, lz: number, tile?: number) => { const [X, Y, Z] = P(lx, ly, lz); bt.box(mat, w_, h_, d_, mtx(X, Y, Z, ry), tile); };
-  box(wall, w, H, depth, 0, H / 2, -depth / 2);
+  box(wall, w, H + 1.5, depth, 0, H / 2 - 0.75, -depth / 2);
+  { const [X, , Z] = P(0, 0, -depth / 2); world.add(X, Z, w / 2, depth / 2, ry, base - 1.5, base + H + 0.2, 'building'); }
   box(M.stone, w + 0.04, 1.25, 0.12, 0, 0.62, 0.05, 1.6);
   for (let f = 1; f < floors; f++) box(M.cornice, w + 0.1, 0.16, 0.22, 0, f * FH + 0.35, 0.08, 1.2);
   box(M.cornice, w + 0.3, 0.32, 0.5, 0, H - 0.1, 0.2, 1.2); box(M.cornice, w + 0.36, 0.12, 0.6, 0, H + 0.12, 0.26, 1.2);
@@ -65,4 +68,6 @@ export function building(bt: Batcher, scene: THREE.Scene, o: BuildingOpts) {
     g.applyMatrix4(mtx(...P(0, H + 0.15, 0), ry)); bt.geo(M.roof, g);
     for (let c = 0; c < 1 + (w > 7 ? 1 : 0); c++) box(M.brickD, 0.7, 1.6, 0.6, -w / 4 + c * w / 2, H + rh * 0.6, -depth / 2 + 0.8, 1.8);
   } else { box(wall, w, 0.9, 0.25, 0, H + 0.45, 0.05); box(M.brickD, 0.8, 1.3, 0.7, w / 3, H + 0.65, -depth / 2, 1.8); }
+  const dbay = Math.floor(bays * door), dcx = -w / 2 + bw * (dbay + 0.5); const [DX, , DZ] = P(dcx, 0, 0.8);
+  return { x, z, ry, w, depth, H, floors, base, door: { x: DX, z: DZ, ry } };
 }
