@@ -196,6 +196,7 @@ export class Game implements StvHost, Ctx {
     else if (this.cs.lampsFlicker) this.applyCity(s.t);
     const b = p.body; const inside = this.insideRoom(); this.sceneInside = inside ?? ''; this.hemi.intensity = inside ? 0.12 : 0.7; this.moon.intensity = inside ? 0.0 : 1.0; this.snd.setMuffled(!!inside);
     const extra = roomLights.filter(l => l.on(s.t, s.flags) && !l.shot && (inside ? l.room === inside : Math.hypot(l.x - b.x, l.z - b.z) < 14 && (l.room !== 'cellar' || b.y < -2))).map(l => ({ x: l.x, y: l.y, z: l.z, color: l.color, intensity: l.intensity, dist: l.dist }));
+    if (this.pilot.aboard) { const m = this.pilot.mesh.position, ry = this.pilot.s.ry; extra.push({ x: m.x + Math.sin(ry) * 1.2, y: m.y + 2.6, z: m.z + Math.cos(ry) * 1.2, color: 0xffd0a0, intensity: 6, dist: 9 }); }
     const fl = this.fx.lights(this.cs.fires); this.pool.update(b.x, b.z, [...extra, ...fl], !!inside);
     this.fx.update(dt, this.cs.fires, this.cs.glow); this.snd.setFire(this.cs.glow);
     updateDoors(dt);
