@@ -1,38 +1,49 @@
-# 00 · С чего начать (пак «Окно v2»)
+# 00 · С чего начать (пак «Окно v4 — Затон»)
 
 ## Что в архиве
 ```
-assets/            ← 1700+ моделей, звуки, HDRI, текстуры, шрифты (≈90 МБ)
-  models/…           GLB по папкам; подробности — docs/02_ASSET_GUIDE.md
-  INDEX_models.txt   список всех моделей (размеры, треугольники, анимации)
-  ASSET_MANIFEST.md  сводка
+assets/              ← все модели, звуки, HDRI, текстуры, шрифты (≈130 МБ распакованным)
+  textures/city/       PBR-текстуры города: кирпич, штукатурка, камень, черепица, брусчатка, плиты, доски
+  models/people/       реалистичные тела Mixamo + библиотека анимаций UAL
+  models/interior_q/   мебель для приюта, домов, кабинетов
+  models/village_q/    колокол, скамьи, повозка, камни
+  INDEX_models.txt     список всех моделей (размер, треугольники, анимации)
 docs/
   00_README_START.md   этот файл
-  01_LEVEL_SPEC.md     ПОЛНАЯ спека уровня «Часовая набережная» (со ссылками на ассеты в [скобках])
-  02_ASSET_GUIDE.md    масштабы, загрузка, рецепт картинки, анимации, оговорки
-  03_START_PROMPT.md   промпт для облачной сессии
-  screenshots/         эталонные картинки (ночная улица, интерьер таверны, каталоги)
-tools/style_test/  ← две рабочие страницы-доказательства стиля
-CREDITS.md         ← авторы и лицензии
+  01_GAME_SPEC.md      ПОЛНАЯ спека: сюжет, мир, карта, места, люди, механики, хронология, прохождение, финал
+  02_DIALOGUES.md      все диалоги
+  03_ASSET_GUIDE.md    ассеты: что где, масштабы, сборка людей, ретаргет анимаций
+  04_START_PROMPT.md   промпт для облачной сессии
+  screenshots/         эталон картинки style_v4_street.png
+tools/
+  style_test/noir.html эталон стиля: процедурная улица, канал, мост, переулок (от первого лица, можно ходить)
+  shot.cjs             скриншоты через Playwright
+CREDITS.md           авторы и лицензии (всё CC0 / OFL)
 ```
 
-## Git: как положить это в новую ветку
-Старая ветка `claude/sweet-davinci-1ym3mj` — рабочее ядро (+-), но очень плохой визуал, бездушные NPC, мало диалогов. Её не трогаем. Новая ветка стартует с нуля от `master`, а старый код кладём в `reference_old/` только для чтения (агент смотрит, как он выглядит, но не основывается на нём).
+Старый пак (`okno-v2-pack.zip`) больше не нужен: всё нужное отсюда, старые спеки недействительны.
 
+## Git: новая ветка
 ```bash
+cd point-zero-belfry
 git fetch origin
-git checkout -b v2/chasovaya-nabereznaya origin/master
-mkdir -p reference_old
-git archive origin/claude/sweet-davinci-1ym3mj | tar -x -C reference_old
-rm -rf reference_old/node_modules
-unzip -o ~/Downloads/okno-v2-pack.zip -d .
+git checkout -b v3/zaton origin/main
+git rm -r -q --ignore-unmatch src docs tools assets reference_old public index.html vite.config.* package*.json tsconfig*.json
+unzip -o ~/Downloads/okno-v4-pack.zip -d .
 git add -A
-git commit -m "v2: asset pack + level spec + old code as reference"
-git push -u origin v2/chasovaya-nabereznaya
+git commit -m "v3: Затон — спека, диалоги, ассеты, эталон стиля"
+git push -u origin v3/zaton
 ```
-Когда уровень будет готов, `reference_old/` удали одним коммитом.
+Если основная ветка называется `master`, замени `origin/main` на `origin/master`. Старый код остаётся в истории git.
 
-## Что дальше
-1. Открой `tools/style_test/index.html` (инструкция там же) и убедись, что картинка тебе нравится.
-2. Запусти облачную сессию на ветке `v2/chasovaya-nabereznaya` и вставь промпт из `docs/03_START_PROMPT.md`.
-3. Спека — единственный источник правды. Хочешь изменить сюжет — правь `01_LEVEL_SPEC.md`, не код.
+## Посмотреть стиль до запуска сессии
+```bash
+npm i three
+npx vite --open /tools/style_test/noir.html
+```
+Клик по экрану — захват мыши, WASD — ходить. `?shot=1..5` — ракурсы, `?people=1` — люди (в работе), `?sat=0.2` — доля цвета.
+
+## Дальше
+1. Запусти облачную сессию на ветке `v3/zaton` и вставь промпт из `docs/04_START_PROMPT.md`
+
+2. Спека — единственный источник правды. Хочешь изменить сюжет или диалог — правь `01_GAME_SPEC.md` / `02_DIALOGUES.md`, не код
