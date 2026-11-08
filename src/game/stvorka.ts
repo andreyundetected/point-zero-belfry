@@ -28,7 +28,7 @@ const ITEM_TXT: Record<string, { ru: string; en: string; d: { ru: string; en: st
 export const itemName = (i: string) => pick(ITEM_TXT[i] ?? { ru: i, en: i });
 
 export interface StvHost {
-  getYaw(): number; s: GameState; open: boolean; targetT: number; getPos(): { x: number; z: number }; jumpTo(t: number, preview: boolean): void; previewing: boolean; holdBegin(): void; holdEnd(): void;
+  getYaw(): number; s: GameState; open: boolean; targetT: number; getPos(): { x: number; z: number }; jumpTo(t: number, preview: boolean): void; previewing: boolean; togglePreview(): void; showGhosts?(t: number): void;
   onClose?(): void; wait?: boolean;
 }
 export class Stvorka {
@@ -59,14 +59,14 @@ export class Stvorka {
     b.innerHTML = `<div style="display:flex;justify-content:space-between"><div>${tr('now')}: <b>${fmt(this.nowT, true)}</b></div><div>${tr('target')}: <b class="red" id="tsel">${fmt(this.host.targetT, true)}</b></div></div>
     <div class="tl"><div class="bar"></div>${marks}<div class="now" style="left:${x(this.nowT)}"></div><div class="sel" id="selmark" style="left:${x(this.host.targetT)}"></div>${hours}</div>
     <input id="rng" type="range" min="0" max="${WINDOW}" step="10" value="${Math.round(this.host.targetT / 10) * 10}">
-    <p><button class="go" id="jbtn">${tr('jump')} — ${lang === 'ru' ? 'держать 1 с' : 'hold 1 s'} [Enter]</button><button id="bm">${tr('bookmark')}</button><span class="dim">${tr('jump.hold')}</span></p>
+    <p><button class="go" id="jbtn">${tr('jump')} [Enter]</button><button id="pbtn">${lang === 'ru' ? 'Предпросмотр' : 'Preview'} [P]</button><button id="bm">${tr('bookmark')}</button></p>
     <div>${seen.sort((a, c) => a.t - c.t).map(m => `<div class="ev" data-t="${m.t}"><span class="dim">${fmt(m.t)}</span> ${m.big ? '<span class="red">●</span>' : '○'} ${m.label}</div>`).join('') || `<span class="dim">${lang === 'ru' ? 'Событий пока не видел.' : 'No events seen yet.'}</span>`}</div>`;
     const rng = $('rng') as HTMLInputElement; rng.oninput = () => this.setTarget(+rng.value);
     b.querySelectorAll('.ev').forEach(el => (el as HTMLElement).onclick = () => { this.setTarget(+(el as HTMLElement).dataset.t!); rng.value = String(this.host.targetT); });
-    const jb = $('jbtn'); jb.onmousedown = () => this.host.holdBegin(); jb.onmouseup = jb.onmouseleave = () => this.host.holdEnd();
+    $('jbtn').onclick = () => this.host.jumpTo(this.host.targetT, false); $('pbtn').onclick = () => this.host.togglePreview();
     $('bm').onclick = () => { this.host.s.bookmarks.push({ t: this.nowT, label: fmt(this.nowT) }); this.render(); };
   }
-  setTarget(t: number) { this.host.targetT = Math.max(0, Math.min(WINDOW, t)); this.sel = this.host.targetT; const e = document.getElementById('tsel'); if (e) e.textContent = fmt(this.host.targetT, true); const m = document.getElementById('selmark'); if (m) m.style.left = (this.host.targetT / WINDOW * 100) + '%'; }
+  setTarget(t: number) { this.host.targetT = Math.max(0, Math.min(WINDOW, t)); if (this.host.previewing) this.host.showGhosts?.(this.host.targetT); this.sel = this.host.targetT; const e = document.getElementById('tsel'); if (e) e.textContent = fmt(this.host.targetT, true); const m = document.getElementById('selmark'); if (m) m.style.left = (this.host.targetT / WINDOW * 100) + '%'; }
   /** released the jump button: a short hold = preview was cancelled, a full hold = jump */
   release() { if (!this.hold) return; this.hold = false; this.host.jumpTo(this.host.targetT, false); }
   private renderPeople(b: HTMLElement) {

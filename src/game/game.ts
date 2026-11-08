@@ -51,7 +51,7 @@ export class Game implements StvHost, Ctx {
     addEventListener('keydown', e => this.key(e));
     document.addEventListener('pointerlockchange', () => { const locked = !!document.pointerLockElement; if (locked) { this.hadLock = true; this.paused = false; document.getElementById('pause')!.style.display = 'none'; } else if (this.hadLock && !this.open && !this.ui.open && !this.runner.active && !this.s.ended && !this.jumpBusy) { this.paused = true; document.getElementById('pause')!.style.display = 'flex'; } });
     document.getElementById('pause')!.addEventListener('click', () => { this.paused = false; document.getElementById('pause')!.style.display = 'none'; this.player.dom.requestPointerLock?.(); });
-    addEventListener('keyup', e => { if (e.code === 'KeyT') this.waitHeld = false; if (e.code === 'Enter') this.holdEnd(); });
+    addEventListener('keyup', e => { if (e.code === 'KeyT') this.waitHeld = false; });
     addEventListener('mousedown', () => this.snd.init()); addEventListener('keydown', () => this.snd.init(), { once: true });
     player.onRespawn = () => { this.hud.bark('Холодная вода. Вылез.', true); this.hurt(0.6); };
     this.runner.onEnd = () => { setTimeout(() => { try { (this.player.dom.requestPointerLock() as any)?.catch?.(() => {}); } catch { /* needs a gesture */ } }, 60); };
@@ -96,12 +96,13 @@ export class Game implements StvHost, Ctx {
   }
   tAt = 0; meetT = 0; miniT = 0; bellShown = false; markT = 0; paused = false; hadLock = false; holdT = 0; holding = false;
   /** spec 2.2: hold the jump button for 1 real second = preview; released earlier = cancel; held through = jump */
+  togglePreview() { if (this.previewing) { this.hideGhosts(); this.previewing = false; } else { this.showGhosts(this.targetT); this.previewing = true; } }
   holdBegin() { if (this.holding || this.jumpBusy) return; this.holding = true; this.holdT = 0; this.showGhosts(this.targetT); }
   holdEnd() { if (!this.holding) return; this.holding = false; this.hideGhosts(); }
   async jumpTo(target: number, previewOnly: boolean) {
     if (this.jumpBusy) return;
     if (previewOnly) { this.showGhosts(target); this.previewing = true; return; }
-    if (!this.previewing) { /* quick click: do the jump directly */ } this.hideGhosts(); this.previewing = false;
+    this.hideGhosts(); this.previewing = false;
     this.doJump(target);
   }
   async doJump(target: number) {
@@ -135,7 +136,7 @@ export class Game implements StvHost, Ctx {
   key(e: KeyboardEvent) {
     if (this.ui.open || this.s.ended) return;
     if (e.code === 'Tab') { e.preventDefault(); this.toggleStvorka(); return; }
-    if (this.open) { if (e.code === 'Enter' && !e.repeat) this.holdBegin(); if (e.code === 'KeyB') { this.s.bookmarks.push({ t: this.s.t, label: fmt(this.s.t) }); this.stv.render(); } if (e.code === 'Escape') this.toggleStvorka(); return; }
+    if (this.open) { if (e.code === 'Enter' && !e.repeat) { void this.jumpTo(this.targetT, false); } if (e.code === 'KeyP') this.togglePreview(); if (e.code === 'KeyB') { this.s.bookmarks.push({ t: this.s.t, label: fmt(this.s.t) }); this.stv.render(); } if (e.code === 'Escape') this.toggleStvorka(); return; }
     if (e.code === 'KeyL') { setLang(getLang() === 'ru' ? 'en' : 'ru'); this.hud.toast(getLang() === 'ru' ? 'Язык: русский' : 'Language: English', 1.5); this.hud.refresh(); }
     if (e.code === 'KeyT') this.waitHeld = true;
     if (e.code === 'KeyB') { this.s.bookmarks.push({ t: this.s.t, label: fmt(this.s.t) }); this.hud.toast('Закладка ' + fmt(this.s.t), 1.5); }
@@ -201,7 +202,6 @@ export class Game implements StvHost, Ctx {
       if (this.waitHeld && !wait) { this.hud.toast('Рядом враг — ждать нельзя', 1.5); this.waitHeld = false; }
     }
     this.time += dt; s.clampT();
-    if (this.holding) { this.holdT += dt; if (this.holdT >= 1.0) { this.holding = false; this.hideGhosts(); this.previewing = false; void this.doJump(this.targetT); } }
     if (s.t >= WINDOW && !s.ended && !this.frozen) this.finish('empty');
     p.frozen = this.open || talking || this.jumpBusy || this.frozen || this.pilot.aboard || this.paused; if (!this.pilot.aboard) p.update(dt); else p.apply();
     this.hud.clock(s.t); this.hud.update(dt);

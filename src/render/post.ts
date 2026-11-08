@@ -9,7 +9,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 export function makePost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, cam: THREE.Camera, W: number, H: number, sat = 0.2) {
   const comp = new EffectComposer(renderer); comp.setPixelRatio(1); comp.setSize(W, H);
   comp.addPass(new RenderPass(scene, cam));
-  comp.addPass(new UnrealBloomPass(new THREE.Vector2(W, H), 0.55, 0.6, 0.9));
+  comp.addPass(new UnrealBloomPass(new THREE.Vector2(W / 2, H / 2), 0.55, 0.6, 0.9));
   const grade = new ShaderPass({
     uniforms: { tDiffuse: { value: null }, time: { value: 0 }, sat: { value: sat }, res: { value: new THREE.Vector2(W, H) } },
     vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
@@ -21,5 +21,8 @@ export function makePost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, cam:
   vec2 d=vUv-.5; col*=mix(.5,1.,smoothstep(.9,.25,length(d*vec2(1.,res.y/res.x))*1.25)); col+=(h(vUv*res+time)-.5)*.035; gl_FragColor=vec4(col,1.);}`,
   });
   comp.addPass(grade); comp.addPass(new OutputPass());
-  return { comp, grade };
+  const bloom = comp.passes[1] as UnrealBloomPass;
+  /** adaptive resolution: scale the internal buffers, the canvas stays full-size */
+  const setScale = (k: number) => { renderer.setPixelRatio(1); comp.setSize(Math.round(W * k), Math.round(H * k)); renderer.domElement.style.width = W + 'px'; renderer.domElement.style.height = H + 'px'; grade.uniforms.res.value.set(W * k, H * k); bloom.resolution.set(W * k / 2, H * k / 2); };
+  return { comp, grade, setScale };
 }

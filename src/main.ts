@@ -22,7 +22,7 @@ const { moon, hemi } = setupAtmosphere(scene);
 const zaton = buildZaton(scene);
 const dev = makeDevice(); cam.add(dev.obj);
 const rain = makeRain(scene);
-const { comp, grade } = makePost(renderer, scene, cam, W, H, SAT);
+const { comp, grade, setScale } = makePost(renderer, scene, cam, W, H, SAT);
 const player = new Player(cam, renderer.domElement);
 const game = new Game(scene, cam, player, moon, hemi, renderer);
 
@@ -40,10 +40,11 @@ if (q.get('gun')) { game.s.hasGun = true; game.s.mag = 6; game.s.ammo = 18; }
 const clock = new THREE.Clock(); let t = 0;
 declare global { interface Window { done?: boolean; info?: string; FREEZE?: boolean; player?: Player; game?: Game; dbg?: any } }
 window.player = player; window.game = game; (window as any).renderer = renderer; window.dbg = { createPerson, scene, THREE, fmt };
-let lastShown = '';
+let lastShown = ''; let scale = +(q.get('scale') ?? 1), acc = 0, accN = 0; setScale(scale);
 function frame() {
   for (const p of (window as any).__lp ?? []) p.update(0.016);
   const dt = Math.min(clock.getDelta(), 0.05); t += dt;
+  acc += dt; accN++; if (accN >= 90) { const avg = acc / accN; acc = 0; accN = 0; if (!q.get('scale')) { const ns = avg > 0.026 ? Math.max(0.5, scale - 0.15) : avg < 0.0155 ? Math.min(1, scale + 0.1) : scale; if (Math.abs(ns - scale) > 0.01) { scale = ns; setScale(scale); } } }
   game.update(dt); { const bm = (scene as any).__beam; if (bm) bm.material.opacity = 0.15 + 0.85 * Math.max(0, Math.sin(t * 0.9) ** 3); } const shown = fmt(game.s.t, true); if (shown !== lastShown) { lastShown = shown; dev.setTime(shown); } (rain as any).mesh.visible = !game.sceneInside; rain(t, cam.position.x, cam.position.z); grade.uniforms.time.value = t; comp.render();
   if (!window.FREEZE) requestAnimationFrame(frame);
 }

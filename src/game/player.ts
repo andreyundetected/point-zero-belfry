@@ -13,7 +13,6 @@ export class Player {
     addEventListener('keydown', e => { this.keys[e.code] = true; if (e.code === 'KeyQ' && !this.frozen) { this.autoRun = !this.autoRun; this.walkTo = null; } if (['KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code)) { if (e.code === 'KeyS') this.autoRun = false; this.walkTo = null; } if (e.code === 'Space') { this.jumpQueued = true; e.preventDefault(); } });
     addEventListener('keyup', e => this.keys[e.code] = false);
     dom.addEventListener('click', () => { if (!document.pointerLockElement) dom.requestPointerLock(); });
-    addEventListener('mousedown', e => { if (e.button === 0 && document.pointerLockElement && !this.frozen && this.canClickMove()) this.clickMove(); });
     addEventListener('mousemove', e => { if (document.pointerLockElement && !this.frozen) { this.yaw -= e.movementX * 0.0022; this.pitch = Math.max(-1.4, Math.min(1.4, this.pitch - e.movementY * 0.0022)); } });
   }
   place(x: number, z: number, lookX: number, lookZ: number, lookDy = 0, y?: number) {
