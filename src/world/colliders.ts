@@ -5,10 +5,13 @@ export interface Box {
   y0: number; y1: number;                                       // vertical extent (world y)
   kind: string; id?: number; walkable?: boolean; cos: number; sin: number; r: number; off?: boolean; tag?: string;
 }
-const CELL = 8;
+const CELL = 8; const EMPTY: Box[] = [];
 const key = (i: number, j: number) => i * 4096 + j;
 export class Colliders {
-  boxes: Box[] = [];
+  boxes: Box[] = []; dyn: Box[] = [];
+  /** a box that moves (tram, wagon, cars): not in the spatial grid, checked everywhere */
+  addDynamic(hx: number, hz: number, kind = 'solid'): Box { const b: Box = { cx: 0, cz: 0, hx, hz, rot: 0, y0: 0, y1: 2, kind, cos: 1, sin: 0, r: Math.hypot(hx, hz), off: true }; this.dyn.push(b); return b; }
+  moveDynamic(b: Box, x: number, z: number, rot: number, y0: number, y1: number) { b.cx = x; b.cz = z; b.rot = rot; b.cos = Math.cos(rot); b.sin = Math.sin(rot); b.y0 = y0; b.y1 = y1; b.off = false; }
   private grid = new Map<number, Box[]>();
   add(cx: number, cz: number, hx: number, hz: number, rot: number, y0: number, y1: number, kind = 'solid'): Box {
     const b: Box = { cx, cz, hx, hz, rot, y0, y1, kind, cos: Math.cos(rot), sin: Math.sin(rot), r: Math.hypot(hx, hz) };
@@ -22,7 +25,7 @@ export class Colliders {
   setOff(tag: string, off: boolean) { for (const b of this.boxes) if (b.tag === tag) b.off = off; }
   /** boxes near a point (radius <= CELL) */
   near(x: number, z: number): Box[] {
-    return this.grid.get(key(Math.floor(x / CELL) + 512, Math.floor(z / CELL) + 512)) ?? [];
+    const g = this.grid.get(key(Math.floor(x / CELL) + 512, Math.floor(z / CELL) + 512)) ?? EMPTY; return this.dyn.length ? g.concat(this.dyn) : g;
   }
   /** is the point inside any box of the kind, ignoring height */
   inside(x: number, z: number, kinds?: string[], pad = 0): boolean {

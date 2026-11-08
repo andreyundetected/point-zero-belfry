@@ -12,6 +12,8 @@ import { buildInteriors, makeDoor, makeWorldDoor } from './interiors';
 import { buildTower } from './tower';
 import { buildFomaAndD8 } from './ruins';
 import { buildDecor } from './decor';
+import { buildNav } from './navbuild';
+import { setNav } from '../sim/nav';
 import { groundH, hash } from './terrain';
 
 const RAD = Math.PI;
@@ -135,12 +137,12 @@ export function buildZaton(scene: THREE.Scene): Zaton {
     props.add('village_q/rock_' + (1 + (i % 3)), x, z, { ry: hash(i, 34) * 6, s: 0.06 + hash(i, 35) * 0.1 });
     void rd;
   }
-  { const bi = world.boxes.length; world.add(-7.8, 0, 0.3, 3.2, 0, 0, 3.2, 'patrol'); world.tagFrom(bi, 'patrol'); world.setOff('patrol', true);
-    const ti = world.boxes.length; world.add(-52, -9.6, 4.6, 1.3, 0, -1, 3.2, 'tram'); world.tagFrom(ti, 'tram'); world.setOff('tram', true); }
+  { const bi = world.boxes.length; world.add(-7.8, 0, 0.3, 3.2, 0, 0, 3.2, 'patrol'); world.tagFrom(bi, 'patrol'); world.setOff('patrol', true); }
   finalizeLamps(scene);
   bt.flush(scene);
   buildGround(scene); buildWater(scene); buildDecor(scene, props);
-  const ready = Promise.all([props.build(scene), interiorProps.build(scene)]).then(() => {});
+  setNav(buildNav());
+  const ready = Promise.all([props.build(scene), interiorProps.build(scene)]).then(() => { setNav(buildNav()); });
   void BOUNDS; void BRIDGE; void placed;
   return { props, ready };
 }

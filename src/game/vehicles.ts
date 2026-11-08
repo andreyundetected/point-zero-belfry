@@ -5,10 +5,12 @@ import { putModel } from '../world/props';
 import { groundH, walkY } from '../world/terrain';
 import { M } from '../render/materials';
 import { buildLaunchMesh } from './pilot';
+import { world } from '../world/colliders';
 
 /** car, wagon, tram, launch: moving models driven by the sim (spec 15.2) */
 export class Vehicles {
-  objs = new Map<string, THREE.Object3D>();
+  objs = new Map<string, THREE.Object3D>(); cols = new Map<string, ReturnType<typeof world.addDynamic>>();
+  private HB: Record<string, [number, number, number]> = { tram: [1.3, 4.6, 3.2], wagon: [1.3, 3.2, 2.6], craneCar: [0.95, 2.4, 1.6], cordCar: [0.95, 2.4, 1.6] };
   constructor(public scene: THREE.Scene) { this.build(); }
   private async build() {
     const black = new THREE.MeshStandardMaterial({ color: 0x0c0c0c, roughness: 0.35, metalness: 0.6 });
@@ -32,7 +34,9 @@ export class Vehicles {
   update(sim: SimWorld, t: number, cs: CityState, skipLaunch = false) {
     for (const v of VEHICLES) {
       const o = this.objs.get(v.id); if (!o || (skipLaunch && v.id === 'launch')) continue; const p = sim.vehicle(v.id, t);
-      if (p.hidden) { o.visible = false; continue; } o.visible = true;
+      const hb = this.HB[v.id]; let col = this.cols.get(v.id); if (hb && !col) { col = world.addDynamic(hb[0], hb[1]); this.cols.set(v.id, col); }
+      if (p.hidden) { o.visible = false; if (col) col.off = true; continue; } o.visible = true;
+      if (hb && col) world.moveDynamic(col, p.x, p.z, p.ry, walkY(p.x, p.z), walkY(p.x, p.z) + hb[2]);
       const y = v.id === 'launch' ? -2.35 + Math.sin(t * 1.7) * 0.05 : walkY(p.x, p.z);
       o.position.set(p.x, y, p.z); o.rotation.y = p.ry + (v.id === 'wagon' || v.id === 'cordCar' || v.id === 'craneCar' ? 0 : 0);
       if (v.id === 'wagon' && cs.wagonPinOut) o.rotation.z = 0.12;

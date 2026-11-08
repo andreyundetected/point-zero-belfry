@@ -3,6 +3,7 @@ import { NPCS, NpcDef } from './npcs';
 import { Kf, NpcPose, poseAt } from './schedule';
 import { at } from './time';
 import { VEHICLES } from './vehicles';
+import { navVersion } from './nav';
 
 export interface Fire { id: string; x: number; z: number; r: number; k: number; }   // k = intensity 0..1
 export interface CityState {
@@ -32,11 +33,11 @@ export function cityState(t: number, f: Flags): CityState {
 export class SimWorld {
   defs = new Map<string, NpcDef>(); private cache = new Map<string, Kf[]>(); private ver = '';
   constructor(public flags: Flags) { for (const n of NPCS) this.defs.set(n.id, n); }
-  private rebuild() { const v = this.flags.hash(); if (v === this.ver) return; this.ver = v; this.cache.clear(); }
+  private rebuild() { const v = this.flags.hash() + '|' + navVersion; if (v === this.ver) return; this.ver = v; this.cache.clear(); }
   kfs(id: string): Kf[] { this.rebuild(); let k = this.cache.get(id); if (!k) { const d = this.defs.get(id); k = d ? d.sched(this.flags) : []; this.cache.set(id, k); } return k; }
   pose(id: string, t: number): NpcPose { return poseAt(this.kfs(id), t); }
   private vcache = new Map<string, Kf[]>(); private vver = '';
-  vehicle(id: string, t: number): NpcPose { const v = this.flags.hash(); if (v !== this.vver) { this.vver = v; this.vcache.clear(); } let k = this.vcache.get(id); if (!k) { k = VEHICLES.find(x => x.id === id)!.sched(this.flags); this.vcache.set(id, k); } return poseAt(k, t); }
+  vehicle(id: string, t: number): NpcPose { const v = this.flags.hash() + '|' + navVersion; if (v !== this.vver) { this.vver = v; this.vcache.clear(); } let k = this.vcache.get(id); if (!k) { k = VEHICLES.find(x => x.id === id)!.sched(this.flags); this.vcache.set(id, k); } return poseAt(k, t); }
   setFlags(f: Flags) { this.flags = f; this.ver = ''; }
   city(t: number) { return cityState(t, this.flags); }
 }

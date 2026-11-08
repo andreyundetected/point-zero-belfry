@@ -173,7 +173,7 @@ export class Game implements StvHost, Ctx {
     const flick = cs.lampsFlicker; for (let i = 0; i < lamps.length; i++) { const l = lamps[i]; let on = true; if (flick) { const ph = Math.sin(t * 2.3 + i * 1.7) + Math.sin(t * 5.1 + i * 3.1); on = ph > -1.55; } if (cs.bridgeLampsDead && Math.abs(l.z) < 4 && Math.abs(l.x) < 10) on = false; if (l.on !== on) setLamp(l, on); }
     if (this.fomaRuin !== cs.rynokRuin || force) { this.fomaRuin = cs.rynokRuin; setFomaState(cs.rynokRuin); }
     if (cs.bellRings && !this.bellShown) { this.bellShown = true; this.snd.play('impact/impact_bell_heavy_00' + (Math.floor(t) % 5), 1, 0.7); } else if (!cs.bellRings) this.bellShown = false;
-    world.setOff('patrol', !(cs.bridgePatrol && !this.s.flags.has('patrolPassed'))); world.setOff('tram', !cs.tramStuck);
+    world.setOff('patrol', !(cs.bridgePatrol && !this.s.flags.has('patrolPassed')));
     this.veh.update(this.sim, t, cs, this.pilot.aboard);
   }
   /** journal portrait: render the head of a person you just met, grey (red frame is drawn by the UI for key people) */

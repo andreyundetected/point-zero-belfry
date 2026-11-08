@@ -1,4 +1,5 @@
 import { walkY as groundH } from '../world/terrain';
+import { route } from './nav';
 // Keyframed NPC schedules. Between kf[i] and kf[i+1]: if kf[i].go the NPC walks (linear), otherwise holds the pose until the next key.
 export interface Kf { t: number; x: number; z: number; y?: number; a: string; ry?: number; go?: boolean; hide?: boolean; speed?: number; }
 export interface NpcPose { x: number; z: number; y: number; a: string; ry: number; hidden: boolean; walking: boolean; }
@@ -9,7 +10,8 @@ export class Sched {
   /** stay where we are until absolute time `until` */
   wait(until: number, a?: string, ry?: number) { if (a) this.ca = a; if (ry !== undefined) this.cry = ry; if (until > this.ct) { this.push({ t: this.ct, x: this.cx, z: this.cz, y: this.cy, a: this.ca, ry: this.cry }); this.ct = until; } return this; }
   /** walk a polyline starting now at speed m/s; y = floor height at the end of the path (undefined = terrain) */
-  walk(path: [number, number][], speed = 1.3, a = 'walk', yEnd?: number) {
+  walk(path0: [number, number][], speed = 1.3, a = 'walk', yEnd?: number) {
+    const path = this.routed(path0);
     for (const [x, z] of path) {
       const d = Math.hypot(x - this.cx, z - this.cz); if (d < 0.01) continue;
       this.push({ t: this.ct, x: this.cx, z: this.cz, y: this.cy, a, ry: Math.atan2(x - this.cx, z - this.cz), go: true });
@@ -18,10 +20,13 @@ export class Sched {
     this.cy = yEnd; return this;
   }
   /** walk and arrive exactly at time `arrive` (explicit-timestamp movement, used for carts) */
-  walkBy(path: [number, number][], arrive: number, a = 'walk') {
-    let len = 0, px = this.cx, pz = this.cz; for (const [x, z] of path) { len += Math.hypot(x - px, z - pz); px = x; pz = z; }
-    return this.walk(path, len / Math.max(1, arrive - this.ct), a);
+  /** every leg goes through the nav grid so nobody walks through a house */
+  private routed(path: [number, number][]): [number, number][] { const out: [number, number][] = []; let x = this.cx, z = this.cz; for (const [tx, tz] of path) { for (const w of route(x, z, tx, tz)) out.push(w); x = tx; z = tz; } return out; }
+  walkBy(path0: [number, number][], arrive: number, a = 'walk') {
+    const path = this.routed(path0); let len = 0, px = this.cx, pz = this.cz; for (const [x, z] of path) { len += Math.hypot(x - px, z - pz); px = x; pz = z; }
+    return this.walkRaw(path, len / Math.max(1, arrive - this.ct), a);
   }
+  private walkRaw(path: [number, number][], speed: number, a: string) { for (const [x, z] of path) { const d = Math.hypot(x - this.cx, z - this.cz); if (d < 0.01) continue; this.push({ t: this.ct, x: this.cx, z: this.cz, y: this.cy, a, ry: Math.atan2(x - this.cx, z - this.cz), go: true }); this.ct += d / speed; this.cx = x; this.cz = z; } this.cy = undefined; return this; }
   teleport(x: number, z: number, y?: number, ry?: number, a?: string) { this.cx = x; this.cz = z; this.cy = y; if (ry !== undefined) this.cry = ry; if (a) this.ca = a; return this; }
   hide(at?: number) { if (at !== undefined) this.wait(at); this.push({ t: this.ct, x: this.cx, z: this.cz, a: this.ca, hide: true }); return this; }
   show(at: number, x: number, z: number, a = 'idle', ry = 0, y?: number) { this.ct = at; this.cx = x; this.cz = z; this.cy = y; this.ca = a; this.cry = ry; return this; }
