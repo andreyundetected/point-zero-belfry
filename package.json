@@ -12,7 +12,7 @@
     "sim:solve": "tsx tests/solve.ts",
     "sim:hash": "tsx tests/hash.ts",
     "test": "npm run sim:baseline --silent > /dev/null && npm run sim:dialogues --silent && npm run sim:solve --silent && npm run sim:hash --silent",
-    "test:world": "node tools/test_physics.cjs && node tools/test_boot.cjs && node tools/test_flow.cjs && node tools/test_foma.cjs",
+    "test:world": "node tools/test_physics.cjs && node tools/test_boot.cjs && node tools/test_flow.cjs && node tools/test_foma.cjs && node tools/test_chain.cjs",
     "sim:dialogues": "tsx tests/dialogues.ts"
   },
   "devDependencies": {

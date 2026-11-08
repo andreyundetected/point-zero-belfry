@@ -71,7 +71,7 @@ export class DialogueRunner {
       const n: Node | undefined = conv.nodes[node]; if (!n) break;
       n.fx?.(this.ctx);
       for (const l of n.say ?? []) { await this.ui.show(l); if (!l.act) this.ctx.advance(5); }
-      if (n.choices) {
+      if (n.choices && n.choices.length) {
         const vis: Choice[] = n.choices.filter(c => !(c.hide && used.has(node + ':' + c.ru)) && (!c.if || c.if(this.ctx)) && (!c.know || this.ctx.knows(c.know)));
         if (!vis.length) break;
         const i: number = await this.ui.choose(vis.map((c: Choice) => ({ text: (getLang() === 'en' && c.en) || c.ru, glyph: c.know ? c.kt ?? '' : undefined })));
