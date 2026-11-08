@@ -46,4 +46,4 @@ function frame() {
   if (!window.FREEZE) requestAnimationFrame(frame);
 }
 frame();
-zaton.ready.then(() => { window.done = true; window.info = 'ok'; if (q.get('board')) { game.s.pocket = 'cap'; game.s.learn('helm_ok'); game.pilot.board(); } window.done = true; window.info = 'ok'; if (!debugPos && !q.get('noprologue')) setTimeout(() => game.runner.start('prologue'), 1200); });
+zaton.ready.then(() => { const ld = document.getElementById('loading'); if (ld) ld.style.display = 'none'; window.done = true; window.info = 'ok'; if (q.get('board')) { game.s.pocket = 'cap'; game.s.learn('helm_ok'); game.pilot.board(); } window.done = true; window.info = 'ok'; if (!debugPos && !q.get('noprologue')) setTimeout(() => game.runner.start('prologue'), 1200); });

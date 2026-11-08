@@ -87,7 +87,7 @@ export class Game implements StvHost, Ctx {
     for (let r = 0.3; r <= 1.5; r += 0.3) for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (ok(px, pz, y)) return { x: px, z: pz, y }; }
     return null;
   }
-  markT = 0; paused = false; hadLock = false; holdT = 0; holding = false;
+  bellShown = false; markT = 0; paused = false; hadLock = false; holdT = 0; holding = false;
   /** spec 2.2: hold the jump button for 1 real second = preview; released earlier = cancel; held through = jump */
   holdBegin() { if (this.holding || this.jumpBusy) return; this.holding = true; this.holdT = 0; this.showGhosts(this.targetT); }
   holdEnd() { if (!this.holding) return; this.holding = false; this.hideGhosts(); }
@@ -160,6 +160,7 @@ export class Game implements StvHost, Ctx {
     const cs = this.cs = this.sim.city(t);
     const flick = cs.lampsFlicker; for (let i = 0; i < lamps.length; i++) { const l = lamps[i]; let on = true; if (flick) { const ph = Math.sin(t * 2.3 + i * 1.7) + Math.sin(t * 5.1 + i * 3.1); on = ph > -1.55; } if (cs.bridgeLampsDead && Math.abs(l.z) < 4 && Math.abs(l.x) < 10) on = false; if (l.on !== on) setLamp(l, on); }
     if (this.fomaRuin !== cs.rynokRuin || force) { this.fomaRuin = cs.rynokRuin; setFomaState(cs.rynokRuin); }
+    if (cs.bellRings && !this.bellShown) { this.bellShown = true; this.snd.play('impact/impact_bell_heavy_00' + (Math.floor(t) % 5), 1, 0.7); } else if (!cs.bellRings) this.bellShown = false;
     world.setOff('patrol', !(cs.bridgePatrol && !this.s.flags.has('patrolPassed'))); world.setOff('tram', !cs.tramStuck);
     this.veh.update(this.sim, t, cs, this.pilot.aboard);
   }
@@ -224,7 +225,7 @@ export class Game implements StvHost, Ctx {
   /** the final screen (spec 13.3 / 15.3): neutral facts, no judgement */
   facts(): string[] {
     const f = this.s.flags, ru = getLang() === 'ru'; const L: string[] = []; const has = (n: any) => f.has(n);
-    L.push(ru ? `Нед: ${has('nedSaved') ? 'жив, остался на мосту' : 'прыгнул с Старого моста в 22:16'}` : `Ned: ${has('nedSaved') ? 'alive, stayed on the bridge' : 'jumped from the Old Bridge at 22:16'}`);
+    L.push(ru ? `Нед: ${has('nedSaved') ? 'жив, остался на мосту' : 'прыгнул со Старого моста в 22:16'}` : `Ned: ${has('nedSaved') ? 'alive, stayed on the bridge' : 'jumped from the Old Bridge at 22:16'}`);
     L.push(ru ? `Гейл: ${has('gaylWarned') || has('annaWarned') || has('jetonStolen') ? 'ушёл к жене' : 'ранен, лежит во дворе склада'}` : `Gayl: ${has('gaylWarned') || has('annaWarned') || has('jetonStolen') ? 'went to his wife' : 'wounded in the warehouse yard'}`);
     const tk = has('tikhonDead') ? 'мёртв' : has('tikhonHurt') ? 'без сознания' : has('tikhonLocked') ? 'заперт в доме' : has('tikhonTurned') ? 'дома с Пип' : 'ушёл на пристань';
     L.push(ru ? `Тихон: ${tk}. Пип: ${has('tikhonTurned') ? 'с отцом' : has('tikhonDead') || has('tikhonHurt') ? 'одна' : 'спит одна'}` : `Tikhon: ${tk}. Pip: ${has('tikhonTurned') ? 'with her father' : 'alone'}`);
