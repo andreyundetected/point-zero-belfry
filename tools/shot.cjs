@@ -1,6 +1,15 @@
-// usage: node tools/shot.cjs "tools/style_test/noir.html?shot=a" docs/screenshots/x.png   (needs: npm i -D playwright three)
-const {chromium}=require('playwright');const http=require('http');const fs=require('fs');const path=require('path');
-const srv=http.createServer((q,s)=>{const f=path.join(__dirname,'..',decodeURIComponent(q.url.split('?')[0]==='/'?'/index.html':q.url.split('?')[0]));fs.readFile(f,(e,d)=>{if(e){s.statusCode=404;return s.end()}s.setHeader('Content-Type',f.endsWith('.js')?'text/javascript':f.endsWith('.html')?'text/html':'application/octet-stream');s.end(d)})}).listen(8766);
-(async()=>{const b=await chromium.launch({args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});const p=await b.newPage({viewport:{width:1600,height:700}});
-p.on('response',r=>{if(r.status()>=400)console.log('404',r.url())});p.on('pageerror',e=>console.log('ERR',e.message));p.on('console',m=>console.log('console',m.text()));await p.goto('http://localhost:8766/'+(process.argv[2]||'tools/style_test/noir.html'));await p.waitForFunction('window.done',null,{timeout:180000});
-console.log(await p.evaluate('window.info'));await p.evaluate('window.FREEZE=true'); await p.waitForTimeout(2000); const data=await p.evaluate(()=>document.querySelector('canvas').toDataURL('image/png')); fs.writeFileSync(process.argv[3]||'shot.png',Buffer.from(data.split(',')[1],'base64'));await b.close();srv.close();})();
+// usage: node tools/shot.cjs "/?shot=1" docs/screenshots/x.png   (dev server is started automatically)
+const { chromium } = require('playwright'); const { createServer } = require('vite'); const fs = require('fs');
+(async () => {
+  const srv = await createServer({ server: { port: 5199, host: '127.0.0.1' }, logLevel: 'error' }); await srv.listen();
+  const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  const p = await b.newPage({ viewport: { width: 1600, height: 700 } });
+  p.on('response', r => { if (r.status() >= 400) console.log('HTTP', r.status(), r.url()); });
+  p.on('pageerror', e => console.log('ERR', e.message)); p.on('console', m => console.log('console', m.text()));
+  await p.goto('http://127.0.0.1:5199' + (process.argv[2] || '/'));
+  await p.waitForFunction('window.done', null, { timeout: 240000 });
+  await p.evaluate('window.FREEZE=true'); await p.waitForTimeout(2000);
+  const data = await p.evaluate(() => document.querySelector('canvas').toDataURL('image/png'));
+  fs.writeFileSync(process.argv[3] || 'shot.png', Buffer.from(data.split(',')[1], 'base64'));
+  await b.close(); await srv.close();
+})();

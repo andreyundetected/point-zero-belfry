@@ -1,0 +1,3 @@
+import { defineConfig } from 'vite';
+// assets/ is served at the site root: /models/..., /textures/..., /hdri/...
+export default defineConfig({ publicDir: 'assets', server: { host: true } });
