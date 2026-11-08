@@ -3,7 +3,7 @@
 export interface Box {
   cx: number; cz: number; hx: number; hz: number; rot: number; // footprint, rot = ry of the box (radians)
   y0: number; y1: number;                                       // vertical extent (world y)
-  kind: string; id?: number; walkable?: boolean; cos: number; sin: number; r: number;
+  kind: string; id?: number; walkable?: boolean; cos: number; sin: number; r: number; off?: boolean; tag?: string;
 }
 const CELL = 8;
 const key = (i: number, j: number) => i * 4096 + j;
@@ -17,6 +17,9 @@ export class Colliders {
     for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const k = key(i + 512, j + 512); (this.grid.get(k) ?? this.grid.set(k, []).get(k)!).push(b); }
     return b;
   }
+  /** tag every box added since index `from` (used to toggle intact/ruined states) */
+  tagFrom(from: number, tag: string) { for (let i = from; i < this.boxes.length; i++) this.boxes[i].tag = tag; }
+  setOff(tag: string, off: boolean) { for (const b of this.boxes) if (b.tag === tag) b.off = off; }
   /** boxes near a point (radius <= CELL) */
   near(x: number, z: number): Box[] {
     return this.grid.get(key(Math.floor(x / CELL) + 512, Math.floor(z / CELL) + 512)) ?? [];
@@ -24,7 +27,7 @@ export class Colliders {
   /** is the point inside any box of the kind, ignoring height */
   inside(x: number, z: number, kinds?: string[], pad = 0): boolean {
     for (const b of this.near(x, z)) {
-      if (kinds && !kinds.includes(b.kind)) continue;
+      if (b.off || (kinds && !kinds.includes(b.kind))) continue;
       const dx = x - b.cx, dz = z - b.cz, lx = dx * b.cos - dz * b.sin, lz = dx * b.sin + dz * b.cos;
       if (Math.abs(lx) <= b.hx + pad && Math.abs(lz) <= b.hz + pad) return true;
     }

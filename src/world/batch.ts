@@ -25,7 +25,7 @@ export class Batcher {
   box(mat: THREE.Material, w: number, h: number, d: number, m4: THREE.Matrix4, tile = 1.8) {
     const g = new THREE.BoxGeometry(w, h, d); g.applyMatrix4(m4); worldUV(g, tile, hash(w, d) * 7, hash(h, w) * 5); this.geo(mat, g);
   }
-  flush(scene: THREE.Scene) {
+  flush(scene: THREE.Object3D) {
     for (const [mat, gs] of this.b) {
       const m = new THREE.Mesh(mergeGeometries(gs.map(g => g.index ? g.toNonIndexed() : g))!, mat);
       m.castShadow = m.receiveShadow = !(mat === M.lit || mat === M.lit2); scene.add(m);

@@ -1,5 +1,5 @@
 import { world, Box } from '../world/colliders';
-import { groundH } from '../world/terrain';
+import { groundH, inCanal, inHarbour } from '../world/terrain';
 import { BOUNDS, WATER_Y } from '../world/layout';
 
 export const R = 0.32, HEIGHT = 1.75, STEP = 0.42, G = 15, JUMP_V = 5.2;
@@ -8,9 +8,9 @@ export const newBody = (x: number, z: number): Body => ({ x, y: groundH(x, z), z
 
 /** floor height under (x,z) for a body with feet at y: terrain or the highest box top it can step onto */
 export function supportAt(x: number, z: number, feetY: number, r = R * 0.6): number {
-  let s = groundH(x, z);
+  const gh = groundH(x, z); let s = feetY < gh - 1.2 ? -1e9 : gh; // below ground (cellar): only boxes support
   for (const b of world.near(x, z)) {
-    if (b.y1 > feetY + STEP) continue;
+    if (b.off || b.y1 > feetY + STEP) continue;
     if (circleHitsBox(x, z, r, b) && b.y1 > s) s = b.y1;
   }
   return s;
@@ -24,7 +24,7 @@ function circleHitsBox(x: number, z: number, r: number, b: Box): boolean {
 function resolveHoriz(p: Body, head: number) {
   for (let it = 0; it < 3; it++) {
     for (const b of world.near(p.x, p.z)) {
-      if (p.y + STEP >= b.y1 || p.y + head <= b.y0) continue; // below step height or above head: not a wall
+      if (b.off || p.y + STEP >= b.y1 || p.y + head <= b.y0) continue; // below step height or above head: not a wall
       const dx = p.x - b.cx, dz = p.z - b.cz, lx = dx * b.cos - dz * b.sin, lz = dx * b.sin + dz * b.cos;
       const nx = Math.max(-b.hx, Math.min(b.hx, lx)), nz = Math.max(-b.hz, Math.min(b.hz, lz));
       let ox = lx - nx, oz = lz - nz, d2 = ox * ox + oz * oz, px = 0, pz = 0;
@@ -53,11 +53,12 @@ export function stepBody(p: Body, wishX: number, wishZ: number, run: boolean, ju
   // vertical
   p.vy -= G * dt; p.y += p.vy * dt;
   const sup = supportAt(p.x, p.z, p.y);
-  if (p.vy <= 0 && p.y <= sup + 0.001) { p.y = sup; p.vy = 0; p.grounded = true; }
+  if (sup < -1e8) { p.vy = Math.max(p.vy, -20); p.grounded = false; }
+  else if (p.vy <= 0 && p.y <= sup + 0.001) { p.y = sup; p.vy = 0; p.grounded = true; }
   else if (p.grounded && p.vy < 0 && p.y - sup < 0.3) { p.y = sup; p.vy = 0; } // stick to slopes/stairs going down
   else p.grounded = false;
   if (p.vy > 0) for (const b of world.near(p.x, p.z)) { // bump head on ceilings
-    if (b.y0 > p.y + head - 0.3 && b.y0 < p.y + head + p.vy * dt + 0.05 && circleHitsBox(p.x, p.z, R * 0.8, b)) { p.vy = 0; break; }
+    if (!b.off && b.y0 > p.y + head - 0.3 && b.y0 < p.y + head + p.vy * dt + 0.05 && circleHitsBox(p.x, p.z, R * 0.8, b)) { p.vy = 0; break; }
   }
-  p.inWater = p.y < WATER_Y - 0.5;
+  p.inWater = p.y < WATER_Y - 0.5 && (inCanal(p.x, p.z) || inHarbour(p.z));
 }

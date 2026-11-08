@@ -1,13 +1,16 @@
 import * as THREE from 'three';
 import { M } from '../render/materials';
 import { Batcher, mtx } from './batch';
-import { buildCanal, buildPiers, buildWater, BRIDGE } from './canal';
+import { buildCanal, buildPiers, buildWater } from './canal';
 import { blocks, initCity, placed, put, row } from './city';
 import { world } from './colliders';
 import { buildGround } from './ground';
 import { lamp } from './lamps';
-import { BOUNDS, QUAY_Z, ROADS } from './layout';
+import { BOUNDS, BRIDGE, QUAY_Z, ROADS } from './layout';
 import { PropField } from './props';
+import { buildInteriors, makeDoor } from './interiors';
+import { buildTower } from './tower';
+import { buildFomaAndD8 } from './ruins';
 import { groundH, hash } from './terrain';
 
 const RAD = Math.PI;
@@ -18,18 +21,31 @@ export function buildZaton(scene: THREE.Scene): Zaton {
   buildCanal(scene, bt); buildPiers(scene, bt);
 
   // ---------- named places (spec 4.2 / 5.3). Front centre, facing direction -> ry
-  put('tower', { x: -70, z: -54, ry: 0, w: 8, floors: 9, wall: M.stone, lit: 0.1, roof: 'flat', seed: 901, depth: 8, door: 0.5 });
-  put('orven', { x: -46, z: -33.3, ry: RAD, w: 5, floors: 2, wall: M.brickD, lit: 0.0, shop: true, sign: 'КЛЮЧИ И ЗАМКИ', seed: 902, depth: 4, door: 0.5 });
+  const PI = RAD;
+  put('tower', { x: -70, z: -54, ry: 0, w: 8, floors: 9, wall: M.stone, lit: 0.1, roof: 'none', seed: 901, depth: 8, door: 0.5 });
+  const pOrven = put('orven', { x: -46, z: -33.3, ry: PI, w: 5, floors: 2, wall: M.brickD, lit: 0.0, shop: true, sign: 'КЛЮЧИ И ЗАМКИ', seed: 902, depth: 4, door: 0.5, hollow: true });
   put('D4', { x: -46, z: -36.7, ry: 0, w: 5, floors: 2, wall: M.plaster3, lit: 0, seed: 903, depth: 6 });
-  put('foma', { x: -40, z: -14.4, ry: 0, w: 6.5, floors: 2, wall: M.brickD, lit: 0.1, shop: true, sign: 'ЗАЛОГИ · ФОМА', seed: 904, depth: 6, door: 0.5 });
-  put('D8', { x: -33.2, z: -14.4, ry: 0, w: 6.5, floors: 2, wall: M.plaster2, lit: 0.3, seed: 905, depth: 6 });
   put('post', { x: -22, z: -14.4, ry: 0, w: 8, floors: 2, wall: M.plaster, lit: 0.3, shop: true, sign: 'ПОЧТА · ТЕЛЕГРАФ', seed: 906, depth: 7, door: 0.5 });
-  put('tavern', { x: 19.9, z: 9, ry: -RAD / 2, w: 12, floors: 2, wall: M.brick, lit: 0.6, shop: false, sign: '«ЯКОРЬ»', seed: 907, depth: 9, door: 0.5 });
-  put('contora', { x: 44, z: 23.2, ry: RAD, w: 10, floors: 2, wall: M.plaster2, lit: 0.3, sign: 'КУРЬЕРСКАЯ КОНТОРА', shop: true, seed: 908, depth: 8, door: 0.3 });
-  put('warehouse', { x: 66, z: 23.2, ry: RAD, w: 32, floors: 3, wall: M.brickD, lit: 0.05, roof: 'flat', sign: 'СКЛАД №2 ХАРРОУ И К°', seed: 909, depth: 20, door: 0.5 });
-  put('priyut', { x: 50, z: -66, ry: 0, w: 24, floors: 3, wall: M.plaster, lit: 0.12, sign: 'ПРИЮТ СВ. ЛУКИИ', seed: 910, depth: 9, door: 0.5 });
-  put('chapel', { x: 43, z: -60, ry: RAD / 2, w: 8, floors: 2, wall: M.stone, lit: 0.0, seed: 911, depth: 5, door: 0.5 });
-  put('tikhon', { x: -38, z: 40.1, ry: RAD, w: 6, floors: 1, wall: M.plaster3, lit: 0.9, seed: 912, depth: 6, door: 0.5 });
+  const pTavern = put('tavern', { x: 19.9, z: 9, ry: -PI / 2, w: 12, floors: 2, wall: M.brick, lit: 0.6, sign: '«ЯКОРЬ»', seed: 907, depth: 9, door: 0.5, hollow: true, backDoor: -4.5, holes: [{ f: 1, x0: 4.5, x1: 5.8, z0: -6.4, z1: -0.9 }] });
+  const pContora = put('contora', { x: 44, z: 23.2, ry: PI, w: 10, floors: 2, wall: M.plaster2, lit: 0.3, sign: 'КУРЬЕРСКАЯ КОНТОРА', shop: true, seed: 908, depth: 8, door: 0.3, hollow: true, holes: [{ f: 1, x0: 3.3, x1: 4.7, z0: -7.6, z1: -3.7 }] });
+  put('warehouse', { x: 66, z: 23.2, ry: PI, w: 32, floors: 3, wall: M.brickD, lit: 0.05, roof: 'flat', sign: 'СКЛАД №2 ХАРРОУ И К°', seed: 909, depth: 20, door: 0.5 });
+  const pPriyut = put('priyut', { x: 50, z: -66, ry: 0, w: 24, floors: 3, wall: M.plaster, lit: 0.12, sign: 'ПРИЮТ СВ. ЛУКИИ', seed: 910, depth: 9, door: 0.5, hollow: true, fdn: 4.5, holes: [{ f: 1, x0: 4.9, x1: 6.5, z0: -8, z1: -2.3 }] });
+  put('chapel', { x: 43, z: -60, ry: PI / 2, w: 8, floors: 2, wall: M.stone, lit: 0.0, seed: 911, depth: 5, door: 0.5 });
+  const pTikhon = put('tikhon', { x: -38, z: 40.1, ry: PI, w: 6, floors: 1, wall: M.plaster3, lit: 0.9, seed: 912, depth: 6, door: 0.5, hollow: true });
+  const interiorProps = new PropField();
+  buildInteriors(scene, bt, interiorProps);
+  buildTower(scene, bt, interiorProps);
+  buildFomaAndD8(scene);
+  // doors in the wall gaps (hollow buildings)
+  const T = 0.15;
+  makeDoor(scene, 'orven.door', 'orven', pOrven.dcx!, -T, { locked: t => (t >= 9 * 60 + 25 ? 'Заперто. Записка: «Закрыто. Срочное — Канатная, 11»' : null), label: 'Лавка Орвена' });
+  makeDoor(scene, 'tavern.door', 'tavern', pTavern.dcx!, -T, { label: 'Таверна «Якорь»' });
+  makeDoor(scene, 'tavern.back', 'tavern', -4.5, -9 + T, { label: 'Задний двор' });
+  makeDoor(scene, 'contora.door', 'contora', pContora.dcx!, -T, { locked: (t, f) => (f.has('officeOpen') || t >= 12 * 60 + 5 ? null : 'Контора закрыта. Курьеров впускают по жетону — стучи в окошко.'), label: 'Курьерская контора' });
+  makeDoor(scene, 'contora.inner', 'contora', 3.5, -3.2, { w: 1.5, locked: (t, f) => (f.has('innerOpen') || t >= 12 * 60 + 5 ? null : 'Дверь в кабинет заперта.'), label: 'Дверь в кабинет' });
+  makeDoor(scene, 'priyut.door', 'priyut', pPriyut.dcx!, -T, { label: 'Приют', w: 1.3 });
+  makeDoor(scene, 'tikhon.door', 'tikhon', pTikhon.dcx!, -T, { locked: (t, f) => (f.has('tikhonKnock') || f.has('tikhonTurned') || t < 0 ? null : 'Заперто. Внутри горит свет.'), label: 'Дом Тихона' });
+  const ip = interiorProps; void ip;
 
   // ---------- rows of closed houses (D1..D20 and the second line)
   row({ id: 'rynok:s', a: [-88, -8], b: [-14, -8], side: 1, seed: 1, fmin: 2, fmax: 3, shopP: 0.35, signs: { 3: 'ПЕКАРНЯ', 6: 'АПТЕКА' } });
@@ -117,7 +133,7 @@ export function buildZaton(scene: THREE.Scene): Zaton {
   }
   bt.flush(scene);
   buildGround(scene); buildWater(scene);
-  const ready = props.build(scene);
+  const ready = Promise.all([props.build(scene), interiorProps.build(scene)]).then(() => {});
   void BOUNDS; void BRIDGE; void placed;
   return { props, ready };
 }

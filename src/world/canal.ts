@@ -1,16 +1,13 @@
 import * as THREE from 'three';
 import { M } from '../render/materials';
 import { Batcher, mtx } from './batch';
-import { BED_Y, CANAL, QUAY_Z, WATER_Y } from './layout';
+import { BARGE, BED_Y, BRIDGE, bridgeTop, CANAL, DECK_Y, PIER3, PIER7, PierSpec, QUAY_Z, WATER_Y } from './layout';
 import { world } from './colliders';
 import { groundH } from './terrain';
 import { lamp } from './lamps';
 
-export const BRIDGE = { x0: -9, x1: 9, z0: -3, z1: 3 };
 const RAIL_H = 1.1;    // visible parapet height
 const RAIL_COL = 1.45; // collider is taller: jump peak 0.86 + step 0.42 must not clear it
-/** deck top height of the Old Bridge at x */
-export function bridgeTop(x: number) { const t = x / 9; return 0.12 + 1.15 * (1 - t * t); }
 
 function wallRun(bt: Batcher, ax: number, az: number, bx: number, bz: number, topFn: (x: number, z: number) => number, thick = 1.2, rail = true) {
   const len = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.round(len / 4)), rot = Math.atan2(bx - ax, bz - az) + Math.PI / 2; // local x along the run
@@ -108,10 +105,6 @@ export function buildWater(scene: THREE.Scene) {
   const w = new THREE.Mesh(new THREE.PlaneGeometry(700, 700), mat); w.rotation.x = -Math.PI / 2; w.position.set(0, WATER_Y, 0); scene.add(w);
 }
 
-export interface PierSpec { x: number; z0: number; z1: number; w: number; }
-export const PIER3: PierSpec = { x: -42, z0: QUAY_Z - 1, z1: 86, w: 3 };
-export const PIER7: PierSpec = { x: -9.5, z0: QUAY_Z - 1, z1: 78, w: 5 };
-export const DECK_Y = -0.5;
 export function buildPiers(scene: THREE.Scene, bt: Batcher) {
   for (const p of [PIER3, PIER7]) {
     const len = p.z1 - p.z0, cz = (p.z0 + p.z1) / 2;
@@ -126,7 +119,7 @@ export function buildPiers(scene: THREE.Scene, bt: Batcher) {
     world.add(p.x, p.z1, p.w / 2, 0.15, 0, DECK_Y, DECK_Y + RAIL_COL, 'rail');
   }
   // Barge "Vera" moored on the east side of pier 7: flat deck 16x5, cabin, hatch, rusty hull
-  const bx = PIER7.x + PIER7.w / 2 + 3.1, bz = 68, top = DECK_Y - 0.15;
+  const bx = BARGE.x, bz = BARGE.z, top = BARGE.top;
   bt.box(M.dark, 5, top - (WATER_Y - 0.9), 16, mtx(bx, (top + WATER_Y - 0.9) / 2, bz, 0), 1.4);
   bt.box(M.wood, 4.8, 0.08, 15.8, mtx(bx, top + 0.04, bz, 0), 1.4);
   world.add(bx, bz, 2.5, 8, 0, WATER_Y - 0.9, top, 'deck');

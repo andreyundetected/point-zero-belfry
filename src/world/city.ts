@@ -37,9 +37,11 @@ export function fits(cx: number, cz: number, w: number, d: number, ry: number, m
 let bt: Batcher, scn: THREE.Scene;
 export function initCity(scene: THREE.Scene, batcher: Batcher) { scn = scene; bt = batcher; }
 
-export function put(id: string, o: BuildingOpts): Placed {
-  const info = building(bt, scn, o); const p = { ...info, id }; placed.push(p); return p;
+export function put(id: string, o: BuildingOpts, into?: Batcher): Placed {
+  const info = building(into ?? bt, scn, o); const p = { ...info, id }; placed.push(p); return p;
 }
+/** like put() but into another batcher and without registering for the row layout fit tests twice */
+export function putGroup(id: string, o: BuildingOpts, into: Batcher): Placed { return put(id, o, into); }
 const facing = (fx: number, fz: number) => Math.atan2(fx, fz);
 
 interface RowOpts {

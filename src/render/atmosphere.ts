@@ -6,12 +6,12 @@ import { hash } from '../world/terrain';
 export const FOG = 0x0b0f15;
 export function setupAtmosphere(scene: THREE.Scene) {
   scene.background = new THREE.Color(FOG); scene.fog = new THREE.FogExp2(FOG, 0.035);
-  scene.add(new THREE.HemisphereLight(0x5f7590, 0x1d1a17, 0.7));
+  const hemi = new THREE.HemisphereLight(0x5f7590, 0x1d1a17, 0.7); scene.add(hemi);
   const moon = new THREE.DirectionalLight(0xb0c4e8, 1.0); moon.position.set(-18, 30, -12); moon.castShadow = true;
   moon.shadow.mapSize.set(2048, 2048); Object.assign(moon.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 1, far: 100 });
   moon.shadow.bias = -0.0005; moon.shadow.normalBias = 0.03; scene.add(moon); scene.add(moon.target);
   new EXRLoader().load(A + 'hdri/night_512.exr', t => { t.mapping = THREE.EquirectangularReflectionMapping; scene.environment = t; scene.environmentIntensity = 0.35; });
-  return moon;
+  return { moon, hemi };
 }
 /** Rain follows the camera. */
 export function makeRain(scene: THREE.Scene) {

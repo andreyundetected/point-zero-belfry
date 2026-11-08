@@ -1,0 +1,195 @@
+import * as THREE from 'three';
+import { Player } from './player';
+import { GameState, ItemId } from './state';
+import { Hud } from './hud';
+import { Stvorka, StvHost, itemName } from './stvorka';
+import { DialogueRunner, DialogueUI, Ctx } from './dialogue';
+import { NpcRuntime } from './npcRuntime';
+import { Fx } from './fx';
+import { Sound } from './audio';
+import { SimWorld, CityState } from '../sim/world';
+import { Flags, FlagName } from '../sim/flags';
+import { fmt, WINDOW, TIME_SCALE, WAIT_SCALE, at } from '../sim/time';
+import { EVENTS } from '../sim/events';
+import { THREADS } from '../content/threads';
+import { LampPool, lamps, setLamp } from '../world/lamps';
+import { roomLights, doors, updateDoors, interactables, Interactable } from '../world/interiors';
+import { insideSite, SITES } from '../sim/sites';
+import { setFomaState } from '../world/ruins';
+import { setClock } from '../world/tower';
+import { world } from '../world/colliders';
+import { R, HEIGHT, STEP } from './physics';
+import { groundH } from '../world/terrain';
+import { NPCS } from '../sim/npcs';
+import { VEHICLES } from '../sim/vehicles';
+import { Vehicles } from './vehicles';
+import { getLang, pick } from './strings';
+import { CONVS, pickConv, registerWorldItems, onBark } from '../content';
+import { Combat } from './combat';
+
+export class Game implements StvHost, Ctx {
+  s = new GameState(); sim: SimWorld; npcs: NpcRuntime; hud = new Hud(); stv: Stvorka; ui = new DialogueUI(); runner: DialogueRunner; fx: Fx; snd = new Sound(); veh: Vehicles; combat: Combat;
+  pool: LampPool; open = false; targetT = 0; previewing = false; cs!: CityState; lastCs = ''; locked = false; jumpBusy = false; ghosts: THREE.Group; fomaRuin = false;
+  sinceThread = 0; sceneInside = ''; waitHeld = false; fadeBusy = false; time = 0; frozen = false; custom?: { update(dt: number): void; done?: boolean };
+  seenLight = 1; stepT = 0; sub = ''; hintT = 0; hintStep = 0; shakeT = 0; shakeA = 0;
+  constructor(public scene: THREE.Scene, public cam: THREE.PerspectiveCamera, public player: Player, public moon: THREE.DirectionalLight, public hemi: THREE.HemisphereLight) {
+    this.sim = new SimWorld(this.s.flags); this.npcs = new NpcRuntime(scene, this.sim); this.fx = new Fx(scene); this.veh = new Vehicles(scene); this.combat = new Combat(this);
+    this.pool = new LampPool(scene, 10); this.stv = new Stvorka(this); this.runner = new DialogueRunner(this.ui, this); this.runner.register(...CONVS);
+    this.ghosts = new THREE.Group(); scene.add(this.ghosts); this.ghosts.visible = false;
+    registerWorldItems(this);
+    addEventListener('keydown', e => this.key(e));
+    addEventListener('keyup', e => { if (e.code === 'KeyT') this.waitHeld = false; });
+    addEventListener('mousedown', () => this.snd.init()); addEventListener('keydown', () => this.snd.init(), { once: true });
+    player.onRespawn = () => { this.hud.bark('Холодная вода. Вылез.', true); this.hurt(0.6); };
+    this.applyUniverse(); this.hud.clock(0);
+  }
+  // ---------------- StvHost
+  getPos() { return { x: this.player.body.x, z: this.player.body.z }; }
+  // ---------------- Ctx (for dialogues and content)
+  advance(sec: number) { this.s.t = Math.min(WINDOW, this.s.t + sec); }
+  bark(ru: string, force = false) { return this.hud.bark(ru, force); }
+  thread(key: string) { if (this.s.thread === key) return; this.s.thread = key; const th = THREADS[key]; if (th) this.hud.thread(pick(th), 7); this.sinceThread = 0; }
+  flag(n: FlagName) { this.s.setFlag(n); this.sim.flags = this.s.flags; }
+  give(i: ItemId) { this.s.give(i); this.hud.toast(itemName(i)); }
+  take(i: ItemId) { if (this.s.pocket === i) { this.s.pocket = undefined; this.s.held = undefined; } }
+  learn(id: string) { this.s.learn(id); }
+  note(id: string, ru: string, en: string, who?: string, red = false) { this.s.note({ id, t: this.s.t, ru, en, who, red }); }
+  message(ru: string, en: string) { this.s.messages.push({ t: this.s.t, ru, en }); this.hud.toast(ru, 5); }
+  npcAct() {} end(ending: string) { this.finish(ending); } has(i: ItemId) { return this.s.pocket === i; } knows(id: string) { return this.s.knows(id); } fl(n: FlagName) { return this.s.flags.has(n); }
+  t() { return this.s.t; } money(d: number) { this.s.money += d; } gun() { return this.s.hasGun; } conv(id: string) { void this.runner.start(id); }
+  fomaRuinOn() { return this.fomaRuin; }
+  jumpRel(sec: number) { void this.doJump(Math.max(0, Math.min(WINDOW, this.s.t + sec))); }
+  openDoor(id: string, open = true) { const d = doors.find(x => x.id === id); if (d) d.open = open; }
+  setPocketHeld() { this.s.held = this.s.pocket; }
+  shake(a: number) { this.shakeA = a; this.shakeT = 1.2; }
+  hurt(v: number) { this.hud.hurt(v); setTimeout(() => this.hud.hurt(0), 350); }
+  // ---------------- universe handling
+  applyUniverse() { this.sim.setFlags(this.s.flags); }
+  /** pick the nearest free standing spot within 1.5 m of (x,z) at time t, or null */
+  freeSpot(x: number, z: number, y: number): { x: number; z: number; y: number } | null {
+    const ok = (px: number, pz: number, py: number) => {
+      for (const b of world.near(px, pz)) { if (b.off) continue; if (py + STEP >= b.y1 || py + HEIGHT <= b.y0) continue; const dx = px - b.cx, dz = pz - b.cz, lx = dx * b.cos - dz * b.sin, lz = dx * b.sin + dz * b.cos; const nx = Math.max(-b.hx, Math.min(b.hx, lx)), nz = Math.max(-b.hz, Math.min(b.hz, lz)); if ((lx - nx) ** 2 + (lz - nz) ** 2 < R * R) return false; }
+      for (const d of NPCS) { const p = this.npcs.pose(d.id); if (!p || p.hidden) continue; if (Math.hypot(p.x - px, p.z - pz) < 0.6 && Math.abs(p.y - py) < 1.5) return false; }
+      for (const f of this.cs.fires) if (f.k > 0.3 && Math.hypot(px - f.x, pz - f.z) < f.r * 0.45) return false;
+      return true;
+    };
+    if (ok(x, z, y)) return { x, z, y };
+    for (let r = 0.3; r <= 1.5; r += 0.3) for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (ok(px, pz, y)) return { x: px, z: pz, y }; }
+    return null;
+  }
+  async jumpTo(target: number, previewOnly: boolean) {
+    if (this.jumpBusy) return;
+    if (previewOnly) { this.showGhosts(target); this.previewing = true; return; }
+    if (!this.previewing) { /* quick click: do the jump directly */ } this.hideGhosts(); this.previewing = false;
+    this.doJump(target);
+  }
+  async doJump(target: number) {
+    const s = this.s; if (this.jumpBusy || s.dead || s.ended) return; this.jumpBusy = true;
+    const b = this.player.body, oldT = s.t;
+    // check the destination first (spec 2.2): occupied -> shift, impossible -> refuse
+    const keepFlags = s.flags; const tmp = new Flags(); this.sim.setFlags(tmp); this.cs = this.sim.city(target); this.applyCity(target, true);
+    this.npcs.update(target, b.x, b.z, 0, b.y);
+    const spot = this.freeSpot(b.x, b.z, b.y);
+    if (!spot) { this.sim.setFlags(keepFlags); this.cs = this.sim.city(oldT); this.applyCity(oldT, true); this.snd.play('digital/phaser_down1.ogg', 0.7); const fire = this.cs.fires.some(f => f.k > 0.3 && Math.hypot(b.x - f.x, b.z - f.z) < f.r * 0.5); this.hud.bark(fire ? 'Там горит.' : 'Там стена.', true); this.hud.toast(fire ? 'Там горит' : 'Там нельзя стоять', 2.5); this.jumpBusy = false; return; }
+    this.snd.play('digital/phase_jump' + (1 + (s.jumps % 5)) + '.ogg', 0.9);
+    this.hud.flash(1); this.hud.fade(true, 380); await new Promise(r => setTimeout(r, 700));
+    // new universe: flags reset, knowledge + pocket stay
+    s.flags = tmp; s.changes = []; s.t = target; s.jumps++; s.held = s.pocket; s.worldItems.clear(); s.universeStart = target;
+    this.sim.setFlags(s.flags); b.x = spot.x; b.z = spot.z; b.y = spot.y; b.vy = 0; b.vx = b.vz = 0;
+    for (const d of doors) { d.open = false; (d.pivot as any).inner.rotation.y = 0; }
+    this.player.apply(); this.applyCity(target, true); this.onUniverse();
+    this.hud.flash(0); this.hud.fade(false, 500); await new Promise(r => setTimeout(r, 450)); this.jumpBusy = false;
+    this.hud.toast(`${fmt(oldT)} → ${fmt(target)}`, 2.5);
+  }
+  onUniverse() { onBark(this, 'universe'); }
+  showGhosts(t: number) {
+    this.hideGhosts(); this.ghosts.visible = true; this.hud.ghost(true);
+    const m = new THREE.MeshBasicMaterial({ color: 0x6aa0ff, transparent: true, opacity: 0.35, depthTest: false });
+    const tmp = new SimWorld(new Flags()); const px = this.player.body.x, pz = this.player.body.z;
+    for (const d of NPCS) { const p = tmp.pose(d.id, t); if (p.hidden || Math.hypot(p.x - px, p.z - pz) > 45) continue; const g = new THREE.Mesh(new THREE.CapsuleGeometry(0.26 * (d.look.scale ?? 1), 1.1 * (d.look.scale ?? 1), 4, 8), m); g.position.set(p.x, p.y + 0.85 * (d.look.scale ?? 1), p.z); g.renderOrder = 10; this.ghosts.add(g); }
+    const cs = tmp.city(t); for (const f of cs.fires) { const g = new THREE.Mesh(new THREE.SphereGeometry(f.r * 0.5, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff7a30, transparent: true, opacity: 0.18, depthTest: false })); g.position.set(f.x, groundH(f.x, f.z) + 2, f.z); this.ghosts.add(g); }
+  }
+  hideGhosts() { this.ghosts.visible = false; this.hud.ghost(false); while (this.ghosts.children.length) this.ghosts.remove(this.ghosts.children[0]); }
+  // ---------------- input
+  key(e: KeyboardEvent) {
+    if (this.ui.open || this.s.ended) return;
+    if (e.code === 'Tab') { e.preventDefault(); this.toggleStvorka(); return; }
+    if (this.open) { if (e.code === 'Enter') { void this.jumpTo(this.targetT, false); } if (e.code === 'KeyB') { this.s.bookmarks.push({ t: this.s.t, label: fmt(this.s.t) }); this.stv.render(); } if (e.code === 'Escape') this.toggleStvorka(); return; }
+    if (e.code === 'KeyT') this.waitHeld = true;
+    if (e.code === 'KeyB') { this.s.bookmarks.push({ t: this.s.t, label: fmt(this.s.t) }); this.hud.toast('Закладка ' + fmt(this.s.t), 1.5); }
+    if (e.code === 'KeyE') this.useNearest();
+    if (e.code === 'KeyR') this.combat.reload();
+  }
+  toggleStvorka() {
+    if (this.jumpBusy || this.frozen) return; this.open = !this.open;
+    if (this.open) { document.exitPointerLock?.(); this.stv.show(this.s.t); } else { this.stv.hide(); this.hideGhosts(); this.previewing = false; this.player.dom.requestPointerLock?.(); }
+    this.hud.thread(THREADS[this.s.thread] ? pick(THREADS[this.s.thread]) : '', this.open ? 99 : 0.01);
+  }
+  // ---------------- interaction
+  near: { i: Interactable | null; label: string | null; fn?: () => void } = { i: null, label: null };
+  findInteract() {
+    const p = this.player.body, cam = this.cam; const fx = -Math.sin(this.player.yaw), fz = -Math.cos(this.player.yaw); let best: { d: number; label: string; fn: () => void } | null = null;
+    const consider = (x: number, y: number, z: number, r: number, label: string | null, fn: () => void) => {
+      if (!label) return; const dx = x - p.x, dz = z - p.z, d = Math.hypot(dx, dz); if (d > r || Math.abs(y - p.y) > 2.2) return; const cosA = d < 0.5 ? 1 : (dx * fx + dz * fz) / d; if (cosA < 0.35) return; const score = d - cosA; if (!best || score < best.d) best = { d: score, label, fn };
+    };
+    for (const d of doors) { const lk = d.locked(this.s.t, this.s.flags); consider(d.x, d.y, d.z, 1.9, lk && !d.open ? `${d.label}: ${lk}` : (d.open ? 'Закрыть дверь' : 'Открыть дверь'), () => { if (lk && !d.open) { this.hud.bark(lk.split('.')[0] + '.', true); this.snd.play('rpg_foley/metal_latch.ogg', 0.5); onBark(this, 'locked:' + d.id); return; } d.open = !d.open; this.snd.play('rpg_foley/door_' + (d.open ? 'open_' : 'close_') + (1 + (this.s.t | 0) % 4) + '.ogg', 0.7); }); }
+    for (const it of interactables) { if (it.ok && !it.ok(this)) continue; const q = it.at ? it.at(this) : { x: it.x, y: it.y, z: it.z }; if (!q) continue; consider(q.x, q.y, q.z, it.r ?? 1.6, it.label(this), () => it.use(this)); }
+    for (const d of NPCS) { const po = this.npcs.pose(d.id); if (!po || po.hidden || d.civ && !pickConv(d.id, this)) continue; const cid = pickConv(d.id, this); if (!cid) continue; consider(po.x, po.y, po.z, 2.5, `Говорить: ${pick(d.name)}`, () => this.talk(d.id, cid)); }
+    void cam; return best as { d: number; label: string; fn: () => void } | null;
+  }
+  talk(npc: string, conv: string) { if (this.runner.active) return; this.s.met.add(npc); const p = this.npcs.pose(npc)!; this.player.yaw = Math.atan2(-(p.x - this.player.body.x), -(p.z - this.player.body.z)); this.runner.start(conv).then(() => this.afterTalk()); }
+  afterTalk() { this.player.apply(); }
+  useNearest() { if (this.runner.active || this.frozen) return; const n = this.findInteract(); n?.fn(); }
+  // ---------------- per-frame
+  applyCity(t: number, force = false) {
+    const cs = this.cs = this.sim.city(t);
+    const flick = cs.lampsFlicker; for (let i = 0; i < lamps.length; i++) { const l = lamps[i]; let on = true; if (flick) { const ph = Math.sin(t * 2.3 + i * 1.7) + Math.sin(t * 5.1 + i * 3.1); on = ph > -1.55; } if (cs.bridgeLampsDead && Math.abs(l.z) < 4 && Math.abs(l.x) < 10) on = false; if (l.on !== on) setLamp(l, on); }
+    if (this.fomaRuin !== cs.rynokRuin || force) { this.fomaRuin = cs.rynokRuin; setFomaState(cs.rynokRuin); }
+    this.veh.update(this.sim, t, cs);
+  }
+  update(dt: number) {
+    const s = this.s, p = this.player;
+    if (this.custom) this.custom.update(dt);
+    const wasT = s.t; const talking = this.ui.open || this.runner.active;
+    if (!this.open && !talking && !this.jumpBusy && !this.frozen && !s.ended) {
+      const wait = this.waitHeld && !this.combat.enemyWatching(); this.s.t += dt * (wait ? WAIT_SCALE : TIME_SCALE);
+      if (this.waitHeld && !wait) { this.hud.toast('Рядом враг — ждать нельзя', 1.5); this.waitHeld = false; }
+    }
+    this.time += dt; s.clampT();
+    if (s.t >= WINDOW && !s.ended && !this.frozen) this.finish('empty');
+    p.frozen = this.open || talking || this.jumpBusy || this.frozen; p.update(dt);
+    this.hud.clock(s.t); this.hud.update(dt);
+    // city state + lights
+    if (Math.floor(wasT) !== Math.floor(s.t) || this.lastCs === '') { this.lastCs = 'x'; this.applyCity(s.t); setClock(s.t); }
+    else if (this.cs.lampsFlicker) this.applyCity(s.t);
+    const b = p.body; const inside = this.insideRoom(); this.sceneInside = inside ?? ''; this.hemi.intensity = inside ? 0.12 : 0.7; this.moon.intensity = inside ? 0.0 : 1.0; this.snd.setMuffled(!!inside);
+    const extra = roomLights.filter(l => l.on(s.t, s.flags) && !l.shot && (inside ? l.room === inside : Math.hypot(l.x - b.x, l.z - b.z) < 14 && (l.room !== 'cellar' || b.y < -2))).map(l => ({ x: l.x, y: l.y, z: l.z, color: l.color, intensity: l.intensity, dist: l.dist }));
+    const fl = this.fx.lights(this.cs.fires); this.pool.update(b.x, b.z, [...extra, ...fl], !!inside);
+    this.fx.update(dt, this.cs.fires, this.cs.glow); this.snd.setFire(this.cs.glow);
+    updateDoors(dt);
+    // npcs
+    this.npcs.update(s.t, b.x, b.z, dt, b.y, undefined, id => this.combat.override(id));
+    this.combat.update(dt);
+    if (this.shakeT > 0) { this.shakeT -= dt; const k = this.shakeA * Math.max(0, this.shakeT); this.cam.position.x += (Math.random() - 0.5) * 0.12 * k; this.cam.position.y += (Math.random() - 0.5) * 0.12 * k; }
+    // events seen
+    for (const e of EVENTS) if (s.t >= e.t && s.t < e.t + 30 && !s.seenEvents.has(e.id) && Math.hypot(e.x - b.x, e.z - b.z) < (e.r ?? 55)) { s.seenEvents.add(e.id); onBark(this, 'event:' + e.id); }
+    // interaction prompt
+    if (!talking && !this.open && !this.frozen) { const n = this.findInteract(); this.hud.prompt(n ? n.label : null); } else this.hud.prompt(null);
+    if (this.open) this.stv.drawMapIfOpen();
+    // thread nag + generic thread hint
+    this.sinceThread += dt; onBark(this, 'tick');
+    this.hud.sync(this.s.flags.has('alarm') && false);
+  }
+  insideRoom(): string | null {
+    const b = this.player.body;
+    for (const id of Object.keys(SITES)) { if (id === 'tower') continue; const S = SITES[id]; if (insideSite(id, b.x, b.z, -0.1) && b.y > -3) { const fy = groundH(S.x, S.z); if (b.y < fy + S.floors * 3.1 + 1) return id; } }
+    if (b.y < groundH(b.x, b.z) - 1.5) return 'cellar';
+    return null;
+  }
+  finish(ending: string) { this.s.ended = ending; this.frozen = true; document.exitPointerLock?.(); this.hud.fade(true, 1200); setTimeout(() => this.showEnding(ending), 1300); }
+  showEnding(ending: string) {
+    const e = document.getElementById('end')!; e.style.display = 'flex'; const ru = getLang() === 'ru';
+    const T: Record<string, [string, string]> = { empty: ['Пустой час', ru ? 'В 23:00 окно закрывается. Крайн: «Время вышло».' : 'At 23:00 the window closes. Crane: "Time is up."'], dead: ['Смерть', ru ? 'Смерть окончательна.' : 'Death is final.'] };
+    const [h, p] = T[ending] ?? [ending, '']; e.innerHTML = `<h1>${h}</h1><p>${p}</p><p>${fmt(this.s.t, true)}</p>`;
+  }
+}

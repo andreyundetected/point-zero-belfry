@@ -6,8 +6,9 @@ import { BOUNDS } from '../world/layout';
 /** First-person controller on top of the collision physics. Eye 1.65 m. */
 export class Player {
   yaw = 0; pitch = 0; keys: Record<string, boolean> = {}; t = 0; body: Body; bob = 0; safe = { x: 0, z: 0, y: 0 };
-  frozen = false; jumpQueued = false; onRespawn?: () => void;
+  frozen = false; jumpQueued = false; onRespawn?: () => void; dom: HTMLElement;
   constructor(public cam: THREE.PerspectiveCamera, dom: HTMLElement) {
+    this.dom = dom;
     cam.rotation.order = 'YXZ'; this.body = newBody(0, 0);
     addEventListener('keydown', e => { this.keys[e.code] = true; if (e.code === 'Space') { this.jumpQueued = true; e.preventDefault(); } });
     addEventListener('keyup', e => this.keys[e.code] = false);

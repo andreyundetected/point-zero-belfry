@@ -30,8 +30,8 @@ export class LampPool {
   constructor(scene: THREE.Scene, n = 10) {
     for (let i = 0; i < n; i++) { const L = new THREE.PointLight(0xffb070, 0, 15, 1.6); scene.add(L); this.lights.push(L); }
   }
-  update(px: number, pz: number, extra: { x: number; y: number; z: number; color: number; intensity: number; dist: number }[] = []) {
-    const cand = lamps.filter(l => l.on).map(l => ({ x: l.x, y: l.y, z: l.z, color: l.color, intensity: l.intensity, dist: l.dist, d: (l.x - px) ** 2 + (l.z - pz) ** 2 }));
+  update(px: number, pz: number, extra: { x: number; y: number; z: number; color: number; intensity: number; dist: number }[] = [], inside = false) {
+    const cand = (inside ? [] : lamps.filter(l => l.on)).map(l => ({ x: l.x, y: l.y, z: l.z, color: l.color, intensity: l.intensity, dist: l.dist, d: (l.x - px) ** 2 + (l.z - pz) ** 2 }));
     for (const e of extra) cand.push({ ...e, d: (e.x - px) ** 2 + (e.z - pz) ** 2 - 400 });
     cand.sort((a, b) => a.d - b.d);
     this.lights.forEach((L, i) => {

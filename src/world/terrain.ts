@@ -1,5 +1,5 @@
 // Single source of truth for ground height. Everything stands on groundH(x,z).
-import { BED_Y, CANAL, QUAY_Z, RECTS, ROADS, V2 } from './layout';
+import { BARGE, BED_Y, bridgeTop, CANAL, DECK_Y, PIER3, PIER7, QUAY_Z, RECTS, ROADS, V2 } from './layout';
 
 export function hash(x: number, z: number): number {
   const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453;
@@ -58,4 +58,13 @@ export function groundH(x: number, z: number): number {
     h += 0.07 * (1 - t * t) - 0.025 * Math.exp(-((rd.dc - rd.hw * 0.3) ** 2) * 6);
   } else h += 0.14 * (inRect ? 1 : sm(0, 0.3, rd.d)) + 0.012 * vnoise(x * 0.6, z * 0.6);
   return h + noise;
+}
+
+/** where an NPC's feet stand: terrain, or the bridge deck / pier / barge when over them */
+export function walkY(x: number, z: number): number {
+  if (Math.abs(z) < 3 && Math.abs(x) < 9) return bridgeTop(x);
+  if (Math.abs(x - PIER3.x) < PIER3.w / 2 && z > PIER3.z0 && z < PIER3.z1) return DECK_Y;
+  if (Math.abs(x - PIER7.x) < PIER7.w / 2 && z > PIER7.z0 && z < PIER7.z1) return DECK_Y;
+  if (Math.abs(x - BARGE.x) < BARGE.w / 2 && Math.abs(z - BARGE.z) < BARGE.l / 2) return BARGE.top;
+  return groundH(x, z);
 }

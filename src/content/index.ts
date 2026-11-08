@@ -1,0 +1,145 @@
+import type { Game } from '../game/game';
+import { Conv, nameOf } from '../game/dialogue';
+import { addInteract, doors, tableTop, world2 } from '../world/interiors';
+import { loc, inSite, insideSite, floorY } from '../sim/sites';
+import { at, fmt } from '../sim/time';
+import { TOWER, world3 } from '../world/tower';
+import { ROOF_Y, BASEMENT_Y } from '../sim/npcs';
+import { groundH } from '../world/terrain';
+import { FOMA_SPOT } from '../world/ruins';
+import { prologue, prologue2 } from './d_prologue';
+import { orven, orvenKey, tildaAlley, tildaPier, ned, nedAfter, fern, lidia, stern } from './d_west';
+import { agataAfter, agataBefore, agataFight, ignatTable, scarHunt, fomaDoor, fomaCaught, fomaAfter } from './d_tavern';
+import { gaylWounded, gaylWindow, guardGate, agnia, anna, anka, guardCart } from './d_east';
+import { lukyan, lukyanDying, tikhonDoor, guardPier } from './d_pier';
+import { finale } from './d_finale';
+
+tikhonDoor.start = c => (c.fl('tikhonKnock') ? 'in' : 'a');
+export const CONVS: Conv[] = [prologue, prologue2, orven, orvenKey, tildaAlley, tildaPier, ned, nedAfter, fern, lidia, stern, agataAfter, agataBefore, agataFight, ignatTable, scarHunt, fomaDoor, fomaCaught, fomaAfter, gaylWounded, gaylWindow, guardGate, agnia, anna, anka, guardCart, lukyan, lukyanDying, tikhonDoor, guardPier, finale];
+const P = (g: Game, id: string) => g.npcs.pose(id);
+const near = (g: Game, id: string, x: number, z: number, r: number) => { const p = P(g, id); return !!p && !p.hidden && Math.hypot(p.x - x, p.z - z) < r; };
+
+/** which conversation (if any) an NPC offers right now */
+export function pickConv(id: string, g: Game): string | null {
+  const t = g.s.t, f = g.s.flags, s = g.s; const p = P(g, id); if (!p || p.hidden) return null;
+  switch (id) {
+    case 'lidia': return t >= at(22, 38) ? 'lidia.steps' : null;
+    case 'fern': return t >= at(22, 7) && p.y < 20 ? 'fern' : null;
+    case 'stern': return p.y < groundH(-70, -58) - 2 ? 'stern' : null;
+    case 'orven': return s.pocket === 'key' ? 'orven.key' : (t < at(22, 10, 20) ? 'orven' : null);
+    case 'tilda': if (t >= at(22, 8) && t < at(22, 15)) return 'tilda.alley'; if (p.z > 50 && t < at(22, 33)) return 'tilda.pier'; return null;
+    case 'ned': return t < at(22, 16) ? 'ned' : (f.has('nedSaved') ? 'ned.after' : null);
+    case 'agata': return t < at(22, 12) ? 'agata.before' : (t >= at(22, 15) ? 'agata.after' : 'agata.fight');
+    case 'ignat': return t < at(22, 12) && !f.has('ignatDead') && insideSite('tavern', p.x, p.z) ? 'ignat.table' : null;
+    case 'scar': return f.has('jetonStolen') && t < at(22, 8) ? 'scar.angry' : null;
+    case 'foma': return insideSite('foma', p.x, p.z) ? null : (t >= at(22, 30) ? 'foma.after' : null);
+    case 'gayl': if (p.a === 'die' && t >= at(22, 13)) return 'gayl.wounded'; if (insideSite('contora', p.x, p.z) && t < at(22, 10, 30)) return 'gayl.window'; return null;
+    case 'ggrd1': case 'ggrd2': case 'ggrd3': return !f.has('gateOpen') && near(g, id, 49.4, -49, 7) && t < at(22, 40) ? 'guard.gate' : (t >= at(22, 30) ? 'guard.cart' : null);
+    case 'agnia': return insideSite('priyut', p.x, p.z) ? 'agnia' : null;
+    case 'anna': return 'anna';
+    case 'anka': return t >= at(22, 28) && t < at(22, 38, 30) ? 'anka' : null;
+    case 'lukyan': return p.a === 'die' ? 'lukyan.dying' : (t < at(22, 33) ? 'lukyan' : null);
+    case 'tikhon': return t < at(22, 36) && !f.has('tikhonTurned') && !f.has('tikhonHurt') && !f.has('tikhonDead') ? 'tikhon.door' : null;
+    case 'dock1': case 'dock2': case 'dock3': return t >= at(22, 35) && t < at(22, 40) ? 'guard.pier3' : null;
+    default: return null;
+  }
+}
+const DOOR_CONV: Record<string, string> = { 'foma.door': 'foma.door', 'tikhon.door': 'tikhon.door' };
+export const doorConv = (id: string) => DOOR_CONV[id] ?? null;
+
+// ---------------- NPC <-> NPC scenes, heard as world subtitles within 8 m (spec 15.3)
+interface Scene { t: number; who: string; ru: string; x: number; z: number; r?: number; keep?: string; }
+const tv = (lx: number, lz: number) => loc('tavern', lx, lz);
+export const SCENES: Scene[] = [
+  { t: at(22, 2), who: 'ignat', ru: 'Часы. Ставишь?', ...tv(0.2, -3.6) }, { t: at(22, 2, 5), who: 'ned', ru: 'Отцовские.', ...tv(0.2, -3.6) }, { t: at(22, 2, 10), who: 'ignat', ru: 'Значит, дорогие. Бросай.', ...tv(0.2, -3.6) }, { t: at(22, 2, 20), who: 'lovchiy', ru: 'Пара. Мимо, курьер.', ...tv(0.2, -3.6) },
+  { t: at(22, 4, 10), who: 'ned', ru: 'Последний. Жетон и ключ. На всё.', ...tv(0.2, -3.6) }, { t: at(22, 4, 16), who: 'ignat', ru: 'Ключ? Чей ключ?', ...tv(0.2, -3.6) }, { t: at(22, 4, 22), who: 'ned', ru: 'Неважно. Железный. Тяжёлый. Ставлю.', ...tv(0.2, -3.6) }, { t: at(22, 4, 32), who: 'ignat', ru: 'Три шестёрки. Забираю.', ...tv(0.2, -3.6) },
+  { t: at(22, 4, 40), who: 'ned', ru: 'Ты кидал два раза! Я видел, ты кидал два раза!', ...tv(0.2, -3.6) }, { t: at(22, 4, 50), who: 'ignat', ru: '(встаёт) Повтори.', ...tv(0.2, -3.6) }, { t: at(22, 5, 0), who: 'ned', ru: 'Я… (пятится) Ничего.', ...tv(0.2, -3.6) }, { t: at(22, 5, 10), who: 'lovchiy', ru: 'Иди, курьер. Пока ноги есть.', ...tv(0.2, -3.6) },
+  { t: at(22, 6, 5), who: 'scar', ru: 'Жетон продашь?', ...tv(0.2, -3.6) }, { t: at(22, 6, 10), who: 'ignat', ru: 'Двадцать.', ...tv(0.2, -3.6) }, { t: at(22, 6, 15), who: 'scar', ru: 'Пятнадцать.', ...tv(0.2, -3.6) }, { t: at(22, 6, 20), who: 'ignat', ru: 'Двадцать. Он счастливый.', ...tv(0.2, -3.6) }, { t: at(22, 6, 35), who: 'scar', ru: 'В двенадцать. Не высовывайтесь.', ...tv(0, -1) },
+  { t: at(22, 12, 1), who: 'lovchiy', ru: 'Склад!', ...tv(0.2, -3.6), r: 14 }, { t: at(22, 12, 5), who: 'ignat', ru: 'Все туда! Мы с Ловчим — деньги.', ...tv(0.2, -3.6), r: 14 },
+  { t: at(22, 24, 5), who: 'tilda', ru: 'Лукьян! Лукьян, где моя дочь?', x: -5.7, z: 60.2, r: 14 }, { t: at(22, 24, 12), who: 'lukyan', ru: 'Иди домой, женщина. Нет тут никого.', x: -4, z: 62, r: 14 }, { t: at(22, 24, 20), who: 'tilda', ru: 'Мне сказали — у тебя.', x: -5.7, z: 60.2, r: 14 },
+  { t: at(22, 24, 28), who: 'lukyan', ru: 'Тебе сказали. Мне тоже много чего говорят. Иди.', x: -4, z: 62, r: 14 }, { t: at(22, 24, 38), who: 'tilda', ru: 'Ты летом двоих из Слободки возил. Я знаю.', x: -5.7, z: 60.2, r: 14 }, { t: at(22, 25, 0), who: 'lukyan', ru: 'Ты что знаешь? Ты прачка. Иди стирать.', x: -5, z: 61, r: 14 },
+  { t: at(22, 30, 0), who: 'tilda', ru: 'Пусти на баржу. Я посмотрю и уйду.', x: -5.7, z: 60.2, r: 14 }, { t: at(22, 30, 8), who: 'lukyan', ru: 'Сойди со сходни.', x: -5, z: 61, r: 14 }, { t: at(22, 33, 0), who: 'tilda', ru: '(вынимает револьвер) Где. Моя. Дочь.', x: -5.7, z: 60.2, r: 14 }, { t: at(22, 33, 4), who: 'lukyan', ru: 'Ты не выстре…', x: -5, z: 61, r: 14 },
+  { t: at(22, 34, 10), who: 'cord', ru: 'В машину её. (Лукьяну) Встать можешь? Нет? Лежи.', x: -7, z: 58, r: 16 },
+  { t: at(22, 20, 10), who: 'pip', ru: 'Пап, а ты завтра придёшь?', ...loc('tikhon', 0, -3.4), r: 9 }, { t: at(22, 20, 16), who: 'tikhon', ru: 'Приду. Спи.', ...loc('tikhon', 0, -3.4), r: 9 }, { t: at(22, 20, 24), who: 'pip', ru: 'А если не придёшь?', ...loc('tikhon', 0, -3.4), r: 9 },
+  { t: at(22, 20, 32), who: 'tikhon', ru: '(пауза) Тогда к тебе придёт матушка Агния. С пирогом.', ...loc('tikhon', 0, -3.4), r: 9 }, { t: at(22, 20, 40), who: 'pip', ru: 'С каким?', ...loc('tikhon', 0, -3.4), r: 9 }, { t: at(22, 20, 46), who: 'tikhon', ru: 'С капустой. Спи.', ...loc('tikhon', 0, -3.4), r: 9 },
+  { t: at(22, 35, 3), who: 'yan', ru: 'Всё, ребята, я своё отстоял. Кто на смену?', x: -42, z: 72, r: 16 }, { t: at(22, 35, 9), who: 'dock1', ru: 'Сейчас придёт. Пройдись с нами.', x: -42, z: 70, r: 16 }, { t: at(22, 35, 15), who: 'yan', ru: 'Куда пройтись? Я домой…', x: -42, z: 68, r: 16 }, { t: at(22, 35, 36), who: 'dock1', ru: 'Тихон где?', x: -42, z: 64, r: 16 },
+  { t: at(22, 9, 40), who: 'orven', ru: 'Закрыто. Завтра.', ...loc('orven', 1.25, 1.2), r: 7 },
+];
+const shown = new Set<number>();
+
+export function registerWorldItems(g: Game) {
+  const need = (c: Game, id: string) => !c.s.worldItems.has(id);
+  const take = (c: Game, id: string, item: 'watch' | 'jeton' | 'key' | 'cap' | 'note', label: string, flag?: () => void) => { c.s.worldItems.add(id); if (c.s.pocket && c.s.pocket !== item) c.hud.toast(`В Кармане уже было: ${c.s.pocket}. Оно останется здесь.`, 3); c.give(item); flag?.(); c.hud.bark(label, true); };
+  const watchCheck = (c: Game): boolean => { // is somebody at the table looking at you? (spec 8.2)
+    const t = c.s.t; if (t >= at(22, 4, 10) && t <= at(22, 5, 30)) return false; // everyone watches the row
+    const b = c.player.body; for (const id of ['ignat', 'lovchiy', 'cm1', 'cm2', 'cm3', 'cm4', 'cm5', 'cm6', 'agata']) { if (id === 'agata') continue; const q = c.npcs.pose(id); if (!q || q.hidden) continue; const dx = b.x - q.x, dz = b.z - q.z, d = Math.hypot(dx, dz); if (d > 4.5) continue; const a = Math.atan2(dx, dz) - q.ry, da = Math.abs(Math.atan2(Math.sin(a), Math.cos(a))); if (da < 0.44) return true; } return false; };
+  const steal = (c: Game, id: string, item: 'watch' | 'jeton' | 'key', label: string, flag?: () => void) => { c.advance(1); if (watchCheck(c)) { c.combat.alarm('theft'); c.hud.bark('Эй! Ты что берёшь?!', true); return; } take(c, id, item, label, flag); };
+  // --- tavern table: watch, token, key (spec 9.1, 8.2)
+  addInteract({ id: 'tav.watch', x: tableTop.x - 1.0, y: tableTop.y, z: tableTop.z, r: 2.6, ok: c => c.s.t >= at(22, 2, 25) && c.s.t < at(22, 12) && need(c, 'watch'), label: () => 'Взять часы Неда', use: c => steal(c, 'watch', 'watch', 'Отцовские часы.') });
+  addInteract({ id: 'tav.jeton', x: tableTop.x, y: tableTop.y, z: tableTop.z + 0.4, r: 2.6, ok: c => c.s.t >= at(22, 4, 32) && c.s.t < at(22, 6, 12) && need(c, 'jeton'), label: () => 'Взять жетон (В)', use: c => steal(c, 'jeton', 'jeton', 'Жетон №17.', () => { c.flag('jetonStolen'); c.learn('saw_token_table'); }) });
+  addInteract({ id: 'tav.key', x: tableTop.x + 0.6, y: tableTop.y, z: tableTop.z, r: 2.6, ok: c => c.s.t >= at(22, 4, 32) && c.s.t < at(22, 12) && need(c, 'key'), label: () => 'Взять ключ', use: c => steal(c, 'key', 'key', 'Ключ точёный. На заказ.', () => c.learn('saw_key_lost')) });
+  addInteract({ id: 'tav.keyBody', x: 0, y: 0, z: 0, r: 2, at: c => { const q = c.npcs.pose('ignat'); return q && c.s.flags.has('ignatDead') && !q.hidden ? { x: q.x, y: q.y, z: q.z } : null; }, ok: c => need(c, 'keyBody'), label: () => 'Обыскать Игната: ключ', use: c => take(c, 'keyBody', 'key', 'Ключ. Красный в темноте.', () => c.learn('saw_key_lost')) });
+  // the interactable above has no fixed position: patch consider() via a position getter
+  // --- the coat upstairs
+  { const w = world2.coat; addInteract({ id: 'coat', x: w.x, y: w.y, z: w.z, r: 1.8, label: () => 'Осмотреть пальто', use: c => { c.hud.bark('«В.Х.». Здесь Харроу бывает. Не сегодня.', true); c.learn('saw_coat'); c.note('coat', 'Пальто с монограммой «В.Х.» наверху в «Якоре». Ложный след.', 'A coat monogrammed "V.H." upstairs at the Anchor. A false lead.'); if (c.s.t > at(22, 15) && !c.has('key')) c.message('Пальто ничего не значит. Харроу нужен живым. Без ствола к людям Корда не суйся. У Фомы есть.', 'The coat means nothing. I need Harrow alive. Do not go near Cord\'s men without a gun. Foma has one.'); c.thread('gun'); } }); }
+  // --- Foma's floorboard: the revolver and 18 rounds (intact shop only)
+  { const fp = FOMA_SPOT(); addInteract({ id: 'foma.board', x: fp.x, y: floorY('foma'), z: fp.z, r: 1.3, ok: c => !c.fomaRuinOn() && !c.s.flags.has('gunTaken'), label: () => 'Поднять половицу', use: c => {
+    c.advance(4); c.flag('gunTaken'); c.s.hasGun = true; c.s.mag = 6; c.s.ammo = 18; c.hud.toast('Револьвер. 6 + 18 патронов', 3); c.learn('have_gun'); c.hud.bark('Револьвер. Шесть в барабане.', true); c.thread('fight'); c.note('gun', 'Нашёл револьвер и коробку патронов под половицей в кладовке Фомы.', 'Found a revolver and a box of rounds under the floorboard in Foma\'s storeroom.');
+    const fm = c.npcs.pose('foma'); if (fm && !fm.hidden && insideSite('foma', fm.x, fm.z) && c.s.t < at(22, 30)) setTimeout(() => c.runner.start('foma.caught'), 600); } }); }
+  // --- tower: hatch, door, cellar
+  addInteract({ id: 'tower.hatch', x: TOWER.hatch.x, y: ROOF_Y(), z: TOWER.hatch.z, r: 2.2, label: c => c.s.knows('prologue_done') ? 'Спуститься (≈1 мин)' : null, use: c => travel(c, TOWER.foot.x, TOWER.foot.z, 60, 'Лестница вниз.') });
+  addInteract({ id: 'tower.door', x: TOWER.foot.x, y: groundH(TOWER.foot.x, TOWER.foot.z), z: TOWER.foot.z + 0.3, r: 1.8, label: () => 'Подняться на крышу (≈1 мин)', use: c => travel(c, TOWER.roofSpawn.x, TOWER.roofSpawn.z, 60, 'Винтовая лестница.', ROOF_Y()) });
+  addInteract({ id: 'tower.cellar', x: TOWER.cellarDoor.x, y: groundH(TOWER.cellarDoor.x, TOWER.cellarDoor.z), z: TOWER.cellarDoor.z, r: 1.8, label: c => (c.s.t < at(22, 5) ? 'Спуститься в подвал' : 'Дверь подвала (заперта)'), use: c => { if (c.s.t >= at(22, 5)) { c.hud.bark('Заперто.', true); c.learn('cellar_locked'); return; } travel(c, TOWER.cellarIn.x, TOWER.cellarIn.z - 1.0, 5, 'Вниз.', BASEMENT_Y()); } });
+  addInteract({ id: 'cellar.up', x: TOWER.cellarIn.x, y: BASEMENT_Y(), z: TOWER.cellarIn.z - 1.3, r: 2.0, ok: c => c.player.body.y < groundH(-70, -58) - 2, label: () => 'Подняться', use: c => travel(c, TOWER.cellarDoor.x + 1.4, TOWER.cellarDoor.z, 5, 'Наверх.') });
+  addInteract({ id: 'cellar.fuse', x: TOWER.fuse.x, y: BASEMENT_Y(), z: TOWER.fuse.z + 0.6, r: 1.6, ok: c => !c.s.flags.has('tapCut') && c.player.body.y < groundH(-70, -58) - 2, label: () => 'Выдернуть предохранитель', use: c => { const st = c.npcs.pose('stern'); if (st && !st.hidden && c.s.t < at(22, 4) && Math.hypot(st.x - TOWER.fuse.x, st.z - TOWER.fuse.z) < 5) { c.runner.start('stern'); return; } c.flag('tapCut'); c.learn('cut_tap'); if (world3.fuse) world3.fuse.visible = false; c.message('Свет ровный. Город изменился.', 'The lights are steady. The city has changed.'); c.note('fuse', 'Выдернул красный предохранитель отвода в подвале башни.', 'Pulled the red fuse of the tap in the tower cellar.'); c.hud.bark('Предохранитель. Красный.', true); } });
+  addInteract({ id: 'roof.chest', x: -72.3, y: ROOF_Y(), z: -57.5, r: 1.8, ok: c => c.s.t >= at(22, 15) && need(c, 'note'), label: () => 'Ящик Лидии: записка', use: c => { take(c, 'note', 'note', 'Записка с печатью совета.'); c.learn('know_lidia_note'); c.note('note', 'Записка Лидии: «Впустить техника в 21:55. После — брат дома». Машинопись, печать попечительского совета, подписи нет.', 'Lidia\'s note: "Let the technician in at 21:55. After — brother home." Typed, board seal, no signature.'); } });
+  // --- Tikhon's cap (house, when he is gone) and the orphanage cart pin
+  { const cp = loc('tikhon', -2.6, -0.8); addInteract({ id: 'cap', x: cp.x, y: floorY('tikhon'), z: cp.z, r: 1.6, ok: c => need(c, 'cap') && (c.s.t >= at(22, 28, 30) || c.fl('tikhonTurned')) && c.s.pocket !== 'cap', label: () => 'Взять кепку рулевого', use: c => take(c, 'cap', 'cap', 'Не поднимать голову.', () => { c.learn('know_helm'); c.thread('pier3'); }) });
+    const np = loc('tikhon', 0.4, -3.1); addInteract({ id: 'tikhon.note', x: np.x, y: floorY('tikhon'), z: np.z, r: 1.8, ok: c => c.s.t >= at(22, 28), label: () => 'Записка на столе', use: c => { c.hud.sub('', '«Пип, если не вернусь — иди к матушке Агнии. Деньги в коробке. Папа»', 5); c.note('tnote', 'Записка Тихона: «Пип, если не вернусь — иди к матушке Агнии. Деньги в коробке. Папа».', 'Tikhon\'s note: "Pip, if I do not come back, go to Mother Agnia. The money is in the box. Papa."', 'tikhon'); } }); }
+  addInteract({ id: 'cart.pin', x: 52.2, y: groundH(52.2, -57.3), z: -57.3, r: 2.4, ok: c => c.s.t >= at(22, 15) && c.s.t < at(22, 38) && !c.s.flags.has('wagonPinPulled'), label: () => 'Выбить чеку с оси', use: c => {
+    const g1 = [1, 2, 3].map(i => c.npcs.pose('ggrd' + i)!).filter(Boolean); const watching = g1.some(q => !q.hidden && Math.hypot(q.x - 52, q.z + 57) < 9);
+    if (watching) { c.hud.bark('Охрана смотрит.', true); return; } c.advance(3); c.flag('wagonPinPulled'); c.learn('pin_pulled'); c.hud.toast('Чека выбита', 2.5); c.note('pin', 'Выбил чеку с оси повозки приюта.', 'Knocked the linchpin out of the orphanage wagon axle.'); } });
+  addInteract({ id: 'book', x: world2.book.x, y: world2.book.y, z: world2.book.z, r: 1.8, label: () => 'Книга записей', use: c => { c.learn('know_ledger'); c.hud.bark('«Тимофей, 7 лет, родных нет — отложен».', true); c.note('ledger', 'Книга приюта: «Тимофей, 7 лет, родных нет — отложен», ниже: «сбежал». У сегодняшних четырнадцати — «отложен».', 'Orphanage ledger: "Timofey, 7, no kin — set aside", below: "ran away". Today\'s fourteen are marked "set aside".', 'agnia', true); } });
+  { const wp = { x: 34.4, z: -71 }; addInteract({ id: 'laundry', x: wp.x, y: groundH(wp.x, wp.z), z: wp.z, r: 2.0, label: () => 'Окно прачечной', use: c => { c.hud.bark('Тут я вылезал. Двадцать лет назад.', true); c.flag('gateOpen'); c.learn('know_laundry'); } }); }
+  // --- every closed house: a locked door
+  void g;
+}
+/** fade, move the player, spend game time (tower stairs) */
+function travel(c: Game, x: number, z: number, secs: number, bark: string, y?: number) {
+  if (c.fadeBusy) return; c.fadeBusy = true; c.hud.fade(true, 350);
+  setTimeout(() => { c.advance(secs); const b = c.player.body; b.x = x; b.z = z; b.y = y ?? groundH(x, z); b.vy = 0; b.vx = b.vz = 0; c.player.apply(); c.hud.fade(false, 500); c.hud.bark(bark, true); c.fadeBusy = false; }, 420);
+}
+
+export function onBark(g: Game, evt: string) {
+  const s = g.s, t = s.t, b = g.player.body;
+  if (evt === 'universe') { shown.clear(); if (s.knows('prologue_jumped') && !s.knows('prologue_done') && !g.runner.active) setTimeout(() => g.runner.start('prologue2'), 600); return; }
+  if (evt.startsWith('locked:')) { const id = evt.slice(7); if (id === 'orven.door') { if (t >= at(22, 10)) { g.hud.bark('Заперто. Опоздал минут на пять.', true); s.learn('saw_orven_locked'); if (s.thread === 'orven') g.thread('orven_late'); } } const dc = doorConv(id); if (dc && !g.runner.active) g.runner.start(dc); return; }
+  if (evt.startsWith('event:')) {
+    const e = evt.slice(6);
+    if (e === 'blast') { s.learn('saw_blast'); g.hud.bark('Склад…', true); g.shake(1.6); g.snd.boom(1, 1.6, 70); g.hud.flash(0.8); setTimeout(() => g.hud.flash(0), 160); }
+    if (e === 'rynok_burns') { s.learn('saw_foma_fire'); g.hud.bark('Рыночная горит.', true); }
+    if (e === 'tilda_shoots') { s.learn('saw_tilda_shoot'); g.shake(0.4); g.snd.shot(); }
+    if (e === 'yan_killed') { s.learn('saw_yan_killed'); g.note('yan', 'Яна убили на пристани №3 сразу после швартовки. Охрана Харроу.', 'Yan was killed on pier 3 right after mooring. Harrow\'s guards.', 'yan', true); g.thread('pier3'); }
+    if (e === 'lamps_flicker' && !g.fl('tapCut')) g.hud.bark('Весь город мигает. Не к добру.');
+    if (e === 'bell_silent') s.learn('saw_bell_silent');
+    if (e === 'ned_jump') s.learn('saw_ned_jump');
+    return;
+  }
+  if (evt !== 'tick') return;
+  // --- scenes
+  SCENES.forEach((sc, i) => { if (!shown.has(i) && t >= sc.t && t < sc.t + 6 && Math.hypot(sc.x - b.x, sc.z - b.z) < (sc.r ?? 8)) { shown.add(i); g.hud.sub(nameOf(sc.who), sc.ru, 3.2); } });
+  // --- knowledge from looking
+  if (g.sceneInside === 'tavern' || insideSite('tavern', b.x, b.z)) {
+    if (t < at(22, 12) && !s.knows('bark_guns')) { s.learn('bark_guns'); g.hud.bark(s.hasGun ? 'Восемь стволов. С одним не полезу.' : 'Голыми руками тут только умирать.', true); }
+    if (t > at(22, 4, 32) && t < at(22, 12) && Math.hypot(b.x - tableTop.x, b.z - tableTop.z) < 5 && !s.knows('saw_key_lost')) { s.learn('saw_key_lost'); g.hud.bark('Ключ точёный. На заказ.', true); }
+    if (t > at(22, 4, 32) && t < at(22, 6, 12) && Math.hypot(b.x - tableTop.x, b.z - tableTop.z) < 5) s.learn('saw_token_table');
+  }
+  // --- Crane's four messages (spec 12.2)
+  if (!s.knows('msg1') && insideSite('tavern', b.x, b.z) && b.y > floorY('tavern', 1) - 0.5 && t > at(22, 15) && !s.hasGun) { s.learn('msg1'); g.message('Пальто ничего не значит. Харроу нужен живым. Без ствола к людям Корда не суйся. У Фомы есть.', 'The coat means nothing. Harrow is needed alive. Do not go near Cord\'s men without a gun. Foma has one.'); g.thread('gun'); }
+  if (!s.knows('msg2') && s.thread === 'key' && g.sinceThread > 75 && t < at(22, 30)) { s.learn('msg2'); g.message('Ключи — Орвен.', 'Keys — Orven.'); }
+  if (!s.knows('thread_orven_after') && s.knows('prologue_done') && t > at(22, 12) && s.thread === 'orven' && !s.knows('saw_orven_locked') && Math.hypot(b.x + 46, b.z + 33.3) < 8) { g.hud.bark('Заперто. Опоздал минут на пять.', true); g.thread('orven_late'); s.learn('saw_orven_locked'); s.learn('thread_orven_after'); }
+  // gunless hint at Foma's door after 2 game minutes (spec 8.1 hint ladder)
+  if (g.sceneInside !== 'foma' && t < at(22, 30) && Math.hypot(b.x + 40, b.z + 13) < 3.5 && s.thread === 'gun') { g.hintT += 1 / 60; const h = ['Заперто наглухо. Ломать — весь квартал сбежится.', 'С этой улицы тянет газом… Тут скоро что-то случится.', 'Если войти туда, где стен уже нет, а потом вернуться…']; const k = Math.floor(g.hintT / 120); if (k > g.hintStep && g.hintStep < 3) { g.hud.bark(h[g.hintStep], true); g.hintStep++; } }
+  else if (Math.hypot(b.x + 40, b.z + 13) > 8) { g.hintT = 0; }
+}
+void fmt; void inSite; void doors;

@@ -50,3 +50,13 @@ export const PLACES = {
   warehouse: { x: 66, z: 32 }, priyut: { x: 50, z: -62 }, tikhon: { x: -38, z: 41 },
   pier3: { x: -42, z: 58 }, pier7: { x: -9.5, z: 60 },
 };
+
+// piers, barge, bridge (shared by the world builder and by the NPC simulation)
+export interface PierSpec { x: number; z0: number; z1: number; w: number; }
+export const PIER3: PierSpec = { x: -42, z0: QUAY_Z - 1, z1: 86, w: 3 };
+export const PIER7: PierSpec = { x: -9.5, z0: QUAY_Z - 1, z1: 78, w: 5 };
+export const DECK_Y = -0.5;
+export const BARGE = { x: PIER7.x + PIER7.w / 2 + 3.1, z: 68, w: 5, l: 16, top: DECK_Y - 0.15 };
+export const BRIDGE = { x0: -9, x1: 9, z0: -3, z1: 3 };
+/** deck top height of the Old Bridge at x */
+export const bridgeTop = (x: number) => { const t = x / 9; return 0.12 + 1.15 * (1 - t * t); };
