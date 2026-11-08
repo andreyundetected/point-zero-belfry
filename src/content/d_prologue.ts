@@ -3,7 +3,7 @@ import { Conv, L, A } from '../game/dialogue';
 export const prologue: Conv = { id: 'prologue', start: 'a', nodes: {
   a: { say: [A('Тик выходит из люка. Ветер, дождь, внизу город. Лидия на коленях у ящика с инструментами, у парапета женщина в пальто с вуалью.', 'Tik climbs out of the hatch. Wind, rain, the city below.'), L('lidia', '(не поднимая головы) Осторожно, тут провод. Вы Тимофей?', '(without looking up) Careful, there is a wire. Are you Timofey?')],
     choices: [{ ru: 'Тик.', en: 'Tik.', next: 'b' }, { ru: 'Смотря кто спрашивает.', en: 'Depends who is asking.', next: 'b' }] },
-  b: { say: [L('lidia', 'Лидия. Я собирала эту штуку. Держите. Нет, не так — циферблатом к себе.', 'Lidia. I built this thing. Hold it — no, dial toward you.'), A('Створка в левой руке, загорается красное «22:00».', 'The Device in your left hand, red digits light up.'), L('lidia', 'Видите колёсико? Отведите на три минуты назад. И нажмите.', 'See the wheel? Turn it three minutes back. And press.')],
+  b: { fx: c => c.learn('name_lidia'), say: [L('lidia', 'Лидия. Я собирала эту штуку. Держите. Нет, не так — циферблатом к себе.', 'Lidia. I built this thing. Hold it — no, dial toward you.'), A('Створка в левой руке, загорается красное «22:00».', 'The Device in your left hand, red digits light up.'), L('lidia', 'Видите колёсико? Отведите на три минуты назад. И нажмите.', 'See the wheel? Turn it three minutes back. And press.')],
     choices: [{ ru: 'Зачем?', en: 'Why?', next: 'b1' }, { ru: '(Нажать)', en: '(Press)', next: 'jump' }] },
   b1: { say: [L('lidia', 'Нажмите — поймёте. Объяснять дольше.', 'Press it — you will see. Explaining takes longer.')], choices: [{ ru: '(Нажать)', en: '(Press)', next: 'jump' }] },
   jump: { fx: c => { c.learn('prologue_jumped'); c.jumpRel(-180); }, end: true },
@@ -11,7 +11,7 @@ export const prologue: Conv = { id: 'prologue', start: 'a', nodes: {
 export const prologue2: Conv = { id: 'prologue2', start: 'a', nodes: {
   a: { say: [L('lidia', 'Осторожно, тут провод. Вы Тимофей?', 'Careful, there is a wire. Are you Timofey?')],
     choices: [{ ru: 'Я это уже слышал.', en: "I've heard that.", next: 'b' }, { ru: 'Ты это уже говорила.', en: 'You already said that.', next: 'b' }] },
-  b: { say: [L('lidia', '(поднимает голову, улыбается одними губами) Значит, работает. Для меня вы только что поднялись. Для вас — нет.'), L('crane', '(от парапета, не оборачиваясь) Хватит, Лидия. Подойдите, Тимофей.'), L('crane', 'Я Эвелина Крайн. Вы слышали это имя.')],
+  b: { say: [L('lidia', '(поднимает голову, улыбается одними губами) Значит, работает. Для меня вы только что поднялись. Для вас — нет.'), L('crane', '(от парапета, не оборачиваясь) Хватит, Лидия. Подойдите, Тимофей.'), L('crane', 'Я Эвелина Крайн. Вы слышали это имя.')], fx: c => { c.learn('name_lidia'); c.learn('name_crane'); },
     choices: [{ ru: 'Газ, приюты, попечительский совет.', next: 'n1' }, { ru: 'Слышал. Ничего хорошего.', next: 'n2' }, { ru: 'Нет.', next: 'n3' }] },
   n1: { say: [L('crane', 'Значит, читаете газеты. Хорошо.')], next: 'c' },
   n2: { say: [L('crane', 'Хорошего обо мне говорят те, кто мне должен. Это не про вас. Пока.')], next: 'c' },
@@ -38,5 +38,5 @@ export const prologue2: Conv = { id: 'prologue2', start: 'a', nodes: {
   w2: { say: [L('crane', 'Достаточно, чтобы я стояла под дождём на крыше. Остальное вам знать не нужно.')], next: 'end' },
   w3: { say: [L('crane', 'Потому что вы умеете ждать и не задавать вопросов. И потому что вы из этого района. Вас здесь не замечают.')], fx: c => c.learn('crane_knows_origin'), next: 'end' },
   end: { say: [L('crane', 'Начните с Орвена. Ключник порта, переулок Ключников. Он мне должен и знает, у кого какие ключи. Я буду писать, если будет нужно. Редко.'), L('crane', 'Лидия, проводите.'), L('lidia', '(тихо, у люка) Крутите колёсико плавно. Если в той минуте на вашем месте стена, оно не пустит. Удачи.')],
-    fx: c => { c.learn('prologue_done'); c.thread('orven'); c.note('p_crane', 'Эвелина Крайн: нанимает доставить Виктора Харроу живым к пирсу 7 до 22:50. «Начните с Орвена».', 'Evelina Crane: hires me to bring Victor Harrow alive to pier 7 by 22:50. "Start with Orven."', 'crane'); c.note('p_lidia', 'Лидия: собрала Створку. «Если на вашем месте стена, колёсико не пустит».', 'Lidia: built the Device. "If there is a wall where you stand, the wheel will not let you."', 'lidia'); }, end: true },
+    fx: c => { c.learn('prologue_done'); c.learn('name_orven'); c.thread('orven'); c.note('p_crane', 'Эвелина Крайн: нанимает доставить Виктора Харроу живым к пирсу 7 до 22:50. «Начните с Орвена».', 'Evelina Crane: hires me to bring Victor Harrow alive to pier 7 by 22:50. "Start with Orven."', 'crane'); c.note('p_lidia', 'Лидия: собрала Створку. «Если на вашем месте стена, колёсико не пустит».', 'Lidia: built the Device. "If there is a wall where you stand, the wheel will not let you."', 'lidia'); }, end: true },
 } };

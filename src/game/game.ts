@@ -32,6 +32,7 @@ import { drawMini } from './mapview';
 import { updateMarks } from '../world/marks';
 import { addInteract } from '../world/interiors';
 
+const INTRO = new Set(['lidia', 'crane', 'agata', 'orven', 'tilda', 'anna', 'anka', 'lukyan', 'tikhon', 'stern', 'yan', 'misha']); // people who give their name when you talk to them
 export class Game implements StvHost, Ctx {
   s = new GameState(); sim: SimWorld; npcs: NpcRuntime; hud = new Hud(); stv: Stvorka; ui = new DialogueUI(); runner: DialogueRunner; fx: Fx; burn: Burn; snd = new Sound(); veh: Vehicles; combat: Combat;
   pilot: Pilot; pool: LampPool; open = false; targetT = 0; previewing = false; cs!: CityState; lastCs = ''; locked = false; jumpBusy = false; ghosts: THREE.Group; fomaRuin = false;
@@ -165,7 +166,7 @@ export class Game implements StvHost, Ctx {
     this.note('seen_' + npc, `Встретил в ${fmt(this.s.t)}: ${nm}`, `Met at ${fmt(this.s.t)}: ${nm}`, npc, !!d.key);
   }
   lastMeet = '';
-  talk(npc: string, conv: string) { if (this.runner.active) return; this.meet(npc); const p = this.npcs.pose(npc)!; this.player.yaw = Math.atan2(-(p.x - this.player.body.x), -(p.z - this.player.body.z)); this.runner.start(conv).then(() => this.afterTalk()); }
+  talk(npc: string, conv: string) { if (this.runner.active) return; this.meet(npc); const p = this.npcs.pose(npc)!; this.player.yaw = Math.atan2(-(p.x - this.player.body.x), -(p.z - this.player.body.z)); this.runner.start(conv).then(() => { this.afterTalk(); if (INTRO.has(npc)) this.s.learn('name_' + npc); }); }
   afterTalk() { this.player.apply(); }
   useNearest() { if (this.runner.active || this.frozen) return; const n = this.findInteract(); n?.fn(); }
   // ---------------- per-frame

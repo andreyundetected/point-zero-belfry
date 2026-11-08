@@ -15,7 +15,8 @@ export class GameState {
   // --- persistent through jumps ---
   pocket?: ItemId;
   hasGun = false; ammo = 0; mag = 6;
-  know = new Set<string>();
+  // Tik grew up here: he knows these people by name from the start; everyone else is a description until somebody gives a name
+  know = new Set<string>(['name_agnia', 'name_fern', 'name_foma', 'name_gayl', 'name_harrow', 'name_cord']);
   journal: JournalEntry[] = [];
   bookmarks: Bookmark[] = [];
   thread = 'prologue';

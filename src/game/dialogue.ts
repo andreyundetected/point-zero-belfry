@@ -5,7 +5,7 @@ import { EN } from '../content/en';
 const en = (ru: string, e?: string) => (getLang() === 'en' ? (e ?? EN[ru] ?? ru) : ru);
 
 // ---------- content types
-export interface Line { who: string; ru: string; en?: string; act?: boolean; }
+export interface Line { who: string; ru: string; en?: string; act?: boolean; if?: (c: Ctx) => boolean; }
 export interface Choice {
   ru: string; en?: string; next?: string; if?: (c: Ctx) => boolean; fx?: (c: Ctx) => void;
   know?: string; kt?: string;       // pressure-by-knowledge: needs know[id]; shows the Stvorka glyph and the time the knowledge comes from
@@ -23,6 +23,8 @@ export interface Ctx {
   fl(n: FlagName): boolean; t(): number; money(d: number): void; gun(): boolean; jumpedFrom?: string; conv(id: string): void; fomaRuinOn(): boolean; hurt(v: number): void; jumpRel(sec: number): void; openDoor(id: string, open?: boolean): void; setPocketHeld(): void;
 }
 export const L = (who: string, ru: string, en?: string): Line => ({ who, ru, en });
+/** a line that is spoken only when the player has learned something (spec 1.4: you only use what you know) */
+export const W = (cond: (c: Ctx) => boolean, who: string, ru: string, en?: string): Line => ({ who, ru, en, if: cond });
 export const A = (ru: string, en?: string): Line => ({ who: '', ru, en, act: true });
 
 // ---------- runner + DOM UI
@@ -87,7 +89,7 @@ export class DialogueRunner {
     while (node) {
       const n: Node | undefined = conv.nodes[node]; if (!n) break;
       n.fx?.(this.ctx);
-      for (const l of n.say ?? []) { await this.ui.show(l); if (!l.act) this.ctx.advance(5); }
+      for (const l of n.say ?? []) { if (l.if && !l.if(this.ctx)) continue; await this.ui.show(l); if (!l.act) this.ctx.advance(5); }
       if (n.choices && n.choices.length) {
         const vis: Choice[] = n.choices.filter(c => !(c.hide && used.has(node + ':' + c.ru)) && (!c.if || c.if(this.ctx)) && (!c.know || this.ctx.knows(c.know)));
         if (!vis.length) break;

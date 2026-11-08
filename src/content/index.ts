@@ -42,13 +42,13 @@ export function pickConv(id: string, g: Game): string | null {
     case 'anna': return 'anna';
     case 'anka': return t >= at(22, 28) && t < at(22, 38, 30) ? 'anka' : null;
     case 'lukyan': return p.a === 'die' ? 'lukyan.dying' : (t < at(22, 33) ? 'lukyan' : null);
-    case 'tikhon': return t < at(22, 36) && !f.has('tikhonTurned') && !f.has('tikhonHurt') && !f.has('tikhonDead') ? 'tikhon.door' : null;
+    case 'tikhon': return (s.knows('know_helmsmen') || s.knows('know_tikhon')) && t < at(22, 36) && !f.has('tikhonTurned') && !f.has('tikhonHurt') && !f.has('tikhonDead') ? 'tikhon.door' : null;
     case 'patrol1': case 'patrol2': return !f.has('patrolPassed') ? 'patrol' : null;
     case 'dock1': case 'dock2': case 'dock3': return t >= at(22, 35) && t < at(22, 40) ? 'guard.pier3' : null;
     default: return null;
   }
 }
-const DOOR_CONV: Record<string, string> = { 'foma.door': 'foma.door', 'tikhon.door': 'tikhon.door', 'contora.door': 'gayl.window', 'priyut.gate': 'guard.gate' };
+const DOOR_CONV: Record<string, string> = { 'foma.door': 'foma.door', 'contora.door': 'gayl.window', 'priyut.gate': 'guard.gate' };
 export const doorConv = (id: string) => DOOR_CONV[id] ?? null;
 
 // ---------------- NPC <-> NPC scenes, heard as world subtitles within 8 m (spec 15.3)
@@ -105,7 +105,7 @@ export function registerWorldItems(g: Game) {
   addInteract({ id: 'tower.door', x: TOWER.foot.x, y: groundH(TOWER.foot.x, TOWER.foot.z), z: TOWER.foot.z + 0.3, r: 1.8, label: () => 'Подняться на крышу (≈1 мин)', use: c => travel(c, TOWER.roofSpawn.x, TOWER.roofSpawn.z, 60, 'Винтовая лестница.', ROOF_Y()) });
   addInteract({ id: 'tower.cellar', x: TOWER.cellarDoor.x, y: groundH(TOWER.cellarDoor.x, TOWER.cellarDoor.z), z: TOWER.cellarDoor.z, r: 1.8, label: c => (c.s.t < at(22, 5) ? 'Спуститься в подвал' : 'Дверь подвала (заперта)'), use: c => { if (c.s.t >= at(22, 5)) { c.hud.bark('Заперто.', true); c.learn('cellar_locked'); return; } travel(c, TOWER.cellarIn.x, TOWER.cellarIn.z - 1.0, 5, 'Вниз.', BASEMENT_Y()); } });
   addInteract({ id: 'cellar.up', x: TOWER.cellarIn.x, y: BASEMENT_Y(), z: TOWER.cellarIn.z - 1.3, r: 2.0, ok: c => c.player.body.y < groundH(-70, -58) - 2, label: () => 'Подняться', use: c => travel(c, TOWER.cellarDoor.x + 1.4, TOWER.cellarDoor.z, 5, 'Наверх.') });
-  addInteract({ id: 'cellar.fuse', x: TOWER.fuse.x, y: BASEMENT_Y(), z: TOWER.fuse.z + 0.6, r: 1.6, ok: c => !c.s.flags.has('tapCut') && c.player.body.y < groundH(-70, -58) - 2, label: () => 'Выдернуть предохранитель', use: c => { const st = c.npcs.pose('stern'); if (st && !st.hidden && c.s.t < at(22, 4) && Math.hypot(st.x - TOWER.fuse.x, st.z - TOWER.fuse.z) < 5) { c.runner.start('stern'); return; } c.flag('tapCut'); c.learn('cut_tap'); if (world3.fuse) world3.fuse.visible = false; c.message('Свет ровный. Город изменился.', 'The lights are steady. The city has changed.'); c.note('fuse', 'Выдернул красный предохранитель отвода в подвале башни.', 'Pulled the red fuse of the tap in the tower cellar.'); c.hud.bark('Предохранитель. Красный.', true); } });
+  addInteract({ id: 'cellar.fuse', x: TOWER.fuse.x, y: BASEMENT_Y(), z: TOWER.fuse.z + 0.6, r: 1.6, ok: c => !c.s.flags.has('tapCut') && c.player.body.y < groundH(-70, -58) - 2, label: c => c.s.knows('know_fuse') ? 'Выдернуть предохранитель' : 'Осмотреть коробку', use: c => { if (!c.s.knows('know_fuse') && !(c.npcs.pose('stern') && !c.npcs.pose('stern')!.hidden)) { c.hud.bark('Провода, клеммы. Не разберу, что тут что.', true); c.learn('saw_cellar_box'); return; } const st = c.npcs.pose('stern'); if (st && !st.hidden && c.s.t < at(22, 4) && Math.hypot(st.x - TOWER.fuse.x, st.z - TOWER.fuse.z) < 5) { c.runner.start('stern'); return; } c.flag('tapCut'); c.learn('cut_tap'); if (world3.fuse) world3.fuse.visible = false; c.message('Свет ровный. Город изменился.', 'The lights are steady. The city has changed.'); c.note('fuse', 'Выдернул красный предохранитель отвода в подвале башни.', 'Pulled the red fuse of the tap in the tower cellar.'); c.hud.bark('Предохранитель. Красный.', true); } });
   addInteract({ id: 'roof.chest', x: -73.9, y: ROOF_Y(), z: -56.2, r: 1.8, ok: c => c.s.t >= at(22, 15) && need(c, 'note'), label: () => 'Ящик Лидии: записка', use: c => { take(c, 'note', 'note', 'Записка с печатью совета.'); c.learn('know_lidia_note'); c.note('note', 'Записка Лидии: «Впустить техника в 21:55. После — брат дома». Машинопись, печать попечительского совета, подписи нет.', 'Lidia\'s note: "Let the technician in at 21:55. After — brother home." Typed, board seal, no signature.'); } });
   // --- Tikhon's cap (house, when he is gone) and the orphanage cart pin
   { const cp = loc('tikhon', -2.6, -0.8); addInteract({ id: 'cap', x: cp.x, y: floorY('tikhon'), z: cp.z, r: 1.6, ok: c => need(c, 'cap') && (c.s.t >= at(22, 28, 30) || c.fl('tikhonTurned')) && c.s.pocket !== 'cap', label: () => 'Взять кепку рулевого', use: c => take(c, 'cap', 'cap', 'Не поднимать голову.', () => { c.learn('know_helm'); c.thread('pier3'); }) });
@@ -137,7 +137,7 @@ function travel(c: Game, x: number, z: number, secs: number, bark: string, y?: n
 export function onBark(g: Game, evt: string) {
   const s = g.s, t = s.t, b = g.player.body;
   if (evt === 'universe') { shown.clear(); if (s.knows('prologue_jumped') && !s.knows('prologue_done') && !g.runner.active) setTimeout(() => g.runner.start('prologue2'), 600); return; }
-  if (evt.startsWith('locked:')) { const id = evt.slice(7); if (id === 'orven.door') { if (t >= at(22, 10)) { g.hud.bark('Заперто. Опоздал минут на пять.', true); s.learn('saw_orven_locked'); if (s.thread === 'orven') g.thread('orven_late'); } } const dc = doorConv(id); if (dc && !g.runner.active) g.runner.start(dc); return; }
+  if (evt.startsWith('locked:')) { const id = evt.slice(7); if (id === 'orven.door') { if (t >= at(22, 10)) { g.hud.bark('Заперто. Опоздал минут на пять.', true); s.learn('saw_orven_locked'); if (s.thread === 'orven') g.thread('orven_late'); } } const dc = doorConv(id); if (id === 'tikhon.door') { if (s.knows('know_helmsmen') || s.knows('know_tikhon')) { if (!g.runner.active) g.runner.start('tikhon.door'); } else g.hud.bark('Заперто. В окне свет.', true); return; } if (dc && !g.runner.active) g.runner.start(dc); return; }
   if (evt.startsWith('event:')) {
     const e = evt.slice(6);
     if (e === 'blast') { s.learn('saw_blast'); g.hud.bark('Склад…', true); g.shake(1.6); g.snd.boom(1, 1.6, 70); g.hud.flash(0.8); setTimeout(() => g.hud.flash(0), 160); }

@@ -13,8 +13,10 @@ const { chromium } = require('playwright'); const { createServer } = require('vi
     const reset = (t) => { g.s.flags = new (g.s.flags.constructor)(); g.s.changes = []; g.sim.setFlags(g.s.flags); g.s.t = t; g.s.worldItems.clear(); tick(); };
     // 1. Orven at the door 22:09:30
     reset(mm(9, 30)); await play('orven'); ok('Orven: thread -> ned, knowledge', g.s.thread === 'ned' && g.s.knows('know_ned'));
+    // 1b. gating: a player who skipped Orven cannot ask Ned about the key or his name
+    { const saved = [...g.s.know]; g.s.know = new Set(['name_agnia']); reset(mm(12, 30)); g.runner.start('ned'); await new Promise(r => setTimeout(r, 300)); k('KeyE'); await new Promise(r => setTimeout(r, 300)); k('KeyE'); await new Promise(r => setTimeout(r, 300)); const texts = [...document.querySelectorAll('#dlg .opt')].map(o => o.textContent); ok('Ned without Orven: no "Ты Нед?" option', !texts.some(t => t.includes('Ты Нед')) && texts.length >= 2); document.querySelector('#dlg').innerHTML = ''; g.runner.active = false; g.ui.hide(); g.s.know = new Set(saved); }
     // 2. Ned on the bridge, saved with the blast argument
-    reset(mm(12, 30)); g.s.learn('saw_blast'); await play('ned', ['Ты Нед', '(Дальше)', 'Склад сгорел']); ok('Ned: saved by the pressure argument', g.s.flags.has('nedSaved') && g.s.thread === 'tavern'); out.push('  (ned debug: ' + JSON.stringify({ flags: g.s.flags.entries(), thread: g.s.thread, t: g.s.t }) + ')');
+    reset(mm(12, 30)); g.s.learn('saw_blast'); await play('ned', ['Ты Нед', 'Мне сказали, у тебя ключ', '(Дальше)', 'Склад сгорел']); ok('Ned: saved by the pressure argument', g.s.flags.has('nedSaved') && g.s.thread === 'tavern'); out.push('  (ned debug: ' + JSON.stringify({ flags: g.s.flags.entries(), thread: g.s.thread, t: g.s.t }) + ')');
     // 3. steal the token while everybody watches the row (22:04:30)
     reset(mm(4, 30)); const tb = { x: 24.3, z: 9.2 }; P.place(tb.x - 1.2, tb.z, tb.x, tb.z, 0, g.npcs.pose('ned') ? 0.1 : 0.1); tick(3); const it = window.__items = null;
     const inter = (await import('/src/world/interiors.ts')).interactables.find(i => i.id === 'tav.jeton'); inter.use(g); ok('Token stolen at 22:04:30: pocket + flag', g.s.pocket === 'jeton' && g.s.flags.has('jetonStolen'));
@@ -23,10 +25,10 @@ const { chromium } = require('playwright'); const { createServer } = require('vi
     // 5. Anna with the ring; warned -> flags
     reset(mm(25)); g.s.pocket = 'ring'; await play('anna', ['Протянуть кольцо', 'Выведи']); ok('Anna: warned, ring handed over', g.s.flags.has('annaWarned') && g.s.pocket !== 'ring');
     // 6. Anka's ribbon, Tilda intercepted
-    reset(mm(31)); await play('anka', ['Знаком', 'Заберёт']); ok('Anka: ribbon in the pocket', g.s.pocket === 'ribbon');
+    reset(mm(31)); g.s.learn('name_tilda'); await play('anka', ['Знаком', 'Заберёт']); ok('Anka: ribbon in the pocket', g.s.pocket === 'ribbon');
     reset(mm(22, 30)); await play('tilda.pier', ['Протянуть ленту', 'Я там вырос']); ok('Tilda: warned with the ribbon', g.s.flags.has('tildaWarned') && g.s.pocket !== 'ribbon');
     // 7. Tikhon: talk him round
-    reset(mm(25)); g.s.learn('saw_yan_killed'); g.s.pocket = 'helmsmen'; await play('tikhon.door', ['Я от Гейла', 'В списке', 'Не ходи сегодня', 'Никто']); ok('Tikhon: cap in the pocket, stays home', g.s.pocket === 'cap' && g.s.flags.has('tikhonTurned') && g.s.thread === 'pier3');
+    reset(mm(25)); g.s.learn('saw_yan_killed'); g.s.learn('know_helmsmen'); g.s.pocket = 'helmsmen'; await play('tikhon.door', ['Я от Гейла', 'В списке', 'Не ходи сегодня', 'Никто']); ok('Tikhon: cap in the pocket, stays home', g.s.pocket === 'cap' && g.s.flags.has('tikhonTurned') && g.s.thread === 'pier3');
     // 8. pier 3 guard, then the helm
     reset(mm(36)); g.s.pocket = 'cap'; await play('guard.pier3', ['Я.']); ok('Guard: helm ok', g.s.knows('helm_ok'));
     g.pilot.board(); await new Promise(r => setTimeout(r, 300)); tick(10); ok('Pilot: aboard', g.pilot.aboard);

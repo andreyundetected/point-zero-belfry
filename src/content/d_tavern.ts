@@ -1,4 +1,4 @@
-import { Conv, L, A } from '../game/dialogue';
+import { Conv, L, A, W } from '../game/dialogue';
 import { at } from '../sim/time';
 
 // 02_DIALOGUES §5 Agata, §6 the table, §7 Foma
@@ -10,10 +10,10 @@ export const agataAfter: Conv = { id: 'agata.after', start: 'a', nodes: {
   h: { say: [L('agata', '(смотрит) Не знаю такого. Вот пальто его наверху висит третий месяц — а самого не знаю.')], fx: c => { c.learn('know_coat'); c.note('agata1', 'Агата: восемь человек Корда сидели с вечера, ждали. Как бахнуло на складе — все туда. Наверху висит пальто «В.Х.» третий месяц.', 'Agata: eight of Cord\'s men sat here since evening, waiting. When the warehouse blew, they all left. A coat with "V.H." hangs upstairs for three months.', 'agata'); }, end: true },
 } };
 export const agataBefore: Conv = { id: 'agata.before', start: 'a', nodes: {
-  a: { say: [L('agata', 'Садись у стойки, не стой столбом. Эти не любят, когда стоят. (кивает на стол)')], choices: [{ ru: 'Кто такие?', next: 'b' }, { ru: 'Налей.', next: 'c' }, { ru: 'Курьера знаешь? Рыжий.', next: 'd', if: c => c.t() < at(22, 8) }] },
+  a: { say: [L('agata', 'Садись у стойки, не стой столбом. Эти не любят, когда стоят. (кивает на стол)')], choices: [{ ru: 'Кто такие?', next: 'b' }, { ru: 'Налей.', next: 'c' }, { ru: 'Курьера знаешь? Рыжий.', next: 'd', if: c => c.t() < at(22, 8) && c.knows('know_ned') }] },
   b: { say: [L('agata', 'Не мои гости. Я их не звала. Сиди тихо.')], fx: c => c.learn('know_cord_men'), end: true },
   c: { say: [A('(наливает молча)')], end: true },
-  d: { say: [L('agata', 'Нед. Дурачок. Вон он, весь вечер им проигрывает. (тише) Ты его заберёшь отсюда — спасибо скажу.')], fx: c => { c.learn('know_ned_here'); c.note('agata0', 'Агата: «Нед. Дурачок. Весь вечер им проигрывает».', 'Agata: "Ned. A fool. Loses to them all evening."', 'agata'); }, end: true },
+  d: { say: [L('agata', 'Нед. Дурачок. Вон он, весь вечер им проигрывает. (тише) Ты его заберёшь отсюда — спасибо скажу.')], fx: c => { c.learn('know_ned_here'); c.learn('name_ned'); c.note('agata0', 'Агата: «Нед. Дурачок. Весь вечер им проигрывает».', 'Agata: "Ned. A fool. Loses to them all evening."', 'agata'); }, end: true },
 } };
 export const agataFight: Conv = { id: 'agata.fight', start: 'a', nodes: { a: { say: [L('agata', '(из-за стойки, шёпотом) Уходи. Через двор. Сейчас вернутся.')], fx: c => c.openDoor('tavern.back', true), end: true } } };
 export const ignatTable: Conv = { id: 'ignat.table', start: 'a', nodes: {
@@ -27,9 +27,10 @@ export const scarHunt: Conv = { id: 'scar.angry', start: 'a', nodes: { a: { say:
 // ---- Foma through the door / caught / after the fire
 export const fomaDoor: Conv = { id: 'foma.door', start: 'a', nodes: {
   a: { say: [A('(стук)'), L('foma', '(из-за двери) Закрыто!')], choices: [
-    { ru: 'Мне ствол нужен.', next: 'b1' }, { ru: 'Я от Неда.', next: 'b2' },
+    { ru: 'Мне ствол нужен.', if: c => c.knows('know_foma_guns'), next: 'b1' }, { ru: 'Я от Неда.', if: c => c.knows('name_ned'), next: 'b2' }, { ru: 'Откройте. Мне поговорить.', next: 'b0' },
     { ru: 'Через несколько минут здесь всё сгорит. Открой.', know: 'saw_foma_fire', kt: '22:30', next: 'b3' },
     { ru: 'Твой револьвер краденый. Утром за ним придут.', know: 'know_gun_stolen', kt: 'опись', if: c => c.fl('tapCut'), next: 'b4' }] },
+  b0: { say: [L('foma', 'Ночью не говорят. Иди.')], end: true },
   b1: { say: [L('foma', 'Мне тоже много чего нужно. Иди.')], fx: c => c.learn('foma_door'), end: true },
   b2: { say: [L('foma', 'Нед мне шесть монет должен. Пусть сам придёт.')], end: true },
   b3: { say: [L('foma', '(пауза) Ты пьяный? Иди отсюда, пока я полицию… (смешок) Полиции нет. Ну и иди.')], fx: c => { if (c.t() < at(22, 24)) c.flag('fomaWarned'); }, end: true },

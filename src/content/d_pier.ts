@@ -1,4 +1,4 @@
-import { Conv, L, A } from '../game/dialogue';
+import { Conv, L, A, W } from '../game/dialogue';
 import { at } from '../sim/time';
 
 // 02_DIALOGUES §11 Lukyan, §12 Tikhon and Pip, §14 pier 3, §15 the launch
@@ -16,13 +16,13 @@ export const lukyan: Conv = { id: 'lukyan', start: 'a', nodes: {
 } };
 export const lukyanDying: Conv = { id: 'lukyan.dying', start: 'a', nodes: { a: { say: [L('lukyan', '(хрипит) Тильда… Дура. Зачем… Я бы её сам отдал. Мне что дети, что бочки…')], fx: c => c.learn('know_lukyan_dying'), end: true } } };
 export const tikhonDoor: Conv = { id: 'tikhon.door', start: 'a', nodes: {
-  a: { say: [A('(стук)'), L('tikhon', '(за дверью) Кто?')], choices: [{ ru: 'Я от Гейла.', next: 'b1' }, { ru: 'Открой. Поговорить.', next: 'b2' }, { ru: 'Про Яна.', know: 'saw_yan_killed', kt: '22:35', next: 'b3' }] },
+  a: { say: [A('(стук)'), L('tikhon', '(за дверью) Кто?')], choices: [{ ru: 'Я от Гейла.', if: c => c.knows('name_gayl'), next: 'b1' }, { ru: 'Открой. Поговорить.', next: 'b2' }, { ru: 'Про Яна.', know: 'saw_yan_killed', kt: '22:35', next: 'b3' }] },
   b1: { say: [L('tikhon', '(открывает на цепочку) От Гейла? Ключ я забрал уже. Чего ещё?')], fx: c => c.flag('tikhonKnock'), next: 'in' },
   b2: { say: [L('tikhon', 'Ночью не говорят. Иди.')], choices: [{ ru: 'Я от Гейла.', next: 'b1' }, { ru: 'Про Яна.', know: 'saw_yan_killed', kt: '22:35', next: 'b3' }] },
   b3: { say: [L('tikhon', '(открывает) Тише. Ребёнок спит. Что с Яном?')], fx: c => c.flag('tikhonKnock'), next: 'in' },
   in: { say: [L('tikhon', '(шёпотом, оглядываясь на кровать) Говори.')], choices: [
     { ru: 'Яна убили на пристани. Как только катер встал.', know: 'saw_yan_killed', kt: '22:35', next: 'c1' },
-    { ru: 'В списке у Гейла: «Ян — списать». «Тихон — после рейса списать».', if: c => c.has('helmsmen'), next: 'c2' },
+    { ru: 'В списке у Гейла: «Ян — списать». «Тихон — после рейса списать».', if: c => c.knows('know_helmsmen'), next: 'c2' },
     { ru: 'Мне нужна твоя кепка и твой ключ.', next: 'c3' }, { ru: '(Поднять револьвер)', if: c => c.gun(), next: 'c4' }] },
   c1: { say: [L('tikhon', '(садится на табурет) Не может… Ян двадцать лет у них. Двадцать лет…')], next: 'fork' },
   c2: { say: [L('tikhon', '(берёт список, читает дважды) «После рейса». (смотрит на Пип) После рейса.')], next: 'fork' },
