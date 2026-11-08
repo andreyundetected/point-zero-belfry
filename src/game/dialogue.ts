@@ -35,34 +35,49 @@ const NAMES: Record<string, { ru: string; en: string }> = {
   stern: { ru: 'Штерн', en: 'Stern' }, guard: { ru: 'Охранник', en: 'Guard' }, guard1: { ru: 'Охранник 1', en: 'Guard 1' }, guard2: { ru: 'Охранник 2', en: 'Guard 2' },
   cord: { ru: 'Корд', en: 'Cord' }, device: { ru: 'Створка', en: 'The Device' }, mitya: { ru: 'Митя', en: 'Mitya' }, '': { ru: '', en: '' },
 };
-export const nameOf = (id: string) => NAMES[id]?.[getLang()] ?? id;
+/** until the player has learned a person's name, he is only a description (spec 1: you only use what you know) */
+export const DESC: Record<string, { ru: string; en: string }> = {
+  ned: { ru: 'Рыжий курьер', en: 'Red-haired courier' }, tilda: { ru: 'Женщина в платке', en: 'Woman in a kerchief' }, agata: { ru: 'Хозяйка таверны', en: 'The landlady' },
+  ignat: { ru: 'Человек в жилете', en: 'Man in a waistcoat' }, lovchiy: { ru: 'Человек Корда', en: "Cord's man" }, scar: { ru: 'Человек со шрамом', en: 'Man with a scar' }, foma: { ru: 'Голос за дверью', en: 'A voice behind the door' },
+  gayl: { ru: 'Человек в очках', en: 'Man in spectacles' }, anna: { ru: 'Сестра в чепце', en: 'A nurse in a cap' }, agnia: { ru: 'Старая монахиня', en: 'An old nun' }, anka: { ru: 'Девочка с красной лентой', en: 'Girl with a red ribbon' },
+  tikhon: { ru: 'Человек за дверью', en: 'A man behind the door' }, pip: { ru: 'Спящая девочка', en: 'A sleeping girl' }, yan: { ru: 'Старый рулевой', en: 'Old helmsman' }, harrow: { ru: 'Седой господин', en: 'Grey-haired gentleman' },
+  fern: { ru: 'Старик с фонарём', en: 'Old man with a lantern' }, stern: { ru: 'Человек с чемоданом', en: 'Man with a suitcase' }, orven: { ru: 'Ключник', en: 'The locksmith' }, lukyan: { ru: 'Баржевщик', en: 'The bargeman' },
+  cord: { ru: 'Человек в длинном пальто', en: 'Man in a long coat' }, guard: { ru: 'Охранник', en: 'Guard' },
+};
+export let nameKnown: (id: string) => boolean = () => true; export const setNameKnown = (f: (id: string) => boolean) => { nameKnown = f; };
+export const nameOf = (id: string) => (id && !nameKnown(id) && DESC[id] ? DESC[id][getLang()] : NAMES[id]?.[getLang()] ?? id);
 
 export class DialogueUI {
   root = document.getElementById('dlg')!; open = false;
-  private resolve?: () => void; private choiceFn?: (i: number) => void; private nChoices = 0;
+  private resolve?: () => void; private choiceFn?: (i: number) => void; private nChoices = 0; private sel = 0;
+  private free() { try { if (document.pointerLockElement) document.exitPointerLock(); } catch { /* ignore */ } this.root.style.cursor = 'pointer'; document.body.style.cursor = 'default'; }
+  private paint() { this.root.querySelectorAll('.opt').forEach((el, i) => el.classList.toggle('sel', i === this.sel)); }
   constructor() {
     addEventListener('keydown', e => {
       if (!this.open) return;
-      if (/^Digit[1-9]$/.test(e.code)) { const i = +e.code.slice(5) - 1; if (this.choiceFn && i < this.nChoices) { this.choiceFn(i); e.preventDefault(); } }
-      else if (e.code === 'KeyE' || e.code === 'Enter' || e.code === 'Space') { if (this.resolve) { const r = this.resolve; this.resolve = undefined; r(); e.preventDefault(); } }
+      if (/^(Digit|Numpad)[1-9]$/.test(e.code)) { const i = +e.code.slice(-1) - 1; if (this.choiceFn && i < this.nChoices) { this.choiceFn(i); e.preventDefault(); } }
+      else if (this.choiceFn && (e.code === 'ArrowDown' || e.code === 'KeyS')) { this.sel = (this.sel + 1) % this.nChoices; this.paint(); e.preventDefault(); }
+      else if (this.choiceFn && (e.code === 'ArrowUp' || e.code === 'KeyW')) { this.sel = (this.sel + this.nChoices - 1) % this.nChoices; this.paint(); e.preventDefault(); }
+      else if (e.code === 'KeyE' || e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter') { if (this.choiceFn) { this.choiceFn(this.sel); e.preventDefault(); } else if (this.resolve) { const r = this.resolve; this.resolve = undefined; r(); e.preventDefault(); } }
     });
     this.root.addEventListener('click', e => { const t = (e.target as HTMLElement).closest('[data-i]') as HTMLElement | null; if (t && this.choiceFn) this.choiceFn(+t.dataset.i!); else if (this.resolve) { const r = this.resolve; this.resolve = undefined; r(); } });
   }
   show(l: Line): Promise<void> {
-    this.open = true; this.root.style.display = 'block';
+    this.open = true; this.root.style.display = 'block'; this.free();
     const who = l.act ? '' : `<div class="who">${nameOf(l.who)}</div>`;
     this.root.innerHTML = `${who}<div class="txt${l.act ? ' act' : ''}">${en(l.ru, l.en)}</div><div class="more">${tr('continue')} ▸</div>`;
     return new Promise(r => { this.resolve = r; });
   }
   choose(cs: { text: string; glyph?: string }[]): Promise<number> {
-    this.open = true; this.root.style.display = 'block'; this.nChoices = cs.length;
+    this.open = true; this.root.style.display = 'block'; this.nChoices = cs.length; this.sel = 0; this.free();
     this.root.innerHTML = '<div class="opts">' + cs.map((c, i) => `<div class="opt" data-i="${i}"><b>${i + 1}.</b> ${c.glyph ? `<span class="glyph">⟲ ${c.glyph}</span> ` : ''}${c.text}</div>`).join('') + '</div>';
-    return new Promise(r => { this.choiceFn = i => { this.choiceFn = undefined; r(i); }; });
+    const done = new Promise<number>(r => { this.choiceFn = i => { this.choiceFn = undefined; r(i); }; }); this.paint(); return done;
   }
   hide() { this.open = false; this.root.style.display = 'none'; this.root.innerHTML = ''; }
+  /** the dialogue box stays up with a free cursor until the conversation is over; then the game asks for the mouse back */
 }
 export class DialogueRunner {
-  convs = new Map<string, Conv>(); active = false; cur?: string;
+  convs = new Map<string, Conv>(); active = false; cur?: string; onEnd?: () => void;
   constructor(public ui: DialogueUI, public ctx: Ctx) {}
   register(...cs: Conv[]) { for (const c of cs) this.convs.set(c.id, c); }
   async start(id: string) {
@@ -83,6 +98,6 @@ export class DialogueRunner {
         node = c.next;
       } else node = n.end ? undefined : n.next;
     }
-    this.ui.hide(); this.active = false; this.cur = undefined;
+    this.ui.hide(); this.active = false; this.cur = undefined; this.onEnd?.();
   }
 }

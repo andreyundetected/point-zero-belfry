@@ -23,7 +23,7 @@ canvas{display:block}
 #dlg .who{color:var(--dim);font-size:14px;margin-bottom:4px;letter-spacing:1px}
 #dlg .act{color:var(--dim);font-style:italic}
 #dlg .more{text-align:right;color:var(--dim);font-size:13px;margin-top:6px}
-#dlg .opt{padding:5px 8px;border-radius:3px}#dlg .opt:hover{background:#22201c}
+#dlg .opt{padding:5px 8px;border-radius:3px}#dlg .opt:hover,#dlg .opt.sel{background:#26221c;outline:1px solid #5a4a30}
 #dlg .opt b{color:var(--dim);margin-right:4px}.glyph{color:var(--red);font-size:15px}
 #stv{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center}
 #stv .panel{width:min(920px,94%);height:min(560px,88%);background:#0c0d0f;border:1px solid #4a3a2a;box-shadow:0 0 40px #000;display:flex;flex-direction:column}
@@ -49,8 +49,15 @@ canvas{display:block}
 #end{position:fixed;inset:0;background:#000;color:var(--ink);display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;overflow:auto}
 #end h1{font-size:44px;font-weight:400;letter-spacing:6px;margin:0 0 18px}#end p{max-width:640px;color:var(--dim)}#end ul{text-align:left;color:var(--ink)}
 #ghost{position:fixed;inset:0;pointer-events:none;display:none;box-shadow:inset 0 0 120px #5a8aff55}
+#mini{position:fixed;left:14px;bottom:70px;width:176px;height:176px;border-radius:50%;border:2px solid #3a3228;box-shadow:0 0 14px #000,inset 0 0 18px #000;opacity:.92;pointer-events:none;background:#07080a}
+#pocket{position:fixed;left:14px;bottom:14px;min-width:176px;height:44px;box-sizing:border-box;border:1px solid #3a3228;background:rgba(8,9,11,.78);padding:6px 10px;font-size:14px;display:flex;align-items:center;gap:8px;pointer-events:none}
+#pocket .ic{width:26px;height:26px;border:1px solid #5a4a30;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--dim)}
+#pocket.has .ic{border-color:#c02a20;color:#ff5a48;box-shadow:0 0 10px #a01810}#pocket.has .nm{color:#ffb0a4}
+#newp{position:fixed;right:14px;top:44px;width:260px;display:none;gap:10px;align-items:center;background:rgba(8,9,11,.86);border:1px solid #3a3228;border-left:3px solid #c02a20;padding:8px 10px;transition:opacity .5s;opacity:0}
+#newp img{width:56px;height:56px;border:1px solid #444;filter:grayscale(1)}#newp .t{font-size:11px;letter-spacing:2px;color:#ff6a58;text-transform:uppercase}#newp .n{font-size:17px;margin-top:2px}#newp .s{font-size:12px;color:var(--dim);margin-top:2px}
 </style></head>
 <body>
+<canvas id="mini" width="176" height="176"></canvas><div id="pocket"><div class="ic">◌</div><div class="nm">Карман пуст</div></div><div id="newp"><img id="newp-img" alt=""><div><div class="t">Встречен новый человек</div><div class="n" id="newp-n"></div><div class="s" id="newp-s"></div></div></div>
 <div id="hint"></div><div id="clock"></div><div id="cross"></div><div id="prompt"></div><div id="sub"></div><div id="thread"></div><div id="toast"></div>
 <div id="sync"></div><div id="ghost"></div><div id="red"></div><div id="flash"></div><div id="fade"></div>
 <div id="pause" style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;font-size:28px;letter-spacing:4px;cursor:pointer;color:#d8d2c4">ПАУЗА — клик, чтобы продолжить</div>

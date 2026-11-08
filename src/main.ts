@@ -44,7 +44,7 @@ let lastShown = '';
 function frame() {
   for (const p of (window as any).__lp ?? []) p.update(0.016);
   const dt = Math.min(clock.getDelta(), 0.05); t += dt;
-  game.update(dt); { const bm = (scene as any).__beam; if (bm) bm.material.opacity = 0.15 + 0.85 * Math.max(0, Math.sin(t * 0.9) ** 3); } const shown = fmt(game.s.t); if (shown !== lastShown) { lastShown = shown; dev.setTime(shown); } (rain as any).mesh.visible = !game.sceneInside; rain(t, cam.position.x, cam.position.z); grade.uniforms.time.value = t; comp.render();
+  game.update(dt); { const bm = (scene as any).__beam; if (bm) bm.material.opacity = 0.15 + 0.85 * Math.max(0, Math.sin(t * 0.9) ** 3); } const shown = fmt(game.s.t, true); if (shown !== lastShown) { lastShown = shown; dev.setTime(shown); } (rain as any).mesh.visible = !game.sceneInside; rain(t, cam.position.x, cam.position.z); grade.uniforms.time.value = t; comp.render();
   if (!window.FREEZE) requestAnimationFrame(frame);
 }
 frame();

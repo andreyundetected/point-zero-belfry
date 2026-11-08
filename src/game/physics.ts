@@ -62,3 +62,12 @@ export function stepBody(p: Body, wishX: number, wishZ: number, run: boolean, ju
   }
   p.inWater = p.y < WATER_Y - 0.5 && (inCanal(p.x, p.z) || inHarbour(p.z));
 }
+
+/** can a point at (ax,ay,az) see (bx,by,bz)? Walls, closed doors and the cellar block sight; furniture does not. */
+export function lineOfSight(ax: number, az: number, ay: number, bx: number, bz: number, by: number): boolean {
+  const d = Math.hypot(bx - ax, bz - az), n = Math.max(2, Math.ceil(d / 0.35));
+  for (let i = 1; i < n; i++) { const t = i / n, x = ax + (bx - ax) * t, z = az + (bz - az) * t, y = ay + (by - ay) * t;
+    for (const b of world.near(x, z)) { if (b.off || (b.kind !== 'building' && b.kind !== 'cellar' && b.kind !== 'door' && b.kind !== 'tram' && b.kind !== 'floor')) continue; if (y < b.y0 || y > b.y1) continue;
+      const dx = x - b.cx, dz = z - b.cz, lx = dx * b.cos - dz * b.sin, lz = dx * b.sin + dz * b.cos; if (Math.abs(lx) < b.hx && Math.abs(lz) < b.hz) return false; } }
+  return true;
+}

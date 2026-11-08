@@ -3,7 +3,7 @@ import { Player } from './player';
 import { GameState, ItemId } from './state';
 import { Hud } from './hud';
 import { Stvorka, StvHost, itemName } from './stvorka';
-import { DialogueRunner, DialogueUI, Ctx } from './dialogue';
+import { DialogueRunner, DialogueUI, Ctx, nameOf, setNameKnown } from './dialogue';
 import { NpcRuntime } from './npcRuntime';
 import { Fx } from './fx';
 import { Sound } from './audio';
@@ -18,7 +18,7 @@ import { insideSite, SITES } from '../sim/sites';
 import { setFomaState } from '../world/ruins';
 import { setClock } from '../world/tower';
 import { world } from '../world/colliders';
-import { R, HEIGHT, STEP } from './physics';
+import { R, HEIGHT, STEP, lineOfSight } from './physics';
 import { groundH } from '../world/terrain';
 import { NPCS } from '../sim/npcs';
 import { VEHICLES } from '../sim/vehicles';
@@ -27,6 +27,7 @@ import { getLang, pick, setLang } from './strings';
 import { CONVS, pickConv, registerWorldItems, onBark } from '../content';
 import { Combat } from './combat';
 import { Pilot } from './pilot';
+import { drawMini } from './mapview';
 import { updateMarks } from '../world/marks';
 import { addInteract } from '../world/interiors';
 
@@ -46,14 +47,18 @@ export class Game implements StvHost, Ctx {
       if (!c.s.knows('helm_ok') && c.s.pocket !== 'cap') { c.hud.bark('Охрана не подпустит. Надо сказать «Я».', true); const d = c.npcs.pose('dock1'); if (d && !d.hidden) c.runner.start('guard.pier3'); return; }
       c.pilot.board(); } });
     addEventListener('keydown', e => this.key(e));
-    document.addEventListener('pointerlockchange', () => { const locked = !!document.pointerLockElement; if (locked) { this.hadLock = true; this.paused = false; document.getElementById('pause')!.style.display = 'none'; } else if (this.hadLock && !this.open && !this.ui.open && !this.s.ended && !this.jumpBusy) { this.paused = true; document.getElementById('pause')!.style.display = 'flex'; } });
+    document.addEventListener('pointerlockchange', () => { const locked = !!document.pointerLockElement; if (locked) { this.hadLock = true; this.paused = false; document.getElementById('pause')!.style.display = 'none'; } else if (this.hadLock && !this.open && !this.ui.open && !this.runner.active && !this.s.ended && !this.jumpBusy) { this.paused = true; document.getElementById('pause')!.style.display = 'flex'; } });
     document.getElementById('pause')!.addEventListener('click', () => { this.paused = false; document.getElementById('pause')!.style.display = 'none'; this.player.dom.requestPointerLock?.(); });
     addEventListener('keyup', e => { if (e.code === 'KeyT') this.waitHeld = false; if (e.code === 'Enter') this.holdEnd(); });
     addEventListener('mousedown', () => this.snd.init()); addEventListener('keydown', () => this.snd.init(), { once: true });
     player.onRespawn = () => { this.hud.bark('Холодная вода. Вылез.', true); this.hurt(0.6); };
+    this.runner.onEnd = () => { setTimeout(() => { try { (this.player.dom.requestPointerLock() as any)?.catch?.(() => {}); } catch { /* needs a gesture */ } }, 60); };
+    setNameKnown(id => ['tik', 'device', 'mitya', 'guard1', 'guard2', 'pg', ''].includes(id) || this.s.knows('name_' + id));
+    player.canClickMove = () => !this.combat.aiming && !this.open && !this.runner.active;
     this.applyUniverse(); this.hud.clock(0);
   }
   // ---------------- StvHost
+  getYaw() { return this.player.yaw; }
   getPos() { return { x: this.player.body.x, z: this.player.body.z }; }
   // ---------------- Ctx (for dialogues and content)
   advance(sec: number) { this.s.t = Math.min(WINDOW, this.s.t + sec); }
@@ -87,7 +92,7 @@ export class Game implements StvHost, Ctx {
     for (let r = 0.3; r <= 1.5; r += 0.3) for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (ok(px, pz, y)) return { x: px, z: pz, y }; }
     return null;
   }
-  bellShown = false; markT = 0; paused = false; hadLock = false; holdT = 0; holding = false;
+  meetT = 0; miniT = 0; bellShown = false; markT = 0; paused = false; hadLock = false; holdT = 0; holding = false;
   /** spec 2.2: hold the jump button for 1 real second = preview; released earlier = cancel; held through = jump */
   holdBegin() { if (this.holding || this.jumpBusy) return; this.holding = true; this.holdT = 0; this.showGhosts(this.targetT); }
   holdEnd() { if (!this.holding) return; this.holding = false; this.hideGhosts(); }
@@ -149,10 +154,17 @@ export class Game implements StvHost, Ctx {
     };
     for (const d of doors) { const lk = d.locked(this.s.t, this.s.flags); consider(d.x, d.y, d.z, 1.9, lk && !d.open ? `${d.label}: ${lk}` : (d.open ? 'Закрыть дверь' : 'Открыть дверь'), () => { if (lk && !d.open) { this.hud.bark(lk.split('.')[0] + '.', true); this.snd.play('rpg_foley/metal_latch.ogg', 0.5); onBark(this, 'locked:' + d.id); return; } d.open = !d.open; this.snd.play('rpg_foley/door_' + (d.open ? 'open_' : 'close_') + (1 + (this.s.t | 0) % 4) + '.ogg', 0.7); }); }
     for (const it of interactables) { if (it.ok && !it.ok(this)) continue; const q = it.at ? it.at(this) : { x: it.x, y: it.y, z: it.z }; if (!q) continue; consider(q.x, q.y, q.z, it.r ?? 1.6, it.label(this), () => it.use(this)); }
-    for (const d of NPCS) { const po = this.npcs.pose(d.id); if (!po || po.hidden || d.civ && !pickConv(d.id, this)) continue; const cid = pickConv(d.id, this); if (!cid) continue; consider(po.x, po.y, po.z, 2.5, `Говорить: ${pick(d.name)}`, () => this.talk(d.id, cid)); }
+    for (const d of NPCS) { const po = this.npcs.pose(d.id); if (!po || po.hidden || d.civ && !pickConv(d.id, this)) continue; const cid = pickConv(d.id, this); if (!cid) continue; consider(po.x, po.y, po.z, 2.5, `Говорить: ${nameOf(d.id)}`, () => this.talk(d.id, cid)); }
     void cam; return best as { d: number; label: string; fn: () => void } | null;
   }
-  talk(npc: string, conv: string) { if (this.runner.active) return; if (!this.s.met.has(npc)) { this.s.met.add(npc); this.portraitQ.push(npc); const d = NPCS.find(n => n.id === npc)!; this.note('seen_' + npc, `Встретил ${fmt(this.s.t)}: ${pick(d.name)}`, `Met at ${fmt(this.s.t)}: ${pick(d.name)}`, npc, !!d.key); } this.s.met.add(npc); const p = this.npcs.pose(npc)!; this.player.yaw = Math.atan2(-(p.x - this.player.body.x), -(p.z - this.player.body.z)); this.runner.start(conv).then(() => this.afterTalk()); }
+  /** first meeting: journal entry, portrait and the top-right card */
+  meet(npc: string) {
+    if (this.s.met.has(npc)) return; this.s.met.add(npc); const d = NPCS.find(n => n.id === npc); if (!d || d.civ) return; this.portraitQ.push(npc); this.lastMeet = npc;
+    const nm = nameOf(npc); this.hud.newPerson(nm, getLang() === 'ru' ? `записано в «Люди» · ${fmt(this.s.t)}` : `added to People · ${fmt(this.s.t)}`);
+    this.note('seen_' + npc, `Встретил в ${fmt(this.s.t)}: ${nm}`, `Met at ${fmt(this.s.t)}: ${nm}`, npc, !!d.key);
+  }
+  lastMeet = '';
+  talk(npc: string, conv: string) { if (this.runner.active) return; this.meet(npc); const p = this.npcs.pose(npc)!; this.player.yaw = Math.atan2(-(p.x - this.player.body.x), -(p.z - this.player.body.z)); this.runner.start(conv).then(() => this.afterTalk()); }
   afterTalk() { this.player.apply(); }
   useNearest() { if (this.runner.active || this.frozen) return; const n = this.findInteract(); n?.fn(); }
   // ---------------- per-frame
@@ -175,7 +187,7 @@ export class Game implements StvHost, Ctx {
     this.renderer.setRenderTarget(rt); this.renderer.render(this.scene, this.pcam); this.renderer.readRenderTargetPixels(rt, 0, 0, 96, 96, buf); this.renderer.setRenderTarget(null); this.scene.remove(pl); this.scene.fog = prevFog;
     const cv = document.createElement('canvas'); cv.width = cv.height = 96; const cx = cv.getContext('2d')!; const im = cx.createImageData(96, 96);
     for (let y = 0; y < 96; y++) for (let x = 0; x < 96; x++) { const i = (y * 96 + x) * 4, j = ((95 - y) * 96 + x) * 4, l = Math.min(255, (buf[i] * 0.3 + buf[i + 1] * 0.59 + buf[i + 2] * 0.11) * 1.5); im.data[j] = im.data[j + 1] = im.data[j + 2] = l; im.data[j + 3] = 255; }
-    cx.putImageData(im, 0, 0); this.s.portraits[id] = cv.toDataURL('image/png');
+    cx.putImageData(im, 0, 0); this.s.portraits[id] = cv.toDataURL('image/png'); if (id === this.lastMeet) this.hud.setPortrait(this.s.portraits[id]);
   }
   update(dt: number) {
     const s = this.s, p = this.player;
@@ -191,6 +203,8 @@ export class Game implements StvHost, Ctx {
     if (s.t >= WINDOW && !s.ended && !this.frozen) this.finish('empty');
     p.frozen = this.open || talking || this.jumpBusy || this.frozen || this.pilot.aboard || this.paused; if (!this.pilot.aboard) p.update(dt); else p.apply();
     this.hud.clock(s.t); this.hud.update(dt);
+    this.meetT -= dt; if (this.meetT <= 0 && !this.open) { this.meetT = 0.4; for (const d of NPCS) { if (d.civ || this.s.met.has(d.id)) continue; const q = this.npcs.pose(d.id); if (!q || q.hidden) continue; const dx = q.x - p.body.x, dz = q.z - p.body.z, dd = Math.hypot(dx, dz); if (dd > 6.5) continue; const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw); if ((dx * fx + dz * fz) / Math.max(dd, 0.01) < 0.3) continue; if (!lineOfSight(p.body.x, p.body.z, p.body.y + 1.6, q.x, q.z, q.y + 1.5)) continue; this.meet(d.id); } }
+    this.miniT -= dt; if (this.miniT <= 0) { this.miniT = 0.1; drawMini(document.getElementById('mini') as HTMLCanvasElement, { x: p.body.x, z: p.body.z, yaw: p.yaw, thread: s.thread, time: performance.now() / 1000 }); this.hud.pocket(s.pocket ? itemName(s.pocket) : null); }
     { const b0 = p.body, sp = Math.hypot(b0.vx, b0.vz); if (b0.grounded && sp > 0.8 && !p.frozen) { this.stepT -= dt * (sp > 4 ? 1.6 : 1); if (this.stepT <= 0) { this.stepT = 0.5; const kind = this.sceneInside || b0.y > 20 ? 'wood' : 'concrete'; this.snd.play(`impact/footstep_${kind}_00${(Math.random() * 5) | 0}`, p.crouching ? 0.12 : 0.28); } } }
     // city state + lights
     if (Math.floor(wasT) !== Math.floor(s.t) || this.lastCs === '') { this.lastCs = 'x'; this.applyCity(s.t); setClock(s.t); }
@@ -203,7 +217,7 @@ export class Game implements StvHost, Ctx {
     updateDoors(dt);
     // npcs
     this.npcs.update(s.t, b.x, b.z, dt, b.y, undefined, id => this.combat.override(id));
-    this.combat.update(dt); this.pilot.update(dt); this.markT -= dt; if (this.markT <= 0) { this.markT = 0.25; updateMarks(this); }
+    this.combat.update(dt); this.pilot.update(dt); this.markT -= dt; if (this.markT <= 0) { this.markT = 0.08; updateMarks(this); }
     if (this.shakeT > 0) { this.shakeT -= dt; const k = this.shakeA * Math.max(0, this.shakeT); this.cam.position.x += (Math.random() - 0.5) * 0.12 * k; this.cam.position.y += (Math.random() - 0.5) * 0.12 * k; }
     // events seen
     for (const e of EVENTS) if (s.t >= e.t && s.t < e.t + 30 && !s.seenEvents.has(e.id) && Math.hypot(e.x - b.x, e.z - b.z) < (e.r ?? 55)) { s.seenEvents.add(e.id); onBark(this, 'event:' + e.id); }

@@ -6,6 +6,8 @@ import { pick, tr, getLang } from './strings';
 import { ROADS, CANAL, BOUNDS } from '../world/layout';
 import { placed } from '../world/city';
 import { NPCS } from '../sim/npcs';
+import { nameOf } from './dialogue';
+import { drawMain } from './mapview';
 
 const $ = (id: string) => document.getElementById(id)!;
 export type Tab = 'time' | 'thread' | 'people' | 'map' | 'pocket' | 'messages' | 'branch';
@@ -26,7 +28,7 @@ const ITEM_TXT: Record<string, { ru: string; en: string; d: { ru: string; en: st
 export const itemName = (i: string) => pick(ITEM_TXT[i] ?? { ru: i, en: i });
 
 export interface StvHost {
-  s: GameState; open: boolean; targetT: number; getPos(): { x: number; z: number }; jumpTo(t: number, preview: boolean): void; previewing: boolean; holdBegin(): void; holdEnd(): void;
+  getYaw(): number; s: GameState; open: boolean; targetT: number; getPos(): { x: number; z: number }; jumpTo(t: number, preview: boolean): void; previewing: boolean; holdBegin(): void; holdEnd(): void;
   onClose?(): void; wait?: boolean;
 }
 export class Stvorka {
@@ -44,7 +46,7 @@ export class Stvorka {
     if (this.tab === 'time') this.renderTime(b);
     else if (this.tab === 'thread') { const th = THREADS[s.thread]; b.innerHTML = `<h3 class="red">${th ? pick(th) : '—'}</h3><p class="dim">${lang === 'ru' ? 'Красный маркер на карте показывает, куда идти.' : 'The red marker on the map shows where to go.'}</p>`; }
     else if (this.tab === 'people') this.renderPeople(b);
-    else if (this.tab === 'map') { b.style.padding = '0'; b.innerHTML = '<canvas class="map" id="mapcv" width="900" height="520"></canvas>'; this.mapCv = $('mapcv') as HTMLCanvasElement; this.drawMap(); }
+    else if (this.tab === 'map') { b.style.padding = '0'; b.innerHTML = '<canvas class="map" id="mapcv" width="1100" height="640"></canvas>'; this.mapCv = $('mapcv') as HTMLCanvasElement; this.drawMap(); }
     else if (this.tab === 'pocket') { const p = s.pocket; b.innerHTML = p ? `<h3 class="red">${itemName(p)}</h3><p>${pick(ITEM_TXT[p].d)}</p>` : `<p class="dim">${tr('pocket.empty')}</p>${s.hasGun ? `<p>${lang === 'ru' ? 'Револьвер при себе' : 'Revolver on you'}: ${s.mag}/${s.ammo}</p>` : ''}`; }
     else if (this.tab === 'messages') b.innerHTML = s.messages.length ? s.messages.map(m => `<p><span class="dim">${fmt(m.t)}</span> — ${pick(m)}</p>`).join('') : `<p class="dim">—</p>`;
     else b.innerHTML = s.changes.length ? s.changes.map(c => `<p>• ${c}</p>`).join('') : `<p class="dim">${tr('branch.none')}</p>`;
@@ -71,19 +73,8 @@ export class Stvorka {
     const s = this.host.s; const rows = s.journal.filter(j => j.who);
     const who = new Map<string, typeof rows>(); for (const j of rows) (who.get(j.who!) ?? who.set(j.who!, []).get(j.who!)!).push(j);
     if (!who.size) { b.innerHTML = `<p class="dim">${tr('journal.none')}</p>`; return; }
-    b.innerHTML = [...who].map(([id, es]) => { const d = NPCS.find(n => n.id === id); const nm = d ? pick(d.name) : id; return `<div class="person ${d?.key ? 'key' : ''}">${s.portraits[id] ? `<img src="${s.portraits[id]}" style="width:64px;height:64px;border:2px solid ${d?.key ? '#a01010' : '#333'};filter:grayscale(1)">` : `<div style="width:60px;height:64px;background:#17181a;border:2px solid ${d?.key ? '#a01010' : '#333'};text-align:center;line-height:64px;font-size:26px">${nm[0]}</div>`}<div><b>${nm}</b>${es.map(e => `<div class="dim">${fmt(e.t)} — <span style="color:#d8d2c4">${pick(e)}</span></div>`).join('')}</div></div>`; }).join('');
+    b.innerHTML = [...who].map(([id, es]) => { const d = NPCS.find(n => n.id === id); const nm = nameOf(id); return `<div class="person ${d?.key ? 'key' : ''}">${s.portraits[id] ? `<img src="${s.portraits[id]}" style="width:64px;height:64px;border:2px solid ${d?.key ? '#a01010' : '#333'};filter:grayscale(1)">` : `<div style="width:60px;height:64px;background:#17181a;border:2px solid ${d?.key ? '#a01010' : '#333'};text-align:center;line-height:64px;font-size:26px">${nm[0]}</div>`}<div><b>${nm}</b>${es.map(e => `<div class="dim">${fmt(e.t)} — <span style="color:#d8d2c4">${pick(e)}</span></div>`).join('')}</div></div>`; }).join('');
   }
-  /** schematic map (spec 2.5): canal, streets, houses, red markers for the current thread, player dot */
-  drawMap() {
-    const cv = this.mapCv!, g = cv.getContext('2d')!; const W = cv.width, H = cv.height, sx = (x: number) => (x - BOUNDS.x0) / (BOUNDS.x1 - BOUNDS.x0) * W, sz = (z: number) => (z - BOUNDS.z0) / (95 - BOUNDS.z0) * H;
-    g.fillStyle = '#07080a'; g.fillRect(0, 0, W, H);
-    g.fillStyle = '#0d1218'; g.fillRect(sx(CANAL.x0), sz(CANAL.z0), sx(CANAL.x1) - sx(CANAL.x0), sz(58) - sz(CANAL.z0)); g.fillRect(0, sz(58), W, H);
-    g.strokeStyle = '#3a3a38'; g.lineCap = 'round'; for (const r of ROADS) { g.lineWidth = Math.max(2, r.w * W / 190 * 0.8); g.beginPath(); r.pts.forEach(([x, z], i) => i ? g.lineTo(sx(x), sz(z)) : g.moveTo(sx(x), sz(z))); g.stroke(); }
-    g.fillStyle = '#1b1c1e'; for (const p of placed) { g.save(); g.translate(sx(p.x), sz(p.z)); g.rotate(-p.ry); g.fillRect(-p.w / 2 * W / 190, -p.depth * H / 185, p.w * W / 190, p.depth * H / 185); g.restore(); }
-    g.fillStyle = '#4a4438'; g.fillRect(sx(-9), sz(-3), sx(9) - sx(-9), sz(3) - sz(-3));
-    g.font = '13px serif'; g.fillStyle = '#8d887c'; for (const [n, x, z] of [['Башня', -70, -58], ['Таверна', 22, 9], ['Склад', 66, 32], ['Приют', 50, -62], ['Мост', 0, 8], ['Орвен', -46, -31], ['Фома', -40, -20], ['Канатная', -38, 44], ['Пирс 7', -9, 80]] as [string, number, number][]) g.fillText(n, sx(x) - 16, sz(z));
-    const th = THREADS[this.host.s.thread]; g.fillStyle = '#e01818'; g.strokeStyle = '#e01818'; for (const m of th?.marker ?? []) { g.beginPath(); g.arc(sx(m.x), sz(m.z), 8, 0, 7); g.fill(); g.beginPath(); g.arc(sx(m.x), sz(m.z), 15, 0, 7); g.stroke(); }
-    const p = this.host.getPos(); g.fillStyle = '#fff'; g.beginPath(); g.arc(sx(p.x), sz(p.z), 5, 0, 7); g.fill();
-  }
+  drawMap() { const p = this.host.getPos(); drawMain(this.mapCv!, { x: p.x, z: p.z, yaw: this.host.getYaw(), thread: this.host.s.thread, time: performance.now() / 1000 }); }
 }
 export function eventsAt(): EventDef[] { return EVENTS; }

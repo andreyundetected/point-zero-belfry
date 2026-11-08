@@ -17,10 +17,17 @@ export class Hud {
   ghost(on: boolean) { $('ghost').style.display = on ? 'block' : 'none'; }
   sync(on: boolean) { const s = $('sync'); s.style.display = on ? 'block' : 'none'; s.textContent = tr('sync'); }
   update(dt: number) {
+    this.tickNewp(dt);
     if (this.subT > 0 && (this.subT -= dt) <= 0) $('sub').style.display = 'none';
     if (this.toastT > 0 && (this.toastT -= dt) <= 0) $('toast').style.opacity = '0';
     if (this.threadT > 0 && (this.threadT -= dt) <= 0) $('thread').style.opacity = '0';
   }
+  private newpT = 0;
+  /** "a new person met" card (top right), portrait filled in when it has been rendered */
+  newPerson(name: string, sub: string, img?: string) { const e = $('newp'); $('newp-n').textContent = name; $('newp-s').textContent = sub; const im = $('newp-img') as HTMLImageElement; im.style.display = img ? 'block' : 'none'; if (img) im.src = img; e.style.display = 'flex'; requestAnimationFrame(() => (e.style.opacity = '1')); this.newpT = 6; }
+  setPortrait(img: string) { const im = $('newp-img') as HTMLImageElement; im.src = img; im.style.display = 'block'; }
+  pocket(label: string | null) { const p = $('pocket'); p.classList.toggle('has', !!label); (p.querySelector('.nm') as HTMLElement).textContent = label ?? 'Карман пуст'; (p.querySelector('.ic') as HTMLElement).textContent = label ? '◉' : '◌'; }
+  tickNewp(dt: number) { if (this.newpT > 0 && (this.newpT -= dt) <= 0) { const e = $('newp'); e.style.opacity = '0'; setTimeout(() => { if (this.newpT <= 0) e.style.display = 'none'; }, 500); } }
   lang() { return getLang(); }
   refresh() { $('hint').textContent = tr('hint.controls'); }
 }
