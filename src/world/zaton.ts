@@ -8,7 +8,7 @@ import { buildGround } from './ground';
 import { lamp } from './lamps';
 import { BOUNDS, BRIDGE, QUAY_Z, ROADS } from './layout';
 import { PropField } from './props';
-import { buildInteriors, makeDoor } from './interiors';
+import { buildInteriors, makeDoor, makeWorldDoor } from './interiors';
 import { buildTower } from './tower';
 import { buildFomaAndD8 } from './ruins';
 import { groundH, hash } from './terrain';
@@ -45,6 +45,7 @@ export function buildZaton(scene: THREE.Scene): Zaton {
   makeDoor(scene, 'contora.inner', 'contora', 3.5, -3.2, { w: 1.5, locked: (t, f) => (f.has('innerOpen') || t >= 12 * 60 + 5 ? null : 'Дверь в кабинет заперта.'), label: 'Дверь в кабинет' });
   makeDoor(scene, 'priyut.door', 'priyut', pPriyut.dcx!, -T, { label: 'Приют', w: 1.3 });
   makeDoor(scene, 'tikhon.door', 'tikhon', pTikhon.dcx!, -T, { locked: (t, f) => (f.has('tikhonKnock') || f.has('tikhonTurned') || t < 0 ? null : 'Заперто. Внутри горит свет.'), label: 'Дом Тихона' });
+  makeWorldDoor(scene, 'priyut.gate', 50, -50, 0, groundH(50, -50), { w: 6, tall: 2.2, mat: M.iron, label: 'Ворота приюта', locked: (t, f) => (t >= 18 * 60 && !f.has('gateOpen') ? 'Ворота закрыты. Охранник смотрит на тебя.' : null) });
   const ip = interiorProps; void ip;
 
   // ---------- rows of closed houses (D1..D20 and the second line)

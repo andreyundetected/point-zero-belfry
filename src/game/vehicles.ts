@@ -4,6 +4,7 @@ import { VEHICLES } from '../sim/vehicles';
 import { putModel } from '../world/props';
 import { groundH, walkY } from '../world/terrain';
 import { M } from '../render/materials';
+import { buildLaunchMesh } from './pilot';
 
 /** car, wagon, tram, launch: moving models driven by the sim (spec 15.2) */
 export class Vehicles {
@@ -25,15 +26,14 @@ export class Vehicles {
       for (const sx of [-1.2, 1.2]) for (const sz of [-1.2, 1.2]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.12, 14), M.iron); w.rotation.z = Math.PI / 2; w.position.set(sx, 0.55, sz); g.add(w); }
       const horse = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.5, 1.6), new THREE.MeshStandardMaterial({ color: 0x1a1512, roughness: 1 })); horse.position.set(0, 1.0, 3.3); g.add(horse);
       g.traverse(o => { o.castShadow = true; }); }
-    // launch
-    { const g = new THREE.Group(); this.scene.add(g); g.visible = false; this.objs.set('launch', g);
-      try { const m = await putModel(this.scene, 'boats/boat_watercraft_pack_024', 0, 0, { l: 8, y: 0 }); this.scene.remove(m); g.add(m); } catch { const b = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.2, 7), M.dark); b.position.y = 0.4; g.add(b); } }
+    // launch (same mesh the helm uses)
+    { const g = buildLaunchMesh(); g.visible = false; this.scene.add(g); this.objs.set('launch', g); }
   }
-  update(sim: SimWorld, t: number, cs: CityState) {
+  update(sim: SimWorld, t: number, cs: CityState, skipLaunch = false) {
     for (const v of VEHICLES) {
-      const o = this.objs.get(v.id); if (!o) continue; const p = sim.vehicle(v.id, t);
+      const o = this.objs.get(v.id); if (!o || (skipLaunch && v.id === 'launch')) continue; const p = sim.vehicle(v.id, t);
       if (p.hidden) { o.visible = false; continue; } o.visible = true;
-      const y = v.id === 'launch' ? -2.2 + Math.sin(t * 1.7) * 0.05 : walkY(p.x, p.z);
+      const y = v.id === 'launch' ? -2.35 + Math.sin(t * 1.7) * 0.05 : walkY(p.x, p.z);
       o.position.set(p.x, y, p.z); o.rotation.y = p.ry + (v.id === 'wagon' || v.id === 'cordCar' || v.id === 'craneCar' ? 0 : 0);
       if (v.id === 'wagon' && cs.wagonPinOut) o.rotation.z = 0.12;
     }

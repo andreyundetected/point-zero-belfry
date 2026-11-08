@@ -81,3 +81,10 @@ export const guardCart: Conv = { id: 'guard.cart', start: 'a', nodes: {
   b2: { say: [L('guard', '(показывает бумагу с печатью совета) Видишь печать? Вот чьи. Отойди.'), A('На ремне кобуры бирка: «Склад №2».'), L('tik', 'Бирка со склада Харроу.')], fx: c => { c.learn('know_guard_tag'); c.note('tag', 'Охрана повозки: пропуск с печатью совета; на кобуре бирка «Склад №2» (склад Харроу).', 'Wagon guards: a pass with the board seal; a "Warehouse No. 2" tag on the holster (Harrow\'s warehouse).', 'ggrd1'); }, end: true },
   z: { end: true },
 } };
+
+export const safeConv: Conv = { id: 'safe', start: 'a', nodes: {
+  a: { say: [A('В сейфе: список рулевых катера «Сокол», запасной ключ зажигания «Сокол-2», опись склада, перевозочный лист. В Карман войдёт одно.')],
+    fx: c => { c.learn('know_manifest'); c.learn('know_helmsmen'); c.learn('know_gun_stolen'); c.learn('know_manifest_pencil'); c.thread('tikhon'); c.note('safe', 'Сейф Гейла: список рулевых («Ян Вилк — списать. Тихон Мерц, Канатная 4 — после рейса списать»), запасной ключ «Сокол-2», опись склада (револьвер №4417 краденый, сдан в залог Ф.), перевозочный лист (приют → пирс 7, 22:40, 14 мест; карандашом: «по распоряжению попечительского совета»).', 'Gayl\'s safe: list of helmsmen, spare key "Falcon-2", warehouse inventory (revolver #4417 stolen, pawned by F.), transport sheet (orphanage → pier 7, 22:40, 14 places; in pencil: "by order of the board").', 'gayl'); },
+    choices: [{ ru: 'Взять перевозочный лист.', next: 'm' }, { ru: 'Взять список рулевых.', next: 'h' }, { ru: 'Взять запасной ключ зажигания.', next: 's' }, { ru: 'Оставить всё.', next: 'z' }] },
+  m: { fx: c => c.give('manifest'), end: true }, h: { fx: c => c.give('helmsmen'), end: true }, s: { fx: c => c.give('spareKey'), end: true }, z: { end: true },
+} };

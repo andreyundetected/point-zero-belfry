@@ -26,17 +26,23 @@ import { Vehicles } from './vehicles';
 import { getLang, pick } from './strings';
 import { CONVS, pickConv, registerWorldItems, onBark } from '../content';
 import { Combat } from './combat';
+import { Pilot } from './pilot';
+import { addInteract } from '../world/interiors';
 
 export class Game implements StvHost, Ctx {
   s = new GameState(); sim: SimWorld; npcs: NpcRuntime; hud = new Hud(); stv: Stvorka; ui = new DialogueUI(); runner: DialogueRunner; fx: Fx; snd = new Sound(); veh: Vehicles; combat: Combat;
-  pool: LampPool; open = false; targetT = 0; previewing = false; cs!: CityState; lastCs = ''; locked = false; jumpBusy = false; ghosts: THREE.Group; fomaRuin = false;
+  pilot: Pilot; pool: LampPool; open = false; targetT = 0; previewing = false; cs!: CityState; lastCs = ''; locked = false; jumpBusy = false; ghosts: THREE.Group; fomaRuin = false;
   sinceThread = 0; sceneInside = ''; waitHeld = false; fadeBusy = false; time = 0; frozen = false; custom?: { update(dt: number): void; done?: boolean };
   seenLight = 1; stepT = 0; sub = ''; hintT = 0; hintStep = 0; shakeT = 0; shakeA = 0;
   constructor(public scene: THREE.Scene, public cam: THREE.PerspectiveCamera, public player: Player, public moon: THREE.DirectionalLight, public hemi: THREE.HemisphereLight) {
-    this.sim = new SimWorld(this.s.flags); this.npcs = new NpcRuntime(scene, this.sim); this.fx = new Fx(scene); this.veh = new Vehicles(scene); this.combat = new Combat(this);
+    this.sim = new SimWorld(this.s.flags); this.npcs = new NpcRuntime(scene, this.sim); this.fx = new Fx(scene); this.veh = new Vehicles(scene); this.combat = new Combat(this); this.pilot = new Pilot(this);
     this.pool = new LampPool(scene, 10); this.stv = new Stvorka(this); this.runner = new DialogueRunner(this.ui, this); this.runner.register(...CONVS);
     this.ghosts = new THREE.Group(); scene.add(this.ghosts); this.ghosts.visible = false;
     registerWorldItems(this);
+    addInteract({ id: 'launch.helm', x: -43.0, y: -0.5, z: 83.2, r: 4.2, ok: c => c.s.t >= at(22, 36) && c.s.t < at(22, 40, 40) && !c.pilot.aboard, label: () => 'Встать к штурвалу', use: c => {
+      if (c.fl('tikhonThreatened') && !c.fl('tikhonLocked')) { c.combat.alarm('tikhon'); c.hud.bark('Эй, ты не Тихон.', true); return; }
+      if (!c.s.knows('helm_ok') && c.s.pocket !== 'cap') { c.hud.bark('Охрана не подпустит. Надо сказать «Я».', true); const d = c.npcs.pose('dock1'); if (d && !d.hidden) c.runner.start('guard.pier3'); return; }
+      c.pilot.board(); } });
     addEventListener('keydown', e => this.key(e));
     addEventListener('keyup', e => { if (e.code === 'KeyT') this.waitHeld = false; });
     addEventListener('mousedown', () => this.snd.init()); addEventListener('keydown', () => this.snd.init(), { once: true });
@@ -84,7 +90,7 @@ export class Game implements StvHost, Ctx {
     this.doJump(target);
   }
   async doJump(target: number) {
-    const s = this.s; if (this.jumpBusy || s.dead || s.ended) return; this.jumpBusy = true;
+    const s = this.s; if (this.jumpBusy || s.dead || s.ended) return; if (s.knows('sync_held')) { this.hud.bark('Синхронизация удержана.', true); this.snd.play('digital/phaser_down1.ogg', 0.7); return; } this.jumpBusy = true;
     const b = this.player.body, oldT = s.t;
     // check the destination first (spec 2.2): occupied -> shift, impossible -> refuse
     const keepFlags = s.flags; const tmp = new Flags(); this.sim.setFlags(tmp); this.cs = this.sim.city(target); this.applyCity(target, true);
@@ -145,7 +151,7 @@ export class Game implements StvHost, Ctx {
     const cs = this.cs = this.sim.city(t);
     const flick = cs.lampsFlicker; for (let i = 0; i < lamps.length; i++) { const l = lamps[i]; let on = true; if (flick) { const ph = Math.sin(t * 2.3 + i * 1.7) + Math.sin(t * 5.1 + i * 3.1); on = ph > -1.55; } if (cs.bridgeLampsDead && Math.abs(l.z) < 4 && Math.abs(l.x) < 10) on = false; if (l.on !== on) setLamp(l, on); }
     if (this.fomaRuin !== cs.rynokRuin || force) { this.fomaRuin = cs.rynokRuin; setFomaState(cs.rynokRuin); }
-    this.veh.update(this.sim, t, cs);
+    this.veh.update(this.sim, t, cs, this.pilot.aboard);
   }
   update(dt: number) {
     const s = this.s, p = this.player;
@@ -157,7 +163,7 @@ export class Game implements StvHost, Ctx {
     }
     this.time += dt; s.clampT();
     if (s.t >= WINDOW && !s.ended && !this.frozen) this.finish('empty');
-    p.frozen = this.open || talking || this.jumpBusy || this.frozen; p.update(dt);
+    p.frozen = this.open || talking || this.jumpBusy || this.frozen || this.pilot.aboard; if (!this.pilot.aboard) p.update(dt); else p.apply();
     this.hud.clock(s.t); this.hud.update(dt);
     // city state + lights
     if (Math.floor(wasT) !== Math.floor(s.t) || this.lastCs === '') { this.lastCs = 'x'; this.applyCity(s.t); setClock(s.t); }
@@ -169,7 +175,7 @@ export class Game implements StvHost, Ctx {
     updateDoors(dt);
     // npcs
     this.npcs.update(s.t, b.x, b.z, dt, b.y, undefined, id => this.combat.override(id));
-    this.combat.update(dt);
+    this.combat.update(dt); this.pilot.update(dt);
     if (this.shakeT > 0) { this.shakeT -= dt; const k = this.shakeA * Math.max(0, this.shakeT); this.cam.position.x += (Math.random() - 0.5) * 0.12 * k; this.cam.position.y += (Math.random() - 0.5) * 0.12 * k; }
     // events seen
     for (const e of EVENTS) if (s.t >= e.t && s.t < e.t + 30 && !s.seenEvents.has(e.id) && Math.hypot(e.x - b.x, e.z - b.z) < (e.r ?? 55)) { s.seenEvents.add(e.id); onBark(this, 'event:' + e.id); }
@@ -187,9 +193,28 @@ export class Game implements StvHost, Ctx {
     return null;
   }
   finish(ending: string) { this.s.ended = ending; this.frozen = true; document.exitPointerLock?.(); this.hud.fade(true, 1200); setTimeout(() => this.showEnding(ending), 1300); }
+  /** the final screen (spec 13.3 / 15.3): neutral facts, no judgement */
+  facts(): string[] {
+    const f = this.s.flags, ru = getLang() === 'ru'; const L: string[] = []; const has = (n: any) => f.has(n);
+    L.push(ru ? `Нед: ${has('nedSaved') ? 'жив, остался на мосту' : 'прыгнул с Старого моста в 22:16'}` : `Ned: ${has('nedSaved') ? 'alive, stayed on the bridge' : 'jumped from the Old Bridge at 22:16'}`);
+    L.push(ru ? `Гейл: ${has('gaylWarned') || has('annaWarned') || has('jetonStolen') ? 'ушёл к жене' : 'ранен, лежит во дворе склада'}` : `Gayl: ${has('gaylWarned') || has('annaWarned') || has('jetonStolen') ? 'went to his wife' : 'wounded in the warehouse yard'}`);
+    const tk = has('tikhonDead') ? 'мёртв' : has('tikhonHurt') ? 'без сознания' : has('tikhonLocked') ? 'заперт в доме' : has('tikhonTurned') ? 'дома с Пип' : 'ушёл на пристань';
+    L.push(ru ? `Тихон: ${tk}. Пип: ${has('tikhonTurned') ? 'с отцом' : has('tikhonDead') || has('tikhonHurt') ? 'одна' : 'спит одна'}` : `Tikhon: ${tk}. Pip: ${has('tikhonTurned') ? 'with her father' : 'alone'}`);
+    const kids = has('wagonPinPulled') ? (has('annaWarned') ? (ru ? 'в приюте у Анны' : 'back at the orphanage with Anna') : (ru ? 'на повозке, застрявшей на мосту' : 'in the wagon stuck on the bridge')) : (this.s.ended === 'utro' ? (ru ? `на катере: ${Math.min(14, 8 + (has('tildaWarned') ? 3 : 0) + (has('nedSaved') ? 3 : 0))} из 14` : `on the launch: ${Math.min(14, 8 + (has('tildaWarned') ? 3 : 0) + (has('nedSaved') ? 3 : 0))} of 14`) : (ru ? 'на барже «Вера»' : 'on the barge Vera'));
+    L.push(ru ? `Дети приюта: ${kids}` : `Orphanage children: ${kids}`);
+    L.push(ru ? `Тильда и Анка: ${has('tildaWarned') ? 'вместе' : 'Тильда у Корда'}` : `Tilda and Anka: ${has('tildaWarned') ? 'together' : 'Tilda is with Cord'}`);
+    L.push(ru ? `Рыночная: ${has('tapCut') ? 'цела' : 'сгорела'}. Колокол: ${has('tapCut') ? 'бил' : 'молчал'}` : `Rynochnaya: ${has('tapCut') ? 'intact' : 'burned'}. The bell: ${has('tapCut') ? 'rang' : 'was silent'}`);
+    return L;
+  }
   showEnding(ending: string) {
     const e = document.getElementById('end')!; e.style.display = 'flex'; const ru = getLang() === 'ru';
-    const T: Record<string, [string, string]> = { empty: ['Пустой час', ru ? 'В 23:00 окно закрывается. Крайн: «Время вышло».' : 'At 23:00 the window closes. Crane: "Time is up."'], dead: ['Смерть', ru ? 'Смерть окончательна.' : 'Death is final.'] };
-    const [h, p] = T[ending] ?? [ending, '']; e.innerHTML = `<h1>${h}</h1><p>${p}</p><p>${fmt(this.s.t, true)}</p>`;
+    const T: Record<string, [string, string]> = {
+      empty: ['Пустой час', ru ? 'В 23:00 окно закрывается. Крайн: «Время вышло».' : 'At 23:00 the window closes. Crane: "Time is up."'],
+      dead: ['Смерть', ru ? 'Смерть окончательна.' : 'Death is final.'],
+      otlozhen: ['Отложен', ru ? 'Катер у пирса 7. Выстрел. Тьма. Дождь.' : 'The launch at pier 7. A shot. Darkness. Rain.'],
+      utro: ['Утро', ru ? 'Катер уходит в гавань. Город горит. Рассвет нескоро.' : 'The launch leaves for the harbour. The city burns. Dawn is far.'],
+    };
+    const [h, p] = T[ending] ?? [ending, '']; const facts = ending === 'otlozhen' || ending === 'utro' ? `<h3 style="font-weight:400;color:#8d887c">${ru ? 'Что изменилось этой ночью' : 'What changed tonight'}</h3><ul>${this.facts().map(x => `<li>${x}</li>`).join('')}</ul>` : `<p>${fmt(this.s.t, true)}</p>`;
+    e.innerHTML = `<h1>${h}</h1><p>${p}</p>${facts}<p><a href="" style="color:#e01818">${ru ? 'Новая игра' : 'New game'}</a></p>`;
   }
 }

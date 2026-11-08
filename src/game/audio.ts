@@ -17,5 +17,7 @@ export class Sound {
   boom(vol = 0.9, dur = 0.8, f0 = 90) { if (!this.ctx) return; const c = this.ctx, o = c.createOscillator(), g = c.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f0, c.currentTime); o.frequency.exponentialRampToValueAtTime(25, c.currentTime + dur); g.gain.setValueAtTime(vol, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + dur); o.connect(g); g.connect(this.master!); o.start(); o.stop(c.currentTime + dur); }
   shot() { this.boom(0.6, 0.18, 220); this.play('impact/impact_generic_light_000', 0.4); }
   setMuffled(on: boolean) { if (this.lowpass && this.ctx) this.lowpass.frequency.setTargetAtTime(on ? 700 : 18000, this.ctx.currentTime, 0.12); }
+  eng?: OscillatorNode; engG?: GainNode;
+  setEngine(k: number) { if (!this.ctx) return; if (!this.eng) { const c = this.ctx; this.eng = c.createOscillator(); this.eng.type = 'sawtooth'; this.engG = c.createGain(); this.engG.gain.value = 0; const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 260; this.eng.connect(f); f.connect(this.engG); this.engG.connect(this.master!); this.eng.start(); } this.eng.frequency.setTargetAtTime(38 + k * 40, this.ctx.currentTime, 0.2); this.engG!.gain.setTargetAtTime(0.03 + k * 0.1, this.ctx.currentTime, 0.2); }
   setFire(k: number) { if (this.fire && this.ctx) this.fire.gain.setTargetAtTime(Math.min(0.35, k * 0.3), this.ctx.currentTime, 0.5); }
 }

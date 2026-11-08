@@ -10,12 +10,13 @@ import { FOMA_SPOT } from '../world/ruins';
 import { prologue, prologue2 } from './d_prologue';
 import { orven, orvenKey, tildaAlley, tildaPier, ned, nedAfter, fern, lidia, stern } from './d_west';
 import { agataAfter, agataBefore, agataFight, ignatTable, scarHunt, fomaDoor, fomaCaught, fomaAfter } from './d_tavern';
-import { gaylWounded, gaylWindow, guardGate, agnia, anna, anka, guardCart } from './d_east';
+import { gaylWounded, gaylWindow, guardGate, agnia, anna, anka, guardCart, safeConv } from './d_east';
+import { placed } from '../world/city';
 import { lukyan, lukyanDying, tikhonDoor, guardPier } from './d_pier';
 import { finale } from './d_finale';
 
 tikhonDoor.start = c => (c.fl('tikhonKnock') ? 'in' : 'a');
-export const CONVS: Conv[] = [prologue, prologue2, orven, orvenKey, tildaAlley, tildaPier, ned, nedAfter, fern, lidia, stern, agataAfter, agataBefore, agataFight, ignatTable, scarHunt, fomaDoor, fomaCaught, fomaAfter, gaylWounded, gaylWindow, guardGate, agnia, anna, anka, guardCart, lukyan, lukyanDying, tikhonDoor, guardPier, finale];
+export const CONVS: Conv[] = [prologue, prologue2, orven, orvenKey, tildaAlley, tildaPier, ned, nedAfter, fern, lidia, stern, agataAfter, agataBefore, agataFight, ignatTable, scarHunt, fomaDoor, fomaCaught, fomaAfter, gaylWounded, gaylWindow, guardGate, agnia, anna, anka, guardCart, lukyan, lukyanDying, tikhonDoor, guardPier, finale, safeConv];
 const P = (g: Game, id: string) => g.npcs.pose(id);
 const near = (g: Game, id: string, x: number, z: number, r: number) => { const p = P(g, id); return !!p && !p.hidden && Math.hypot(p.x - x, p.z - z) < r; };
 
@@ -44,7 +45,7 @@ export function pickConv(id: string, g: Game): string | null {
     default: return null;
   }
 }
-const DOOR_CONV: Record<string, string> = { 'foma.door': 'foma.door', 'tikhon.door': 'tikhon.door' };
+const DOOR_CONV: Record<string, string> = { 'foma.door': 'foma.door', 'tikhon.door': 'tikhon.door', 'contora.door': 'gayl.window', 'priyut.gate': 'guard.gate' };
 export const doorConv = (id: string) => DOOR_CONV[id] ?? null;
 
 // ---------------- NPC <-> NPC scenes, heard as world subtitles within 8 m (spec 15.3)
@@ -100,9 +101,19 @@ export function registerWorldItems(g: Game) {
     const g1 = [1, 2, 3].map(i => c.npcs.pose('ggrd' + i)!).filter(Boolean); const watching = g1.some(q => !q.hidden && Math.hypot(q.x - 52, q.z + 57) < 9);
     if (watching) { c.hud.bark('Охрана смотрит.', true); return; } c.advance(3); c.flag('wagonPinPulled'); c.learn('pin_pulled'); c.hud.toast('Чека выбита', 2.5); c.note('pin', 'Выбил чеку с оси повозки приюта.', 'Knocked the linchpin out of the orphanage wagon axle.'); } });
   addInteract({ id: 'book', x: world2.book.x, y: world2.book.y, z: world2.book.z, r: 1.8, label: () => 'Книга записей', use: c => { c.learn('know_ledger'); c.hud.bark('«Тимофей, 7 лет, родных нет — отложен».', true); c.note('ledger', 'Книга приюта: «Тимофей, 7 лет, родных нет — отложен», ниже: «сбежал». У сегодняшних четырнадцати — «отложен».', 'Orphanage ledger: "Timofey, 7, no kin — set aside", below: "ran away". Today\'s fourteen are marked "set aside".', 'agnia', true); } });
-  { const wp = { x: 34.4, z: -71 }; addInteract({ id: 'laundry', x: wp.x, y: groundH(wp.x, wp.z), z: wp.z, r: 2.0, label: () => 'Окно прачечной', use: c => { c.hud.bark('Тут я вылезал. Двадцать лет назад.', true); c.flag('gateOpen'); c.learn('know_laundry'); } }); }
-  // --- every closed house: a locked door
-  void g;
+  addInteract({ id: 'laundry.in', x: 34.6, y: groundH(34.6, -71), z: -71, r: 1.8, label: () => 'Влезть в окно прачечной', use: c => { c.hud.bark('Тут я вылезал. Двадцать лет назад.', true); c.learn('know_laundry'); travel(c, 38.2, -71, 4, 'Двор приюта.'); } });
+  addInteract({ id: 'laundry.out', x: 37.9, y: groundH(37.9, -71), z: -71, r: 1.8, label: () => 'Вылезти через окно', use: c => travel(c, 33.8, -71, 4, 'Снаружи.') });
+  // --- the safe upstairs in the courier office
+  { const sf = world2.safe; addInteract({ id: 'contora.safe', x: sf.x, y: sf.y - 1.1, z: sf.z, r: 2.0, label: c => (c.cs.safeBlown ? 'Сейф' : (c.s.pocket === 'key' || c.fl('safeOpened') ? 'Открыть сейф' : 'Сейф (нужен ключ)')), use: c => {
+    if (c.cs.safeBlown) { c.hud.bark('Дверца сорвана. Бумаги горят.', true); c.learn('saw_safe_blown'); c.thread('safe_early'); return; }
+    if (c.s.pocket !== 'key' && !c.fl('safeOpened')) { c.hud.bark('Замочная скважина. Нужен тот самый ключ.', true); return; }
+    c.flag('safeOpened'); c.runner.start('safe'); } }); }
+  // --- every closed house has a locked door (spec 5.2); the laundry window at the orphanage
+  for (const h of placed) { if (h.hollow || h.id === 'tower' || h.id === 'warehouse' || h.id === 'chapel' || h.id === 'blk' || h.id === 'D8' || h.id === 'foma' || h.id === 'post') continue;
+    addInteract({ id: 'door:' + h.id, x: h.door.x, y: h.base + 0.4, z: h.door.z, r: 1.5, label: () => 'Дверь', use: c => { c.hud.bark('Заперто.', true); c.snd.play('rpg_foley/metal_latch.ogg', 0.4); } }); }
+  addInteract({ id: 'warehouse.gate', x: 66, y: 0, z: 21.6, r: 3, label: () => 'Ворота склада', use: c => c.hud.bark(c.cs.blast ? 'Ворота сорваны. Внутри огонь.' : 'Заперто.', true) });
+  addInteract({ id: 'post.door', x: -22, y: 0, z: -13.4, r: 2.0, label: () => 'Почта', use: c => c.hud.bark('Заперто.', true) });
+  addInteract({ id: 'foma.hint', x: -40, y: 0, z: -13.6, r: 1.5, ok: c => c.fomaRuinOn(), label: () => 'Осмотреть руины', use: c => { c.hud.bark('Здесь была кладовка.', true); } });
 }
 /** fade, move the player, spend game time (tower stairs) */
 function travel(c: Game, x: number, z: number, secs: number, bark: string, y?: number) {
