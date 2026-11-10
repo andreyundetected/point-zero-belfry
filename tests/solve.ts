@@ -17,13 +17,15 @@ const near = (id: string, tt: number, x: number, z: number, r: number) => { cons
 t = at(22, 3, 30); jump(t - 180, 'prologue lesson'); know.add('prologue_done');
 ok(near('crane', at(22, 0, 40), -70, -64.2, 1) && near('lidia', at(22, 0, 40), -73.9, -59.3, 1.5), 'roof 22:00: Crane at the parapet, Lidia at the chest');
 // 2. late for Orven: shop locked at 22:13, jump back 5 minutes
-t = at(22, 13); ok(at_('orven', t).hidden, 'Orven is gone by 22:13 (shop locked)'); jump(at(22, 8, 40), 'Orven closes at 22:09');
-ok(!at_('orven', at(22, 9, 30)).hidden, 'Orven is at his door at 22:09:30 and talkable'); know.add('know_ned');
+t = at(22, 7); ok(at_('orven', t).hidden, 'Orven is gone by 22:07 (note on the door: left at 22:02)'); jump(at(22, 1, 30), 'Orven leaves at 22:02');
+ok(near('orven', at(22, 1, 55), -47.25, -32.3, 2.5), 'Orven is at his door at 22:01:55 and talkable');
+{ const fo = new Flags(); fo.set('talk_orven', at(22, 3)); const so = new SimWorld(fo); ok(!so.pose('orven', at(22, 5)).hidden && so.pose('orven', at(22, 7)).hidden, 'after a talk Orven closes the shutters until 22:06, then leaves'); } know.add('know_ned');
 // 3. Tilda in the alley 22:08-22:14
-ok(near('tilda', at(22, 10), -37.2, -33.2, 2), 'Tilda stands in Kluchnikov alley at 22:10'); know.add('know_lukyan');
+ok(near('tilda', at(22, 10), -36.8, -32.6, 2), 'Tilda waits at the alley exit at 22:10'); know.add('know_lukyan');
 // 4. bridge and Ned
-ok(near('ned', at(22, 12), 0.4, 2.3, 1), 'Ned is at the south rail of the Old Bridge at 22:12'); ok(at_('ned', at(22, 17)).hidden, 'unsaved Ned has jumped by 22:17');
+ok(near('ned', at(22, 6, 5), 0.6, 1.85, 1), 'Ned is at the south rail of the Old Bridge from 22:06'); ok(at_('ned', at(22, 15)).hidden, 'unsaved Ned has jumped by 22:15');
 const f2 = new Flags(); f2.set('nedSaved', at(22, 13)); const sim2 = new SimWorld(f2); ok(!sim2.pose('ned', at(22, 17)).hidden, 'saved Ned is still there at 22:17');
+ok(near('ned', at(22, 2), 22.4, 8.7, 2), 'Ned plays in the Anchor at 22:02'); ok(at_('ned', at(22, 4, 50)).walking || near('ned', at(22, 4, 50), 17, 9, 4), 'Ned leaves the Anchor on foot at 22:04');
 // 5. tavern after the blast: empty, Agata only
 ok(near('agata', at(22, 20), 24, 9, 7), 'Agata is still in the tavern at 22:20 (sweeping glass)'); ok(!near('ignat', at(22, 20), 24, 9, 6) && !near('cm4', at(22, 20), 24, 9, 6), 'Ignat and Cord\'s men have left the tavern by 22:20');
 // 6. Foma through time: ruins at 22:40+, intact before; tapCut removes the fire
@@ -31,12 +33,12 @@ ok(!cityState(at(22, 25), flags).rynokRuin && cityState(at(22, 45), flags).rynok
 jump(at(22, 15), 'back into the closed storeroom (spot in the ruins -> same spot at 22:15)'); ok(!cityState(t, flags).rynokRuin, 'at 22:15 the storeroom exists again'); act('gunTaken');
 jump(at(22, 42), 'forward again; now the front is ruins'); ok(cityState(t, flags).rynokRuin, 'at 22:42 the shop is a ruin, the player can step out');
 // 7. the tavern fight: jump to 22:00 and watch; the token can be stolen (8.2) -> no raid
-jump(at(22, 3), 'tavern from the start'); ok(near('ignat', t, 24.6, 8.7, 2) && near('ned', t, 22.4, 8.7, 2), 'at 22:03 Ignat and Ned sit at the table');
-act('jetonStolen'); ok(!near('scar', at(22, 11), 45.25, 24.2, 3), 'jeton stolen: Scar does not enter the courier office at 22:11'); ok(at_('gayl', at(22, 14)).a !== 'die', 'jeton stolen: Gayl is not wounded at 22:14');
+jump(at(22, 3), 'tavern from the start'); ok(near('ignat', at(22, 2), 24.6, 8.7, 2) && near('ned', at(22, 2), 22.4, 8.7, 2), 'at 22:02 Ignat and Ned sit at the table');
+t = at(22, 3, 20); act('jetonStolen'); ok(!near('scar', at(22, 11), 45.25, 24.2, 3), 'jeton stolen: Scar does not enter the courier office at 22:11'); ok(at_('gayl', at(22, 14)).a !== 'die', 'jeton stolen: Gayl is not wounded at 22:14');
 ok(cityState(at(22, 13), flags).safeBlown === false, 'jeton stolen: the safe is not blown');
 const raid = new SimWorld(new Flags()); ok(raid.pose('gayl', at(22, 14)).a === 'die' && raid.city(at(22, 14)).safeBlown, 'default branch: Gayl lies wounded in the yard and the safe is blown');
 // 8. key to Orven before 22:09 (second jump), then the safe at 22:05
-jump(at(22, 8, 20), 'show the key to Orven'); pocket = 'key'; know.add('know_safe'); ok(!at_('orven', at(22, 9, 30)).hidden, 'Orven can be shown the key');
+jump(at(22, 1, 30), 'show the key to Orven'); pocket = 'key'; know.add('know_safe'); ok(!at_('orven', at(22, 1, 55)).hidden, 'Orven can be shown the key');
 jump(at(22, 5), 'the safe before the raid'); ok(near('gayl', at(22, 6), 45.3, 28.2, 2), 'Gayl is in his office at 22:06'); know.add('know_manifest'); pocket = 'manifest';
 // 9. the orphanage, Tilda intercept, wagon pin
 jump(at(22, 22), 'intercept Tilda at pier 7'); ok(near('tilda', at(22, 23), -5.7, 60.2, 2), 'Tilda waits by the barge at 22:23 (intercept window)'); act('tildaWarned');

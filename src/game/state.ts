@@ -23,12 +23,16 @@ export class GameState {
   jumps = 0; dead = false; ended: string | null = null; tickDone = new Set<string>();
   seenEvents = new Set<string>();
   messages: { t: number; ru: string; en: string }[] = [];
+  // conversation memory: per branch (reset on a jump) and across all branches
+  talks = new Map<string, number>(); topics = new Set<string>(); everTalks = new Map<string, number>(); thoughts = new Set<string>();
+  // knowledge with the game time it was learned at (B2): shown with ⟲ when it comes from later than now
+  knownAt = new Map<string, number>();
   met = new Set<string>(); portraits: Record<string, string> = {};
   alive = true;
   hp = 2;
 
   setFlag(n: FlagName) { if (!this.flags.has(n)) { this.flags.set(n, this.t); this.changes.push(n + '@' + Math.floor(this.t)); } }
-  learn(id: string) { this.know.add(id); }
+  learn(id: string) { if (!this.know.has(id)) this.knownAt.set(id, this.t); this.know.add(id); }
   knows(id: string) { return this.know.has(id); }
   note(e: JournalEntry) { if (!this.journal.some(j => j.id === e.id)) this.journal.push(e); }
   give(item: ItemId) { this.pocket = item; this.held = item; }

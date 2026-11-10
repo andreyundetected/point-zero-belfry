@@ -8,7 +8,7 @@ export class NpcRuntime {
   active = new Map<string, Person>(); loading = new Set<string>(); radius = 24; far = 70; maxPeople = 10; pending: string[] = [];
   /** distant people are cheap dark silhouettes (capsules) - the full Mixamo bodies are 50k triangles each */
   lod = new Map<string, THREE.Mesh>(); capGeo = new THREE.CapsuleGeometry(0.24, 1.2, 2, 6);
-  poses = new Map<string, { x: number; y: number; z: number; ry: number; a: string; hidden: boolean }>();
+  poses = new Map<string, { x: number; y: number; z: number; ry: number; a: string; hidden: boolean; walking?: boolean }>();
   constructor(public scene: THREE.Scene, public sim: SimWorld) {}
   /** world position of an npc right now (even if not spawned) */
   pose(id: string) { return this.poses.get(id); }

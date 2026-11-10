@@ -24,7 +24,11 @@ canvas{display:block}
 #dlg .act{color:var(--dim);font-style:italic}
 #dlg .more{text-align:right;color:var(--dim);font-size:13px;margin-top:6px}
 #dlg .opt{padding:5px 8px;border-radius:3px}#dlg .opt:hover,#dlg .opt.sel{background:#26221c;outline:1px solid #5a4a30}
-#dlg .opt b{color:var(--dim);margin-right:4px}.glyph{color:var(--red);font-size:15px}
+#dlg .opt b{color:var(--dim);margin-right:4px}
+#dlg .sysrow{margin-top:10px;padding-top:6px;border-top:1px solid #2a2824;display:flex;gap:18px;justify-content:flex-end}
+#dlg .sys{font-size:13px;color:#7d786c;cursor:pointer}#dlg .sys:hover{color:#bdb6a4}
+kbd{font:11px monospace;border:1px solid #4a463c;border-radius:3px;padding:0 4px;color:#9a9484;margin-left:4px}
+#dlg .more{font-size:12px}.glyph{color:var(--red);font-size:15px}
 #stv{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center}
 #stv .panel{width:min(920px,94%);height:min(560px,88%);background:#0c0d0f;border:1px solid #4a3a2a;box-shadow:0 0 40px #000;display:flex;flex-direction:column}
 #stv .tabs{display:flex;border-bottom:1px solid #2a2824}
@@ -55,10 +59,12 @@ canvas{display:block}
 #pocket.has .ic{border-color:#c02a20;color:#ff5a48;box-shadow:0 0 10px #a01810}#pocket.has .nm{color:#ffb0a4}
 #newp{position:fixed;right:14px;top:44px;width:260px;display:none;gap:10px;align-items:center;background:rgba(8,9,11,.86);border:1px solid #3a3228;border-left:3px solid #c02a20;padding:8px 10px;transition:opacity .5s;opacity:0}
 #newp img{width:56px;height:56px;border:1px solid #444;filter:grayscale(1)}#newp .t{font-size:11px;letter-spacing:2px;color:#ff6a58;text-transform:uppercase}#newp .n{font-size:17px;margin-top:2px}#newp .s{font-size:12px;color:var(--dim);margin-top:2px}
+#notes{position:fixed;right:14px;top:132px;width:300px;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.note{background:rgba(8,9,11,.86);border:1px solid #3a3228;border-left:3px solid #8a6a3a;padding:6px 10px;font-size:14px;transition:opacity .3s}
 </style></head>
 <body>
 <canvas id="mini" width="176" height="176"></canvas><div id="pocket"><div class="ic">◌</div><div class="nm">Карман пуст</div></div><div id="newp"><img id="newp-img" alt=""><div><div class="t">Встречен новый человек</div><div class="n" id="newp-n"></div><div class="s" id="newp-s"></div></div></div>
-<div id="hint"></div><div id="clock"></div><div id="cross"></div><div id="prompt"></div><div id="sub"></div><div id="thread"></div><div id="toast"></div>
+<div id="notes"></div><div id="hint"></div><div id="clock"></div><div id="cross"></div><div id="prompt"></div><div id="sub"></div><div id="thread"></div><div id="toast"></div>
 <div id="sync"></div><div id="ghost"></div><div id="red"></div><div id="flash"></div><div id="fade"></div>
 <div id="pause" style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;font-size:28px;letter-spacing:4px;cursor:pointer;color:#d8d2c4">ПАУЗА — клик, чтобы продолжить</div>
 <div id="loading" style="position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#8d887c;font-size:22px;letter-spacing:5px;z-index:50"><div>ЗАТОН · 1947</div><div style="font-size:13px;letter-spacing:2px;margin-top:14px;opacity:.6">загрузка…</div></div>

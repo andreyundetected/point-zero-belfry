@@ -31,6 +31,7 @@ import { Pilot } from './pilot';
 import { drawMini } from './mapview';
 import { updateMarks } from '../world/marks';
 import { addInteract } from '../world/interiors';
+import { FACTS } from '../content/knowledge';
 
 const INTRO = new Set(['lidia', 'crane', 'agata', 'orven', 'tilda', 'anna', 'anka', 'lukyan', 'tikhon', 'stern', 'yan', 'misha']); // people who give their name when you talk to them
 export class Game implements StvHost, Ctx {
@@ -54,7 +55,9 @@ export class Game implements StvHost, Ctx {
     addEventListener('keyup', e => { if (e.code === 'KeyT') this.waitHeld = false; });
     addEventListener('mousedown', () => this.snd.init()); addEventListener('keydown', () => this.snd.init(), { once: true });
     player.onRespawn = () => { this.hud.bark('Холодная вода. Вылез.', true); this.hurt(0.6); };
-    this.runner.onEnd = () => { setTimeout(() => { try { (this.player.dom.requestPointerLock() as any)?.catch?.(() => {}); } catch { /* needs a gesture */ } }, 60); };
+    this.runner.onEnd = (npc, finished) => {
+      if (npc && finished) { this.s.talks.set(npc, (this.s.talks.get(npc) ?? 0) + 1); this.s.everTalks.set(npc, (this.s.everTalks.get(npc) ?? 0) + 1); this.s.flags.put(`talk_${npc}`, this.s.t); this.sim.setFlags(this.s.flags); if (INTRO.has(npc)) this.s.learn('name_' + npc); this.meet(npc); }
+      this.talkHold = null; setTimeout(() => { try { (this.player.dom.requestPointerLock() as any)?.catch?.(() => {}); } catch { /* needs a gesture */ } }, 60); };
     setNameKnown(id => ['tik', 'device', 'mitya', 'guard1', 'guard2', 'pg', ''].includes(id) || this.s.knows('name_' + id));
     player.canClickMove = () => !this.combat.aiming && !this.open && !this.runner.active;
     this.applyUniverse(); this.hud.clock(0);
@@ -69,15 +72,33 @@ export class Game implements StvHost, Ctx {
   flag(n: FlagName) { this.s.setFlag(n); this.sim.flags = this.s.flags; }
   give(i: ItemId) { this.s.give(i); this.hud.toast(itemName(i)); }
   take(i: ItemId) { if (this.s.pocket === i) { this.s.pocket = undefined; this.s.held = undefined; } }
-  learn(id: string) { this.s.learn(id); }
+  learn(id: string) {
+    if (this.s.knows(id)) return; this.s.learn(id); const f = FACTS[id]; if (!f) return;
+    const future = f.t !== undefined && f.t > this.s.t + 30; const txt = pick(f);
+    this.hud.notify((getLang() === 'ru' ? 'Узнал: ' : 'Learned: ') + txt, future ? `⟲ ${fmt(f.t!)}` : '');
+    this.note('fact_' + id, (future ? `⟲ ${fmt(f.t!)}: ` : '') + f.ru, (future ? `⟲ ${fmt(f.t!)}: ` : '') + f.en, f.who);
+  }
   note(id: string, ru: string, en: string, who?: string, red = false) { this.s.note({ id, t: this.s.t, ru, en, who, red }); }
+  /** B1: small stacked notification, top right */
+  notify(ru: string) { this.hud.notify(ru); }
   message(ru: string, en: string) { this.s.messages.push({ t: this.s.t, ru, en }); this.hud.toast(ru, 5); }
   npcAct() {} end(ending: string) { this.finish(ending); } has(i: ItemId) { return this.s.pocket === i; } knows(id: string) { return this.s.knows(id); } fl(n: FlagName) { return this.s.flags.has(n); }
   t() { return this.s.t; } money(d: number) { this.s.money += d; } gun() { return this.s.hasGun; } conv(id: string) { void this.runner.start(id); }
   fomaRuinOn() { return this.fomaRuin; }
+  // --- conversation memory (A4) and situation (A1)
+  npc?: string;
+  count() { return this.npc ? this.s.talks.get(this.npc) ?? 0 : 0; }
+  ever() { return this.npc ? this.s.everTalks.get(this.npc) ?? 0 : 0; }
+  talked(topic: string) { return this.s.topics.has((this.npc ?? '') + ':' + topic); }
+  topic(topic: string) { this.s.topics.add((this.npc ?? '') + ':' + topic); }
+  /** where the player stands: 'inside:<site>', 'cellar', 'roof' or 'street' */
+  place() { const b = this.player.body; if (b.y > 20) return 'roof'; const r = this.insideRoom(); return r ? (r === 'cellar' ? 'cellar' : 'inside:' + r) : 'street'; }
+  npcAt(id: string) { const p = this.npcs.pose(id); return p ? { x: p.x, z: p.z, y: p.y, a: p.a, hidden: p.hidden } : null; }
   jumpRel(sec: number) { void this.doJump(Math.max(0, Math.min(WINDOW, this.s.t + sec))); }
   openDoor(id: string, open = true) { const d = doors.find(x => x.id === id); if (d) d.open = open; }
   setPocketHeld() { this.s.held = this.s.pocket; }
+  /** a splash in the canal: white sprite burst + sound (Ned's fall) */
+  splash(delay: number, z: number) { setTimeout(() => { this.snd.play('impact/impact_generic_light_002', 0.8, 0.5); this.fx.splash(0.6, -4.55, z); }, delay * 1000); }
   shake(a: number) { this.shakeA = a; this.shakeT = 1.2; }
   hurt(v: number) { this.hud.hurt(v); setTimeout(() => this.hud.hurt(0), 350); }
   // ---------------- universe handling
@@ -94,7 +115,7 @@ export class Game implements StvHost, Ctx {
     for (let r = 0.3; r <= 1.5; r += 0.3) for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (ok(px, pz, y)) return { x: px, z: pz, y }; }
     return null;
   }
-  tAt = 0; meetT = 0; miniT = 0; bellShown = false; markT = 0; paused = false; hadLock = false; holdT = 0; holding = false;
+  fomaT = 0; roofT = 0; tAt = 0; meetT = 0; miniT = 0; bellShown = false; markT = 0; paused = false; hadLock = false; holdT = 0; holding = false;
   /** spec 2.2: hold the jump button for 1 real second = preview; released earlier = cancel; held through = jump */
   togglePreview() { if (this.previewing) { this.hideGhosts(); this.previewing = false; } else { this.showGhosts(this.targetT); this.previewing = true; } }
   holdBegin() { if (this.holding || this.jumpBusy) return; this.holding = true; this.holdT = 0; this.showGhosts(this.targetT); }
@@ -116,7 +137,7 @@ export class Game implements StvHost, Ctx {
     this.snd.play('digital/phase_jump' + (1 + (s.jumps % 5)) + '.ogg', 0.9);
     this.hud.flash(1); this.hud.fade(true, 380); await new Promise(r => setTimeout(r, 700));
     // new universe: flags reset, knowledge + pocket stay
-    s.flags = tmp; s.changes = []; s.t = target; s.jumps++; s.held = s.pocket; s.worldItems.clear(); s.universeStart = target;
+    s.flags = tmp; s.changes = []; s.talks.clear(); s.topics.clear(); s.thoughts.clear(); s.t = target; s.jumps++; s.held = s.pocket; s.worldItems.clear(); s.universeStart = target;
     this.sim.setFlags(s.flags); b.x = spot.x; b.z = spot.z; b.y = spot.y; b.vy = 0; b.vx = b.vz = 0;
     for (const d of doors) { d.open = false; (d.pivot as any).inner.rotation.y = 0; }
     this.player.apply(); this.applyCity(target, true); this.onUniverse();
@@ -157,17 +178,28 @@ export class Game implements StvHost, Ctx {
     };
     for (const d of doors) { const lk = d.locked(this.s.t, this.s.flags); consider(d.x, d.y, d.z, 1.9, lk && !d.open ? `${d.label}: ${lk}` : (d.open ? 'Закрыть дверь' : 'Открыть дверь'), () => { if (lk && !d.open) { this.hud.bark(lk.split('.')[0] + '.', true); this.snd.play('rpg_foley/metal_latch.ogg', 0.5); onBark(this, 'locked:' + d.id); return; } d.open = !d.open; this.snd.play('rpg_foley/door_' + (d.open ? 'open_' : 'close_') + (1 + (this.s.t | 0) % 4) + '.ogg', 0.7); }); }
     for (const it of interactables) { if (it.ok && !it.ok(this)) continue; const q = it.at ? it.at(this) : { x: it.x, y: it.y, z: it.z }; if (!q) continue; consider(q.x, q.y, q.z, it.r ?? 1.6, it.label(this), () => it.use(this)); }
-    for (const d of NPCS) { const po = this.npcs.pose(d.id); if (!po || po.hidden || d.civ && !pickConv(d.id, this)) continue; const cid = pickConv(d.id, this); if (!cid) continue; consider(po.x, po.y, po.z, 2.5, `Говорить: ${nameOf(d.id)}`, () => this.talk(d.id, cid)); }
+    for (const d of NPCS) { const po = this.npcs.pose(d.id); if (!po || po.hidden) continue; const cid = pickConv(d.id, this); if (!cid) continue; consider(po.x, po.y, po.z, 2.5, `Говорить: ${nameOf(d.id)}`, () => this.talk(d.id, cid)); }
     void cam; return best as { d: number; label: string; fn: () => void } | null;
   }
   /** first meeting: journal entry, portrait and the top-right card */
   meet(npc: string) {
     if (this.s.met.has(npc)) return; this.s.met.add(npc); const d = NPCS.find(n => n.id === npc); if (!d || d.civ) return; this.portraitQ.push(npc); this.lastMeet = npc;
-    const nm = nameOf(npc); this.hud.newPerson(nm, getLang() === 'ru' ? `записано в «Люди» · ${fmt(this.s.t)}` : `added to People · ${fmt(this.s.t)}`);
+    const nm = nameOf(npc); this.hud.notify((getLang() === 'ru' ? 'Новый человек: ' : 'New person: ') + nm); this.hud.newPerson(nm, getLang() === 'ru' ? `записано в «Люди» · ${fmt(this.s.t)}` : `added to People · ${fmt(this.s.t)}`);
     this.note('seen_' + npc, `Встретил в ${fmt(this.s.t)}: ${nm}`, `Met at ${fmt(this.s.t)}: ${nm}`, npc, !!d.key);
   }
-  lastMeet = '';
-  talk(npc: string, conv: string) { if (this.runner.active) return; this.meet(npc); const p = this.npcs.pose(npc)!; this.player.yaw = Math.atan2(-(p.x - this.player.body.x), -(p.z - this.player.body.z)); this.runner.start(conv).then(() => { this.afterTalk(); if (INTRO.has(npc)) this.s.learn('name_' + npc); }); }
+  lastMeet = ''; talkHold: { id: string; x: number; y: number; z: number; ry: number } | null = null;
+  /** start a conversation: the NPC stops where he is and faces you while it lasts (A7); a 'bark:' answer is a single line, no tree (A1) */
+  /** talk to an npc behind a door etc. (no pose needed) */
+  talkTo(npc: string, conv: string) { if (this.runner.active) return; if (conv.startsWith('bark:')) { void this.runner.quick(npc, conv.slice(5)); return; } void this.runner.start(conv, npc || undefined); }
+  /** Tik thinks aloud (B6): once per event in a branch, never if he already knows it */
+  thought(key: string, ru: string, know?: string) { if (this.s.thoughts.has(key) || (know && this.s.knows(know))) return; this.s.thoughts.add(key); this.hud.bark(ru, true); }
+  talk(npc: string, conv: string) {
+    if (this.runner.active) return; const p = this.npcs.pose(npc)!; const b = this.player.body;
+    this.player.yaw = Math.atan2(-(p.x - b.x), -(p.z - b.z));
+    if (conv.startsWith('bark:')) { void this.runner.quick(npc, conv.slice(5)); return; }
+    this.talkHold = { id: npc, x: p.x, y: p.y, z: p.z, ry: Math.atan2(b.x - p.x, b.z - p.z) };
+    void this.runner.start(conv, npc);
+  }
   afterTalk() { this.player.apply(); }
   useNearest() { if (this.runner.active || this.frozen) return; const n = this.findInteract(); n?.fn(); }
   // ---------------- per-frame
@@ -197,7 +229,7 @@ export class Game implements StvHost, Ctx {
     if (this.portraitQ.length && !this.open) this.capturePortrait();
     if (this.custom) this.custom.update(dt);
     const wasT = s.t; const talking = this.ui.open || this.runner.active;
-    if (!this.open && !talking && !this.jumpBusy && !this.frozen && !s.ended && !this.paused) {
+    if (!this.open && !this.jumpBusy && !this.frozen && !s.ended && !this.paused) {
       const wait = this.waitHeld && !this.combat.enemyWatching(); this.s.t += dt * (wait ? WAIT_SCALE : TIME_SCALE);
       if (this.waitHeld && !wait) { this.hud.toast('Рядом враг — ждать нельзя', 1.5); this.waitHeld = false; }
     }
@@ -205,8 +237,7 @@ export class Game implements StvHost, Ctx {
     if (s.t >= WINDOW && !s.ended && !this.frozen) this.finish('empty');
     p.frozen = this.open || talking || this.jumpBusy || this.frozen || this.pilot.aboard || this.paused; if (!this.pilot.aboard) p.update(dt); else p.apply();
     this.hud.clock(s.t); this.hud.update(dt);
-    this.meetT -= dt; if (this.meetT <= 0 && !this.open) { this.meetT = 0.4; for (const d of NPCS) { if (d.civ || this.s.met.has(d.id)) continue; const q = this.npcs.pose(d.id); if (!q || q.hidden) continue; const dx = q.x - p.body.x, dz = q.z - p.body.z, dd = Math.hypot(dx, dz); if (dd > 6.5) continue; const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw); if ((dx * fx + dz * fz) / Math.max(dd, 0.01) < 0.3) continue; if (!lineOfSight(p.body.x, p.body.z, p.body.y + 1.6, q.x, q.z, q.y + 1.5)) continue; this.meet(d.id); } }
-    this.miniT -= dt; if (this.miniT <= 0) { this.miniT = 0.1; drawMini(document.getElementById('mini') as HTMLCanvasElement, { x: p.body.x, z: p.body.z, yaw: p.yaw, thread: s.thread, time: performance.now() / 1000 }); this.hud.pocket(s.pocket ? itemName(s.pocket) : null); }
+    this.miniT -= dt; if (this.miniT <= 0) { this.miniT = 0.1; drawMini(document.getElementById('mini') as HTMLCanvasElement, { x: p.body.x, z: p.body.z, yaw: p.yaw, thread: s.thread, time: performance.now() / 1000, t: s.t }); this.hud.pocket(s.pocket ? itemName(s.pocket) : null); }
     { const b0 = p.body, sp = Math.hypot(b0.vx, b0.vz); if (b0.grounded && sp > 0.8 && !p.frozen) { this.stepT -= dt * (sp > 4 ? 1.6 : 1); if (this.stepT <= 0) { this.stepT = 0.5; const kind = this.sceneInside || b0.y > 20 ? 'wood' : 'concrete'; this.snd.play(`impact/footstep_${kind}_00${(Math.random() * 5) | 0}`, p.crouching ? 0.12 : 0.28); } } }
     // city state + lights
     if (Math.floor(wasT) !== Math.floor(s.t) || this.lastCs === '') { this.lastCs = 'x'; this.applyCity(s.t); setClock(s.t); }
@@ -219,7 +250,7 @@ export class Game implements StvHost, Ctx {
     { const f = this.scene.fog as THREE.FogExp2 | null; if (f) f.density = 0.035 - 0.026 * Math.max(0, Math.min(1, (b.y - 4) / 22)); }
     updateDoors(dt); updateTower(dt, Math.hypot(b.x + 70, b.z + 58) < 70);
     // npcs
-    this.npcs.update(s.t, b.x, b.z, dt, b.y, undefined, id => this.combat.override(id));
+    this.npcs.update(s.t, b.x, b.z, dt, b.y, undefined, id => { const h = this.talkHold; if (h && h.id === id) return { x: h.x, y: h.y, z: h.z, ry: h.ry, a: 'talk', hidden: false }; return this.combat.override(id); });
     this.combat.update(dt); this.pilot.update(dt); this.markT -= dt; if (this.markT <= 0) { this.markT = 0.08; updateMarks(this); }
     if (this.shakeT > 0) { this.shakeT -= dt; const k = this.shakeA * Math.max(0, this.shakeT); this.cam.position.x += (Math.random() - 0.5) * 0.12 * k; this.cam.position.y += (Math.random() - 0.5) * 0.12 * k; }
     // events seen

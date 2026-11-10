@@ -26,6 +26,8 @@ export class Sched {
     const path = this.routed(path0); let len = 0, px = this.cx, pz = this.cz; for (const [x, z] of path) { len += Math.hypot(x - px, z - pz); px = x; pz = z; }
     return this.walkRaw(path, len / Math.max(1, arrive - this.ct), a);
   }
+  /** straight segments, no routing (bridge rail, climbing, falling); yEnd interpolated when both ends have y */
+  walkDirect(path: [number, number][], speed: number, a: string, yEnd?: number) { for (const [x, z] of path) { const d = Math.max(0.01, Math.hypot(x - this.cx, z - this.cz)); this.push({ t: this.ct, x: this.cx, z: this.cz, y: this.cy, a, ry: Math.atan2(x - this.cx, z - this.cz) || this.cry, go: true }); this.ct += d / speed; this.cx = x; this.cz = z; } this.cy = yEnd; return this; }
   private walkRaw(path: [number, number][], speed: number, a: string) { for (const [x, z] of path) { const d = Math.hypot(x - this.cx, z - this.cz); if (d < 0.01) continue; this.push({ t: this.ct, x: this.cx, z: this.cz, y: this.cy, a, ry: Math.atan2(x - this.cx, z - this.cz), go: true }); this.ct += d / speed; this.cx = x; this.cz = z; } this.cy = undefined; return this; }
   teleport(x: number, z: number, y?: number, ry?: number, a?: string) { this.cx = x; this.cz = z; this.cy = y; if (ry !== undefined) this.cry = ry; if (a) this.ca = a; return this; }
   hide(at?: number) { if (at !== undefined) this.wait(at); this.push({ t: this.ct, x: this.cx, z: this.cz, a: this.ca, hide: true }); return this; }

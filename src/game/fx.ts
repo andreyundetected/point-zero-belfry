@@ -34,6 +34,10 @@ export class Fx {
     }
     for (const [id, o] of this.fires) if (!seen.has(id)) o.g.visible = false;
   }
+  /** white water burst and rings (D4) */
+  splash(x: number, y: number, z: number) { const g = new THREE.Group(); g.position.set(x, y, z); this.scene.add(g); const parts: THREE.Sprite[] = []; for (let i = 0; i < 18; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xdde6ee, transparent: true, depthWrite: false, opacity: 0.9 })); s.userData.v = [(hash(i, 1) - 0.5) * 2.4, 2 + hash(i, 2) * 4, (hash(i, 3) - 0.5) * 2.4]; s.scale.setScalar(0.4); g.add(s); parts.push(s); }
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.45, 32), new THREE.MeshBasicMaterial({ color: 0xbfcad4, transparent: true, opacity: 0.7, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; g.add(ring);
+    let t = 0; const tick = () => { t += 1 / 60; for (const p of parts) { const v = p.userData.v; v[1] -= 9.8 / 60; p.position.x += v[0] / 60; p.position.y = Math.max(0, p.position.y + v[1] / 60); p.position.z += v[2] / 60; (p.material as THREE.SpriteMaterial).opacity = Math.max(0, 0.9 - t * 0.6); } ring.scale.setScalar(1 + t * 6); (ring.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.7 - t * 0.25); if (t < 3) requestAnimationFrame(tick); else this.scene.remove(g); }; tick(); }
   /** light-pool entries for the nearest fires (flicker) */
   lights(fires: Fire[]) { return fires.filter(f => f.k > 0.05).map(f => ({ x: f.x, y: groundH(f.x, f.z) + 3.5, z: f.z, color: 0xff7a30, intensity: (22 + Math.sin(this.t * 13 + f.x) * 6 + Math.sin(this.t * 7.3) * 4) * f.k, dist: 26 + f.r })); }
 }

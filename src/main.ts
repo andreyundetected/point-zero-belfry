@@ -31,7 +31,7 @@ const at4 = q.get('at')?.split(',').map(Number); const tq = q.get('t');
 const SHOTS: Record<string, [number, number, number, number, number?]> = { '1': [-34, -3, -60, -8.5], '2': [12, 12, 30, 9, 0.05], '3': [-12, 0.2, 9, 0], '4': [-60, -37, -38, -33.5], '5': [-24, 52, -9, 66, -0.05] };
 const sh = q.get('shot') ? SHOTS[q.get('shot')!] : undefined;
 const debugPos = at4 && at4.length >= 4 ? (at4 as [number, number, number, number]) : sh;
-if (tq) { const [m, s] = tq.split(':').map(Number); game.s.t = m * 60 + (s || 0); } else game.s.t = debugPos ? 0 : at(22, 3, 30);
+if (tq) { const [m, s] = tq.split(':').map(Number); game.s.t = m * 60 + (s || 0); } else game.s.t = debugPos ? 0 : at(22, 3);
 if (debugPos) player.place(debugPos[0], debugPos[1], debugPos[2], debugPos[3], (debugPos as any)[4] ?? 0);
 else { player.place(TOWER.roofSpawn.x, TOWER.roofSpawn.z, -70, -63, 0, ROOF_Y()); }
 if (q.get('thread')) game.s.thread = q.get('thread')!;

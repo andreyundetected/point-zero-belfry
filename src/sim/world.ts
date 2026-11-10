@@ -13,7 +13,7 @@ export interface CityState {
 }
 export function cityState(t: number, f: Flags): CityState {
   const tap = f.has('tapCut');
-  const raided = !f.has('jetonStolen') && !f.has('gaylWarned') && !f.has('annaWarned');
+  const raided = !f.has('jetonStolen') && !f.has('nedLeftEarly') && !f.has('gaylWarned') && !f.has('annaWarned');
   const blast = t >= at(22, 12), rynok = !tap && t >= at(22, 30), ruin = !tap && t >= at(22, 40), kanat = !tap && t >= at(22, 45), office = t >= at(22, 20);
   const fires: Fire[] = [];
   if (blast) fires.push({ id: 'warehouse', x: 66, z: 32, r: 22, k: Math.min(1, 0.6 + (t - at(22, 12)) / 600) });

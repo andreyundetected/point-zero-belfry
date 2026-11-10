@@ -1,6 +1,6 @@
 import { BOUNDS, CANAL, ROADS, RECTS, PIER3, PIER7, DECK_Y } from '../world/layout';
 import { placed } from '../world/city';
-import { THREADS } from '../content/threads';
+import { THREADS, threadMarkers } from '../content/threads';
 import { pick } from './strings';
 
 // Schematic map (spec 2.5): one cached drawing, drawn big in the Stvorka and as a small rotating-free minimap on the HUD.
@@ -25,10 +25,10 @@ function build() {
   for (const [t, x, z] of lab) { g.lineWidth = 4; g.strokeStyle = '#0a0b0d'; g.strokeText(t, px(x), pz(z)); g.fillStyle = '#a9a28f'; g.fillText(t, px(x), pz(z)); }
   return c;
 }
-export interface MapState { x: number; z: number; yaw: number; thread: string; time: number; }
+export interface MapState { x: number; z: number; yaw: number; thread: string; time: number; t?: number; }
 const glow = (g: CanvasRenderingContext2D, x: number, y: number, r: number, a = 1) => { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(255,70,50,${0.95 * a})`); gr.addColorStop(0.25, `rgba(255,40,30,${0.55 * a})`); gr.addColorStop(1, 'rgba(255,20,10,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.fillStyle = `rgba(255,150,130,${a})`; g.beginPath(); g.arc(x, y, Math.max(1.6, r * 0.14), 0, 7); g.fill(); };
 function arrow(g: CanvasRenderingContext2D, x: number, y: number, yaw: number, s: number) { g.save(); g.translate(x, y); g.rotate(-yaw); g.fillStyle = '#e8e2d2'; g.strokeStyle = '#000'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(0, -s); g.lineTo(s * 0.62, s * 0.7); g.lineTo(0, s * 0.35); g.lineTo(-s * 0.62, s * 0.7); g.closePath(); g.fill(); g.stroke(); g.restore(); }
-function markers(st: MapState) { return THREADS[st.thread]?.marker ?? []; }
+function markers(st: MapState) { return threadMarkers(st.thread, st.t ?? 0); }
 /** nearest marker the dashed guide line points at */
 function nearest(st: MapState) { let best: { x: number; z: number } | undefined, d = 1e9; for (const m of markers(st)) { const dd = Math.hypot(m.x - st.x, m.z - st.z); if (dd < d) { d = dd; best = m; } } return best; }
 export function drawMain(cv: HTMLCanvasElement, st: MapState) {

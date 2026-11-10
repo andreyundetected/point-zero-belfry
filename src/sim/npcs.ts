@@ -61,31 +61,33 @@ const add = (d: NpcDef) => { NPCS.push(d); return d; };
 
 // ============ WEST
 add({ id: 'crane', name: { ru: 'Эвелина Крайн', en: 'Evelina Crane' }, key: true, look: { body: 'liza', coat: 0x26292d, trou: 0x1c1c1e, long: true, hat: 'veil', extra: ['cane'], scale: 1.0 },
-  sched: () => { const y = roofY(); const sc = s(-70, -64.2, faceTo(-70, -64.2, -70, -56), 'idle', 0, y); sc.wait(at(22, 5), 'idle').walk([[-70, -55.4]], 1.3, 'walk', y).hide(sc.ct + 0.5);
-    sc.show(at(22, 5, 40), -70, -53.4, 'walk', Math.PI, undefined).walk([[-62, -50], [-57, -43]], 1.4).hide(at(22, 6)); return sc.done(); } });
+  sched: f => { const y = roofY(); const sc = s(-70, -64.2, faceTo(-70, -64.2, -70, -56), 'idle', 0, y); const po = f.at('prologueOver' as const); const go = po !== undefined ? Math.max(at(22, 5), po + 25) : at(22, 15); sc.wait(go, 'idle').walkDirect([[-70, -57.5], [-70, -54.8]], 1.3, 'walk', y).hide(sc.ct + 0.5);
+    sc.show(sc.ct + 40, -70, -53.4, 'walk', Math.PI, undefined).walk([[-62, -50], [-57, -43]], 1.3).hide(); return sc.done(); } });
 add({ id: 'lidia', name: { ru: 'Лидия', en: 'Lidia' }, key: true, look: { body: 'liza', coat: 0x4a4238, trou: 0x2e2c2a, skirt: false, hat: 'scarf', scale: 0.97, hair: 0x3a2a1a },
-  sched: () => { const y = roofY(); const sc = s(-73.9, -59.3, 1.6, 'fix', 0, y); sc.wait(at(22, 15), 'fix').walk([[-70, -55.4]], 1.2, 'walk', y).hide(sc.ct + 0.5);
+  sched: () => { const y = roofY(); const sc = s(-73.9, -59.3, 1.6, 'fix', 0, y); sc.wait(at(22, 15), 'fix').walkDirect([[-72, -57.5], [-70, -54.8]], 1.2, 'walk', y).hide(sc.ct + 0.5);
     sc.show(at(22, 40), -70, -51.6, 'cry', Math.PI, undefined); return sc.end().kfs; } });
 add({ id: 'fern', name: { ru: 'Ферн', en: 'Fern' }, key: true, look: { body: 'james', coat: 0x3a352e, trou: 0x252628, hat: 'cap', extra: ['lantern'], scale: 0.96, hair: 0xb8b8b0 },
-  sched: () => { const y = roofY(); const sc = s(-65.4, -54.9, -1.6, 'idle', 0, y); sc.wait(at(22, 5), 'idle').walk([[-70, -55.4]], 1, 'walk', y).hide(sc.ct + 0.5);
+  sched: () => { const y = roofY(); const sc = s(-65.4, -54.9, -1.6, 'idle', 0, y); sc.wait(at(22, 5), 'idle').walkDirect([[-67.5, -55.5], [-70, -54.8]], 1.2, 'walk', y).hide(sc.ct + 0.5);
     sc.show(at(22, 7), -71.4, -52.9, 'walk', 0).walk([[-67, -47]], 1.1).wait(at(22, 22), 'idle', 0).walk([[-68, -43.5]], 1, 'walk').wait(at(22, 22) + 40, 'lantern', faceTo(-68, -43.5, -70, -54)).end(); return sc.kfs; } });
 add({ id: 'stern', name: { ru: 'Штерн', en: 'Stern' }, key: true, look: { body: 'james', coat: 0x2b2a28, trou: 0x1c1c1e, hat: 'fedora', extra: ['case'] },
   sched: f => { const y = BASEMENT_Y(); const sc = s(-72.4, -60.4, 1.2, 'fix', 0, y);
     if (f.has('sternScared')) { const tf = f.at('sternScared')!; sc.wait(tf, 'fix').hide(); return sc.done(); }
-    sc.wait(at(22, 4), 'fix').hide(at(22, 4)); sc.show(at(22, 4, 10), -70, -53.2, 'walk', 0).walk([[-68, -46], [-68, -9], [-76, -8], [-90, -8]], 1.4).hide(); return sc.done(); } });
+    sc.wait(at(22, 4), 'fix').hide(at(22, 4)); sc.show(at(22, 4, 10), -70, -53.2, 'walk', 0).walk([[-68, -46], [-68, -9], [-76, -8], [-90, -8]], 1.3).hide(); return sc.done(); } });
 add({ id: 'orven', name: { ru: 'Орвен', en: 'Orven' }, key: true, look: { body: 'james', coat: 0x4a4238, trou: 0x2e2c2a, hat: 'none', extra: ['apron'], scale: 0.95, hair: 0x8a8a84 },
-  sched: () => { const i = inSite('orven', -0.3, -2.7); const d = loc('orven', 1.25, 0.3); const sc = s(i.x, i.z, Math.PI, 'idle', 0, i.y);
-    sc.wait(at(22, 9), 'idle', faceTo(i.x, i.z, d.x, d.z)); const door = inSite('orven', 1.25, -0.4);
-    sc.walk([[door.x, door.z]], 1.1, 'walk', undefined); const front = loc('orven', 1.25, 0.9); sc.walk([[front.x, front.z]], 0.8, 'walk').wait(at(22, 10), 'idle', 0);
-    sc.walk([[-53, -38], [-60, -39], [-83, -40]], 1.3).hide(); return sc.done(); } });
+  // D2: counts the till inside, at 22:01:40 comes out and locks up at 22:02, leaves west. If you caught him, he stays at the door
+  // closing the shutters until 22:06 (the conversation itself holds him in place), then locks and goes.
+  sched: f => { const i = inSite('orven', -0.3, -2.7); const front = loc('orven', 1.25, 1.0); const sc = s(i.x, i.z, Math.PI, 'idle', 0, i.y);
+    sc.wait(at(22, 1, 30), 'interact', Math.PI).walk([[loc('orven', 1.25, -0.6).x, loc('orven', 1.25, -0.6).z], [front.x, front.z]], 1.2, 'walk');
+    const talked = f.at('talk_orven' as const); const leave = talked !== undefined ? Math.max(at(22, 6), talked + 20) : at(22, 2, 10);
+    sc.wait(leave, talked !== undefined ? 'interact' : 'idle', Math.PI * 0.0 + Math.PI).walk([[-53, -38], [-60, -39], [-83, -40]], 1.25).hide(); return sc.done(); } });
 add({ id: 'tilda', name: { ru: 'Тильда', en: 'Tilda' }, key: true, look: { body: 'liza', coat: 0x4a4238, trou: 0x2e2c2a, skirt: true, long: false, hat: 'scarf', scale: 0.98, extra: [] },
+  // D3: waits at the alley exit 22:03-22:20 asking passers-by, then walks to pier 7 (22:24 at the barge)
   sched: f => {
-    const sc = s(-37.2, -33.2, 0.5, 'talk', at(22, 8)); sc.ct = at(22, 8);
+    const spot = { x: -36.8, z: -32.6 }; const sc = s(spot.x, spot.z, -0.6, 'idle', 0); sc.hide(0).show(at(22, 2, 40), -30, -30.2, 'walk', -1.6).walk([[spot.x, spot.z]], 1.25).wait(at(22, 20), 'idle', -0.6);
     if (f.has('tildaWarned') && f.at('tildaWarned')! < at(22, 24)) { const tf = f.at('tildaWarned')!;
-      const sc2 = s(-37.2, -33.2, 0.5, 'talk', at(22, 8)); sc2.wait(at(22, 14), 'talk').walk([[-30, -30], [-14, -28], [-14, -2]], 1.5).wait(at(22, 17), 'talk', 0).walk([[-14, 50], [-9.5, 58]], 1.5).wait(Math.max(tf, sc2.ct) , 'idle', Math.PI / 2);
-      // after the warning she runs to the orphanage back gate
-      sc2.walk([[-14, 40], [-14, 2], [-9, 0], [9, 0], [14, 0], [14, -5], [20, -5], [30, -30], [38, -44], [38, -62], [34.6, -69.5]], 4.2, 'run').end('idle', Math.PI / 2); return sc2.kfs; }
-    sc.wait(at(22, 14), 'talk').walk([[-30, -30], [-14, -28], [-14, -2]], 1.5).wait(at(22, 17), 'talk', 0).walk([[-14, 50], [-9.5, 57.5], [SCENE_BARGE.x, SCENE_BARGE.z]], 1.5).wait(at(22, 24), 'idle', Math.PI / 2);
+      sc.walk([[-30, -30], [-14, -28], [-14, 50], [-9.5, 57.5]], 1.3).wait(Math.max(tf, sc.ct), 'idle', Math.PI / 2);
+      sc.walk([[-14, 40], [-14, 2], [-9, 0], [9, 0], [14, 0], [14, -5], [20, -5], [30, -30], [38, -44], [38, -62], [34.6, -69.5]], 3.6, 'run').end('idle', Math.PI / 2); return sc.kfs; }
+    sc.walk([[-30, -30], [-14, -28], [-14, 50], [-9.5, 57.5], [SCENE_BARGE.x, SCENE_BARGE.z]], 1.3).wait(at(22, 24), 'idle', Math.PI / 2);
     sc.wait(at(22, 32, 20), 'talk', Math.PI / 2).wait(at(22, 33), 'aim', Math.PI / 2).wait(at(22, 33, 40), 'shoot', Math.PI / 2); sc.walk([[-9.6, 59]], 1.2, 'walk').hide(at(22, 35)); return sc.done(); } });
 add({ id: 'lukyan', name: { ru: 'Лукьян', en: 'Lukyan' }, key: true, look: { body: 'james', coat: 0x3a352e, trou: 0x252628, hat: 'cap', extra: ['beard'], scale: 1.02, hair: 0x3a3632 },
   sched: f => { const sc = s(-3.8, 63.8, Math.PI / 2, 'idle', 0, -0.62);
@@ -93,11 +95,17 @@ add({ id: 'lukyan', name: { ru: 'Лукьян', en: 'Lukyan' }, key: true, look:
     sc.wait(at(22, 24), 'idle').walk([[-3.2, 66], [-3.0, 62.6]], 0.6, 'walk', -0.62).wait(at(22, 29, 40), 'talk', Math.PI * 0.9);
     if (!shot) return sc.end('idle').kfs;
     sc.walk([[-5.2, 61.6]], 1, 'walk').wait(at(22, 33), 'talk', Math.PI * 1.1); sc.walk([[-5.6, 61.2]], 0.8, 'hit').wait(at(22, 33, 5), 'die', Math.PI * 1.1).end('die'); return sc.kfs; } });
+export const NED_RAIL = { x: 0.6, z: 1.85 };
 add({ id: 'ned', name: { ru: 'Нед', en: 'Ned' }, key: true, look: { body: 'remy', coat: 0x3a352e, trou: 0x2e2c2a, hat: 'peaked', extra: ['badge'], scale: 0.97, hair: 0x8a5a3a },
-  sched: f => { const p = seat(1); const rail = { x: 0.4, z: 2.3 };
-    const sc = s(p.x, p.z, p.ry, 'sit', 0, p.y); sc.wait(at(22, 6), 'sittalk').walk([[TAV_DOOR.x, TAV_DOOR.z]], 1.3, 'walk', undefined).walk([[16, 9], [14, 0], [9, 0], [rail.x, rail.z]], 1.9, 'walk').wait(at(22, 16), 'rail', 0);
-    if (!f.has('nedSaved')) { sc.wait(at(22, 16, 4), 'yell', 0).hide(at(22, 16, 6)); return sc.done(); }
-    sc.wait(at(22, 18), 'cry', 0).walk([[9, 0], [14, 0], [16, 12]], 1.2, 'walk').end('idle', Math.PI / 2); return sc.kfs; } });
+  // D4: plays until 22:03 (watch 22:01, token+key 22:03), leaves at 22:04 on foot, at the bridge rail from 22:06, jumps at 22:14 unless kept
+  sched: f => { const p = seat(1); const r = NED_RAIL, deck = 0.12 + 1.15 * (1 - (r.x / 9) ** 2);
+    const sc = s(p.x, p.z, p.ry, 'sittalk', 0, p.y);
+    if (f.has('nedLeftEarly')) { const tl = f.at('nedLeftEarly')!; sc.wait(tl, 'sittalk').walk([[TAV_DOOR.x, TAV_DOOR.z]], 1.25, 'walk', undefined).walk([[16, 18], [40, 19.6], [45.25, 21.4]], 1.3).wait(sc.ct + 2, 'idle', 0).hide(); return sc.done(); }
+    sc.wait(at(22, 3, 40), 'sittalk').wait(at(22, 4), 'no').walk([[TAV_DOOR.x, TAV_DOOR.z]], 1.2, 'walk', undefined).wait(at(22, 5, 30), 'idle', -Math.PI / 2).walk([[14.5, 1.5], [9.2, 1.3]], 1.25).walkDirect([[r.x, r.z]], 1.25, 'walk', deck).wait(at(22, 6), 'rail', 0);
+    const talked = f.at('talk_ned' as const); const jumpAt = Math.max(at(22, 14), talked !== undefined && talked > at(22, 13) ? talked + 10 : 0);
+    if (f.has('nedSaved') || f.has('nedKept')) { sc.wait(at(22, 16), 'rail', 0).wait(at(22, 19), 'cry', 0).walk([[9, 1.3], [14, 1.3], [16, 12]], 1.2, 'walk').end('idle', Math.PI / 2); return sc.kfs; }
+    // the jump: climb the parapet, step over, fall 6 m into the canal
+    sc.wait(jumpAt, 'rail', 0).walkDirect([[r.x, 2.45]], 0.5, 'push', deck + 1.15).wait(sc.ct + 1.2, 'idle', 0).walkDirect([[r.x, 3.5]], 1.4, 'die', deck + 0.6).walkDirect([[r.x, 4.1]], 0.45, 'die', -4.6).hide(sc.ct + 0.2); return sc.done(); } });
 add({ id: 'agata', name: { ru: 'Агата', en: 'Agata' }, key: true, look: { body: 'liza', coat: 0x6b6358, trou: 0x2e2c2a, skirt: true, long: true, hat: 'none', extra: ['apron'], scale: 1.0, hair: 0x6a5a48 },
   sched: () => { const b = inSite('tavern', -0.5, -8.0); const sc = s(b.x, b.z, Math.PI / 2 * -1, 'idle', 0, b.y); const sw = inSite('tavern', 2.4, -1.8);
     sc.wait(at(22, 14), 'idle', faceTo(b.x, b.z, TAV(0, -3).x, TAV(0, -3).z)).walk([[sw.x, sw.z]], 1, 'walk', sw.y).wait(at(22, 30), 'sweep', 0).walk([[b.x, b.z]], 1, 'walk', b.y).end('idle'); return sc.kfs; } });
@@ -105,33 +113,35 @@ const cmLook = (i: number): Look => vary('cord' + i, { body: 'remy', coat: 0, lo
 add({ id: 'ignat', name: { ru: 'Игнат', en: 'Ignat' }, key: true, look: { body: 'james', coat: 0x2e2c2a, trou: 0x1c1c1e, hat: 'none', scale: 1.0, hair: 0x2a2622 },
   sched: f => { const p = seat(5); const sc = s(p.x, p.z, p.ry, 'sittalk', 0, p.y);
     if (f.has('ignatDead')) { sc.wait(f.at('ignatDead')!, 'sit').wait(f.at('ignatDead')! + 0.1, 'die'); return sc.end('die').kfs; }
-    sc.wait(at(22, 12), 'sittalk').wait(at(22, 15), 'idle', p.ry).walk([[TAV_DOOR.x, TAV_DOOR.z], [16, 9], [16, 18], [58, 19.5]], 1.8).wait(at(22, 20), 'idle', 0).end(); return sc.kfs; } });
+    sc.wait(at(22, 12), 'sittalk').wait(at(22, 15), 'idle', p.ry).walk([[TAV_DOOR.x, TAV_DOOR.z], [16, 9], [16, 18], [58, 19.5]], 2.6, 'run').wait(at(22, 20), 'idle', 0).end(); return sc.kfs; } });
 add({ id: 'lovchiy', name: { ru: 'Ловчий', en: 'Lovchiy' }, key: true, look: { body: 'remy', coat: 0x4a4238, trou: 0x2e2c2a, hat: 'none', scale: 1.0, hair: 0x3a2a1a },
   sched: f => { const p = seat(2); const sc = s(p.x, p.z, p.ry, 'sit', 0, p.y);
     if (f.has('lovchiyDead')) { sc.wait(f.at('lovchiyDead')!, 'sit').wait(f.at('lovchiyDead')! + 0.1, 'die'); return sc.end('die').kfs; }
-    sc.wait(at(22, 12), 'sittalk').wait(at(22, 15), 'idle', p.ry).walk([[TAV_DOOR.x, TAV_DOOR.z], [16, 9], [16, 18], [60, 19.5]], 1.8).wait(at(22, 20), 'idle', 0).end(); return sc.kfs; } });
+    sc.wait(at(22, 12), 'sittalk').wait(at(22, 15), 'idle', p.ry).walk([[TAV_DOOR.x, TAV_DOOR.z], [16, 9], [16, 18], [60, 19.5]], 2.6, 'run').wait(at(22, 20), 'idle', 0).end(); return sc.kfs; } });
 for (let i = 0; i < 6; i++) add({ id: 'cm' + (i + 1), name: { ru: 'Человек Корда', en: "Cord's man" }, look: cmLook(i), role: 'cord',
   sched: f => { const idx = [0, 3, 4, 6, 7, 8][i], p = seat(idx); const sc = s(p.x, p.z, p.ry, i % 2 ? 'sit' : 'sittalk', 0, p.y);
-    sc.wait(at(22, 12, i * 2), i % 2 ? 'sit' : 'sittalk').walk([[TAV_DOOR.x, TAV_DOOR.z], [16, 9], [16, 18], [52 + i * 1.8, 20 - (i % 2) * 1.4]], 3.8, 'run').wait(at(22, 20), 'idle', 0.2 * i);
-    if (i < 2) sc.wait(at(22, 30), 'idle', 0.2 * i).walk([[38, 19], [16, 17], [14, 0], [9, 0], [-9, 0], [-14, 0], [-14, 50], [-12, 56.5 + i * 1.2]], 1.9, 'walk').end('idle', Math.PI / 2); else sc.end(); void f; return sc.kfs; } });
+    sc.wait(at(22, 12, i * 2), i % 2 ? 'sit' : 'sittalk').walk([[TAV_DOOR.x, TAV_DOOR.z], [16, 9], [16, 18], [52 + i * 1.8, 20 - (i % 2) * 1.4]], 3.4, 'run').wait(at(22, 20), 'idle', 0.2 * i);
+    if (i < 2) sc.wait(at(22, 30), 'idle', 0.2 * i).walk([[38, 19], [16, 17], [14, 0], [9, 0], [-9, 0], [-14, 0], [-14, 50], [-12, 56.5 + i * 1.2]], 1.35, 'walk').end('idle', Math.PI / 2); else sc.end(); void f; return sc.kfs; } });
 add({ id: 'scar', name: { ru: 'Шрам', en: 'Scar' }, key: true, look: { body: 'james', coat: 0x1d1e20, trou: 0x1c1c1e, hat: 'fedora', extra: ['scar'], scale: 1.03 },
   sched: f => { const bar = inSite('tavern', -2.0, -6.2); const sc = s(bar.x, bar.z, Math.PI / 2, 'idle', 0, bar.y); const ig = seat(5);
-    if (f.has('jetonStolen')) { const t0 = at(22, 6);
-      sc.wait(at(22, 5, 40), 'idle').walk([[ig.x + 0.4, ig.z + 0.4]], 1.2, 'walk', ig.y).wait(t0 + 5, 'talk', ig.ry).wait(t0 + 30, 'yell').walk([[TAV(-3.2, -1.2).x, TAV(-3.2, -1.2).z]], 1, 'walk', ig.y).wait(at(22, 8), 'idle')
-        .walk([[TAV_DOOR.x, TAV_DOOR.z], [16, 9], [14, 0], [9, 0], [-14, 0], [-14, 50], [-12, 56]], 1.7).end('idle'); return sc.kfs; }
-    sc.wait(at(22, 5, 40), 'idle').walk([[ig.x + 0.5, ig.z + 0.5]], 1.2, 'walk', ig.y).wait(at(22, 6, 15), 'talk', ig.ry).walk([[TAV_DOOR.x, TAV_DOOR.z]], 1.2, 'walk', undefined)
-      .walk([[17, 9], [17, 19], [45.2, 19.8], [45.25, 21.8]], 1.9).wait(at(22, 10), 'idle', 0).walk([[45.25, 24.2]], 1, 'walk', floorY('contora')).wait(at(22, 12, 50), 'idle', Math.PI)
-      .walk([[45.25, 21.5], [38, 19.5], [17, 18], [14, 0], [9, 0], [-14, 0], [-14, 50], [-12, 56]], 1.9, 'walk').end('idle'); return sc.kfs; } });
+    if (f.has('jetonStolen') || f.has('nedLeftEarly')) { const t0 = at(22, 4);
+      sc.wait(at(22, 3, 50), 'idle').walk([[ig.x + 0.4, ig.z + 0.4]], 1.2, 'walk', ig.y).wait(t0 + 5, 'talk', ig.ry).wait(t0 + 30, 'yell').walk([[TAV(-3.2, -1.2).x, TAV(-3.2, -1.2).z]], 1, 'walk', ig.y).wait(at(22, 6), 'idle')
+        .walk([[TAV_DOOR.x, TAV_DOOR.z], [16, 9], [14, 0], [9, 0], [-14, 0], [-14, 50], [-12, 56]], 1.35).end('idle'); return sc.kfs; }
+    sc.wait(at(22, 3, 50), 'idle').walk([[ig.x + 0.5, ig.z + 0.5]], 1.2, 'walk', ig.y).wait(at(22, 4, 40), 'talk', ig.ry).walk([[TAV_DOOR.x, TAV_DOOR.z]], 1.2, 'walk', undefined)
+      .walk([[17, 9], [17, 19], [45.2, 19.8], [45.25, 21.8]], 1.3).wait(at(22, 10), 'idle', 0).walk([[45.25, 24.2]], 1, 'walk', floorY('contora')).wait(at(22, 12, 50), 'idle', Math.PI)
+      .walk([[45.25, 21.5], [38, 19.5], [17, 18], [14, 0], [9, 0], [-14, 0], [-14, 50], [-12, 56]], 1.35, 'walk').end('idle'); return sc.kfs; } });
 add({ id: 'cord', name: { ru: 'Корд', en: 'Cord' }, key: true, look: { body: 'james', coat: 0x26292d, trou: 0x1c1c1e, hat: 'peaked', long: true, scale: 1.05 },
   sched: () => { const sc = s(-9.2, 62.2, Math.PI / 2, 'idle', 0); sc.hide(0); sc.show(at(22, 34), -7.4, 57.8, 'walk', Math.PI * 1.2).walk([[-6.1, 60.2]], 1.4).wait(at(22, 35, 20), 'yell', Math.PI / 2).walk([[-7.8, 57]], 1.2).hide(at(22, 37)); return sc.done(); } });
 add({ id: 'foma', name: { ru: 'Фома', en: 'Foma' }, key: true, look: { body: 'james', coat: 0x4a4238, trou: 0x2e2c2a, hat: 'none', extra: ['apron'], scale: 0.96, hair: 0x7a7a72 },
+  // D6: behind the counter; 22:28 smells gas; 22:30 runs out with his box and stands in the street until the end
   sched: f => { const i = inSite('foma', -0.2, -3.5); const door = loc('foma', 0, 1.2); const sc = s(i.x, i.z, 0, 'idle', 0, i.y);
-    const leave = f.has('fomaWarned') ? at(22, 24) : at(22, 29, 20);
-    sc.wait(at(22, 20), 'idle').walk([[loc('foma', -1.5, -3.5).x, loc('foma', -1.5, -3.5).z]], 0.7, 'walk', i.y).wait(leave, 'idle', Math.PI * 0.5).walk([[loc('foma', 0, -0.3).x, loc('foma', 0, -0.3).z], [door.x, door.z], [door.x + 1.5, door.z + 4]], 1.4, 'walk').wait(sc.ct + 4, 'idle', Math.PI).end('cry', Math.PI); return sc.kfs; } });
+    const leave = f.has('fomaWarned') ? Math.max(at(22, 24), f.at('fomaWarned')! + 30) : at(22, 30);
+    sc.wait(Math.min(leave - 90, at(22, 28)), 'idle').walk([[loc('foma', -1.5, -3.5).x, loc('foma', -1.5, -3.5).z]], 0.7, 'walk', i.y).wait(leave, 'phone', Math.PI * 0.5)
+      .walk([[loc('foma', 0, -1.0).x, loc('foma', 0, -1.0).z], [loc('foma', 0, 0.4).x, loc('foma', 0, 0.4).z], [door.x + 1.5, door.z + 4]], 3.2, 'run').wait(sc.ct + 4, 'idle', Math.PI).end('cry', Math.PI); return sc.kfs; } });
 add({ id: 'gayl', name: { ru: 'Гейл', en: 'Gayl' }, key: true, look: { body: 'james', coat: 0x3a352e, trou: 0x252628, hat: 'none', scale: 1.0, hair: 0x6a6a64 },
   sched: f => { const p = inSite('contora', -1.25, -5.0); const sc = s(p.x, p.z, Math.PI, 'idle', 0, p.y); const yard = { x: 41.5, z: 33.5 };
-    if (f.has('annaWarned') || f.has('gaylWarned')) { const tf = f.at('gaylWarned') ?? f.at('annaWarned')!; sc.wait(Math.max(tf, at(22, 6)), 'idle').walk([[loc('contora', -1.25, -0.5).x, loc('contora', -1.25, -0.5).z], [45, 20], [34, 19], [14, 18], [14, -5], [30, -30], [46, -47], [50, -52]], 1.6).end('idle'); return sc.kfs; }
-    if (f.has('jetonStolen')) { sc.wait(at(22, 20), 'idle').walk([[loc('contora', -1.25, -0.5).x, loc('contora', -1.25, -0.5).z], [45, 20], [34, 19], [14, 18], [14, -5], [30, -30], [46, -47], [50, -52]], 1.6).end('idle'); return sc.kfs; }
+    if (f.has('annaWarned') || f.has('gaylWarned')) { const tf = f.at('gaylWarned') ?? f.at('annaWarned')!; sc.wait(Math.max(tf, at(22, 6)), 'idle').walk([[loc('contora', -1.25, -0.5).x, loc('contora', -1.25, -0.5).z], [45, 20], [34, 19], [14, 18], [14, -5], [30, -30], [46, -47], [50, -52]], 1.35).end('idle'); return sc.kfs; }
+    if (f.has('jetonStolen') || f.has('nedLeftEarly')) { sc.wait(at(22, 20), 'idle').walk([[loc('contora', -1.25, -0.5).x, loc('contora', -1.25, -0.5).z], [45, 20], [34, 19], [14, 18], [14, -5], [30, -30], [46, -47], [50, -52]], 1.35).end('idle'); return sc.kfs; }
     sc.wait(at(22, 10, 40), 'idle').wait(at(22, 11, 30), 'hit').wait(at(22, 12), 'die').wait(at(22, 13), 'die').teleport(yard.x, yard.z, undefined, 0.4, 'die').wait(at(22, 14), 'die').end('die', 0.4); return sc.kfs; } });
 // ============ EAST: orphanage
 add({ id: 'agnia', name: { ru: 'Матушка Агния', en: 'Mother Agnia' }, key: true, look: { body: 'liza', coat: 0x1d1e20, trou: 0x1c1c1e, skirt: true, long: true, hat: 'nun', scale: 0.96, hair: 0x9a9a94 },

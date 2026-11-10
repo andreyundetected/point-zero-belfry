@@ -17,7 +17,7 @@ export class Hud {
   ghost(on: boolean) { $('ghost').style.display = on ? 'block' : 'none'; }
   sync(on: boolean) { const s = $('sync'); s.style.display = on ? 'block' : 'none'; s.textContent = tr('sync'); }
   update(dt: number) {
-    this.tickNewp(dt);
+    this.tickNewp(dt); this.tickNotes(dt);
     if (this.subT > 0 && (this.subT -= dt) <= 0) $('sub').style.display = 'none';
     if (this.toastT > 0 && (this.toastT -= dt) <= 0) $('toast').style.opacity = '0';
     if (this.threadT > 0 && (this.threadT -= dt) <= 0) $('thread').style.opacity = '0';
@@ -28,6 +28,10 @@ export class Hud {
   setPortrait(img: string) { const im = $('newp-img') as HTMLImageElement; im.src = img; im.style.display = 'block'; }
   pocket(label: string | null) { const p = $('pocket'); p.classList.toggle('has', !!label); (p.querySelector('.nm') as HTMLElement).textContent = label ?? 'Карман пуст'; (p.querySelector('.ic') as HTMLElement).textContent = label ? '◉' : '◌'; }
   tickNewp(dt: number) { if (this.newpT > 0 && (this.newpT -= dt) <= 0) { const e = $('newp'); e.style.opacity = '0'; setTimeout(() => { if (this.newpT <= 0) e.style.display = 'none'; }, 500); } }
+  /** B1: stacked notifications (max 3, 4 s each), top right under the new-person card */
+  private notes: { el: HTMLElement; t: number }[] = [];
+  notify(text: string, glyph = '') { const box = $('notes'); const el = document.createElement('div'); el.className = 'note'; el.innerHTML = (glyph ? `<span class="glyph">${glyph}</span> ` : '') + text; box.appendChild(el); this.notes.push({ el, t: 4.5 }); while (this.notes.length > 3) { this.notes.shift()!.el.remove(); } }
+  tickNotes(dt: number) { for (const n of this.notes) { n.t -= dt; if (n.t < 0.6) n.el.style.opacity = String(Math.max(0, n.t / 0.6)); } this.notes = this.notes.filter(n => { if (n.t <= 0) { n.el.remove(); return false; } return true; }); }
   lang() { return getLang(); }
   refresh() { $('hint').textContent = tr('hint.controls'); }
 }
