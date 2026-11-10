@@ -4,7 +4,9 @@ export interface Road { id: string; pts: V2[]; w: number; walk?: number; kind?: 
 export interface Rect { id: string; x0: number; x1: number; z0: number; z1: number; kind: 'setts' | 'flags' | 'yard'; }
 
 export const WATER_Y = -2.9;      // canal and harbour water level
-export const BED_Y = -3.6;        // canal/harbour bed
+export const BED_Y = -3.6;        // harbour bed
+// G3: the canal is cut deep into the flat town: water 4.5 m below the embankment, held by a lock gate at the harbour mouth
+export const CANAL_WATER_Y = -4.6, CANAL_BED_Y = -5.4;
 export const CANAL = { x0: -6, x1: 6, z0: -90, z1: 58 };
 export const QUAY_Z = 58;         // harbour line
 export const BOUNDS = { x0: -92, x1: 92, z0: -86, z1: 90 };

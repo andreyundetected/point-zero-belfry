@@ -1,6 +1,6 @@
 import { world, Box } from '../world/colliders';
 import { groundH, inCanal, inHarbour } from '../world/terrain';
-import { BOUNDS, WATER_Y } from '../world/layout';
+import { BOUNDS, WATER_Y, CANAL_WATER_Y } from '../world/layout';
 
 export const R = 0.32, HEIGHT = 1.75, STEP = 0.42, G = 15, JUMP_V = 5.2;
 export interface Body { x: number; y: number; z: number; vx: number; vz: number; vy: number; grounded: boolean; inWater: boolean; }
@@ -60,7 +60,7 @@ export function stepBody(p: Body, wishX: number, wishZ: number, run: boolean, ju
   if (p.vy > 0) for (const b of world.near(p.x, p.z)) { // bump head on ceilings
     if (!b.off && b.y0 > p.y + head - 0.3 && b.y0 < p.y + head + p.vy * dt + 0.05 && circleHitsBox(p.x, p.z, R * 0.8, b)) { p.vy = 0; break; }
   }
-  p.inWater = p.y < WATER_Y - 0.5 && (inCanal(p.x, p.z) || inHarbour(p.z));
+  p.inWater = (inHarbour(p.z) && p.y < WATER_Y - 0.5) || (inCanal(p.x, p.z) && p.y < CANAL_WATER_Y + 0.2);
 }
 
 /** can a point at (ax,ay,az) see (bx,by,bz)? Walls, closed doors and the cellar block sight; furniture does not. */

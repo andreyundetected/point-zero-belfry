@@ -36,6 +36,7 @@ function blob(kind: 'flame' | 'smoke') {
 const flame = blob('flame'), smokeT = blob('smoke');
 const MAXB = 30, PPB = 60, SPB = 4;
 export class Burn {
+  sparks!: THREE.Points; kmat!: THREE.ShaderMaterial;
   starts = new Map<Placed, number>(); active: Placed[] = []; flames: THREE.Points; smoke: THREE.Points; chars: THREE.InstancedMesh; mat: THREE.ShaderMaterial; smat: THREE.ShaderMaterial; t = 0; fv = ''; count = 0;
   constructor(public scene: THREE.Scene) {
     const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MAXB * PPB * 3), 3)); fg.setAttribute('aSize', new THREE.BufferAttribute(new Float32Array(MAXB * PPB), 1)); fg.setAttribute('aPhase', new THREE.BufferAttribute(new Float32Array(MAXB * PPB), 1)); fg.setDrawRange(0, 0);
@@ -46,8 +47,13 @@ export class Burn {
     const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MAXB * SPB * 3), 3)); sg.setAttribute('aSize', new THREE.BufferAttribute(new Float32Array(MAXB * SPB), 1)); sg.setAttribute('aPhase', new THREE.BufferAttribute(new Float32Array(MAXB * SPB), 1)); sg.setDrawRange(0, 0);
     this.smat = new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, map: { value: smokeT }, uScale: { value: 520 } }, transparent: true, depthWrite: false, fog: false,
       vertexShader: 'attribute float aSize; attribute float aPhase; uniform float uTime, uScale; varying float vK; void main(){ float k = fract(uTime*0.07+aPhase); vec3 p = position + vec3(k*9.0, 4.0+k*34.0, k*3.0); vec4 mv = modelViewMatrix*vec4(p,1.); gl_PointSize = min(300.0, aSize*(0.6+k*2.6)*uScale/max(0.5,-mv.z)); gl_Position = projectionMatrix*mv; vK = k; }',
-      fragmentShader: 'uniform sampler2D map; varying float vK; void main(){ vec4 c = texture2D(map, gl_PointCoord); gl_FragColor = vec4(vec3(0.035,0.03,0.03), c.a*(1.0-vK)*0.5); }' });
+      fragmentShader: 'uniform sampler2D map; varying float vK; void main(){ vec4 c = texture2D(map, gl_PointCoord); vec3 col = mix(vec3(0.42,0.15,0.04), vec3(0.035,0.03,0.03), smoothstep(0.0,0.3,vK)); gl_FragColor = vec4(col, c.a*(1.0-vK)*0.55); /* lit from below by the fire */ }' });
     this.smoke = new THREE.Points(sg, this.smat); this.smoke.frustumCulled = false; this.smoke.renderOrder = 3; scene.add(this.smoke);
+    const kg = new THREE.BufferGeometry(); kg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MAXB * 10 * 3), 3)); kg.setAttribute('aPhase', new THREE.BufferAttribute(new Float32Array(MAXB * 10), 1)); kg.setDrawRange(0, 0);
+    this.kmat = new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+      vertexShader: 'attribute float aPhase; uniform float uTime; varying float vK; void main(){ float k = fract(uTime*0.45+aPhase); vec3 p = position + vec3(sin(aPhase*50.+uTime)*2.5*k, k*16., cos(aPhase*37.)*2.5*k); vec4 mv = modelViewMatrix*vec4(p,1.); gl_PointSize = 70.0/max(1.0,-mv.z); gl_Position = projectionMatrix*mv; vK = k; }',
+      fragmentShader: 'varying float vK; void main(){ float d = length(gl_PointCoord-0.5); if (d > 0.5) discard; gl_FragColor = vec4(vec3(1.0,0.7,0.25)*(1.0-vK), (1.0-vK)*(1.0-d*2.0)); }' });
+    this.sparks = new THREE.Points(kg, this.kmat); this.sparks.frustumCulled = false; scene.add(this.sparks);
     this.chars = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0x050403, transparent: true, opacity: 0.62, depthWrite: false }), MAXB); this.chars.frustumCulled = false; this.chars.count = 0; scene.add(this.chars);
   }
   rebuild(f: Flags) { this.fv = f.hash(); this.starts.clear(); for (const b of placed) { const s = burnStart(b, f); if (s < Infinity) this.starts.set(b, s); } }
@@ -55,7 +61,7 @@ export class Burn {
   fireAt(x: number, z: number, t: number, f: Flags): boolean { for (const b of this.starts.keys()) { const s = this.starts.get(b)!; if (t < s + 30 || t > burnEnd(b, s)) continue; const dx = x - b.x, dz = z - b.z, c = Math.cos(b.ry), sn = Math.sin(b.ry), lx = dx * c - dz * sn, lz = dx * sn + dz * c; if (Math.abs(lx) < b.w / 2 + 1 && lz < 1 && lz > -b.depth - 1) return true; } void f; return false; }
   /** burning fraction of the city (for the glow in the sky) and the nearest burning buildings (for lights) */
   update(t: number, f: Flags, px: number, pz: number, dt: number) {
-    this.t += dt; this.mat.uniforms.uTime.value = this.t; this.smat.uniforms.uTime.value = this.t;
+    this.t += dt; this.mat.uniforms.uTime.value = this.t; this.kmat.uniforms.uTime.value = this.t; this.smat.uniforms.uTime.value = this.t;
     const ver = f.hash(); if (ver !== this.fv) { this.fv = ver; this.starts.clear(); for (const b of placed) { const s = burnStart(b, f); if (s < Infinity) this.starts.set(b, s); } }
     this.refresh = (this.refresh ?? 0) - dt; if (this.refresh > 0) return; this.refresh = 0.7;
     const cand: { b: Placed; d: number; k: number; age: number }[] = []; let burning = 0;
@@ -63,6 +69,7 @@ export class Burn {
     cand.sort((a, b) => a.d - b.d); const use = cand.slice(0, MAXB); this.active = use.map(u => u.b); this.burning = burning; this.lightList = use.slice(0, 8).map(u => ({ x: u.b.x, z: u.b.z, y: u.b.base + Math.min(8, u.b.H * 0.6), k: u.k }));
     const pos = (this.flames.geometry.attributes.position as THREE.BufferAttribute), sz = this.flames.geometry.attributes.aSize as THREE.BufferAttribute, ph = this.flames.geometry.attributes.aPhase as THREE.BufferAttribute;
     const spos = (this.smoke.geometry.attributes.position as THREE.BufferAttribute), ssz = this.smoke.geometry.attributes.aSize as THREE.BufferAttribute, sph = this.smoke.geometry.attributes.aPhase as THREE.BufferAttribute;
+    const kpos = this.sparks.geometry.attributes.position as THREE.BufferAttribute, kph = this.sparks.geometry.attributes.aPhase as THREE.BufferAttribute; let kn = 0;
     let n = 0, sn = 0; const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(); let ci = 0;
     use.forEach(({ b, k, age }) => {
       const c = Math.cos(b.ry), sn_ = Math.sin(b.ry), P = (lx: number, ly: number, lz: number) => [b.x + lx * c + lz * sn_, b.base + ly, b.z - lx * sn_ + lz * c];
@@ -70,11 +77,12 @@ export class Burn {
       for (let i = 0; i < nF; i++) { const r1 = hash(b.x + i, b.z), r2 = hash(i, b.z * 1.3), r3 = hash(b.x * 0.7, i + 3);
         const kind = i % 3, lx = (r1 - 0.5) * b.w, ly = kind === 0 ? b.H * (0.75 + 0.3 * r2) : b.H * (0.12 + 0.7 * r2), lz = kind === 2 ? -r3 * b.depth : 0.5 + r3 * 0.4;
         const [x, y, z] = P(lx, ly, lz); pos.setXYZ(n, x, y, z); sz.setX(n, (2.4 + r3 * 2.2) * k * wane * (kind === 0 ? 1.4 : 1)); ph.setX(n, r1 * 7.3); n++; }
+      if (k > 0.2) for (let i = 0; i < 10; i++) { const [x, y, z] = P((hash(i, b.z) - 0.5) * b.w * 0.8, b.H * 0.8, -b.depth * hash(b.x, i)); kpos.setXYZ(kn, x, y, z); kph.setX(kn, hash(i + 3, b.x + b.z)); kn++; }
       for (let i = 0; i < SPB; i++) { const [x, y, z] = P((hash(i, b.x) - 0.5) * b.w * 0.8, b.H, -b.depth * (0.2 + 0.6 * hash(b.z, i))); spos.setXYZ(sn, x, y, z); ssz.setX(sn, 7 + hash(i, b.z) * 6); sph.setX(sn, hash(b.x, i + b.z)); sn++; }
       m4.compose(new THREE.Vector3(...(P(0, b.H / 2 - 1.4, -b.depth / 2) as [number, number, number])), q.setFromEuler(new THREE.Euler(0, b.ry, 0)), new THREE.Vector3(b.w + 0.25, b.H + 1.2, b.depth + 0.25)); this.chars.setMatrixAt(ci++, m4);
       (this.chars.material as THREE.MeshBasicMaterial).opacity = 0.5;
     });
-    pos.needsUpdate = sz.needsUpdate = ph.needsUpdate = true; spos.needsUpdate = ssz.needsUpdate = sph.needsUpdate = true; this.flames.geometry.setDrawRange(0, n); this.smoke.geometry.setDrawRange(0, sn); this.chars.count = ci; this.chars.instanceMatrix.needsUpdate = true; this.count = n;
+    pos.needsUpdate = sz.needsUpdate = ph.needsUpdate = true; spos.needsUpdate = ssz.needsUpdate = sph.needsUpdate = true; this.flames.geometry.setDrawRange(0, n); kpos.needsUpdate = kph.needsUpdate = true; this.sparks.geometry.setDrawRange(0, kn); this.smoke.geometry.setDrawRange(0, sn); this.chars.count = ci; this.chars.instanceMatrix.needsUpdate = true; this.count = n;
   }
   refresh = 0; burning = 0; lightList: { x: number; y: number; z: number; k: number }[] = [];
   /** share of the city on fire, 0..1 (sky glow) */

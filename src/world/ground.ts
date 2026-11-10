@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { M } from '../render/materials';
-import { BED_Y, BOUNDS } from './layout';
+import { BED_Y, BOUNDS, CANAL_BED_Y } from './layout';
 import { groundH, hash, surfaceAt, Surface, vnoise } from './terrain';
 import { world } from './colliders';
 
@@ -45,5 +45,5 @@ export function buildGround(scene: THREE.Scene) {
   }
   // dark bed under canal and harbour so the water reads as deep
   const bed = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshStandardMaterial({ color: 0x050607, roughness: 1 }));
-  bed.rotation.x = -Math.PI / 2; bed.position.set(0, BED_Y, 0); scene.add(bed);
+  bed.rotation.x = -Math.PI / 2; bed.position.set(0, CANAL_BED_Y - 0.05, 0); scene.add(bed); void BED_Y;
 }

@@ -104,6 +104,14 @@ export function building(bt: Batcher, scene: THREE.Scene, o: BuildingOpts): Buil
     if (R(f + b * 5) < 0.35 && !L_) { box(M.wood, ww * 0.55, wh + 0.1, 0.04, cx - ww * 0.8, wy, 0.08, 1); box(M.wood, ww * 0.55, wh + 0.1, 0.04, cx + ww * 0.8, wy, 0.08, 1); }
     if (f >= 1 && R(f * 3 + b) < 0.12) { box(M.stone, ww + 0.9, 0.12, 0.8, cx, y0 + 0.95, 0.4, 1.2); for (let k = 0; k < 7; k++) box(M.iron, 0.025, 0.85, 0.025, cx - (ww + 0.8) / 2 + k * (ww + 0.8) / 6, y0 + 1.42, 0.78); box(M.iron, ww + 0.9, 0.04, 0.04, cx, y0 + 1.85, 0.78); }
   }
+  // G1(г): the side walls get windows, a drainpipe and a painted firewall advert now and then, so no big blank plane
+  if (!o.hollow) for (const sd of [-1, 1]) {
+    if (R(40 + sd) < 0.25) continue; const fx = sd * (w / 2 + 0.03), n = Math.max(1, Math.floor((depth - 1.5) / 3));
+    for (let f = 0; f < floors; f++) for (let k = 0; k < n; k++) { if (R(f * 7 + k * 3 + sd * 11) < 0.35) continue; const lz = -1.6 - k * ((depth - 2.4) / Math.max(1, n - 1 || 1)), y = f * FH + 0.35 + 1.0 + 0.85, L_ = R(f + k * 13 + sd) < lit * 0.8;
+      box(M.frame, 0.06, 1.85, 1.1, fx, y, lz); box(L_ ? M.lit : M.glass, 0.02, 1.6, 0.86, fx + sd * 0.035, y, lz); box(M.cornice, 0.2, 0.08, 1.3, fx, y - 0.95, lz, 1.2); }
+    if (R(50 + sd) < 0.5) box(M.iron, 0.09, H, 0.09, fx + sd * 0.05, H / 2, -depth + 0.4);
+    if (floors >= 3 && R(60 + sd) < 0.18) { const ad = signMesh(['МЫЛО «СВЕТ»', 'ТАБАК · ГИЛЬЗЫ', 'ШВЕЙНЫЕ МАШИНЫ', 'ПИВО «ЯКОРНОЕ»'][Math.floor(R(61) * 4)], Math.min(depth - 2, 5), 1.6); const [X, Y, Z] = P(fx + sd * 0.06, H * 0.62, -depth / 2); ad.position.set(X, Y, Z); ad.rotation.y = ry + sd * Math.PI / 2; scene.add(ad); }
+  }
   if (sign) { const sg = signMesh(sign, Math.min(w * 0.7, 5), 0.6); const [X, Y, Z] = P(0, 3.25, 0.18); sg.position.set(X, Y, Z); sg.rotation.y = ry; scene.add(sg); }
   box(M.iron, 0.09, H, 0.09, w / 2 - 0.25, H / 2, 0.12);
   if (roof === 'gable') {

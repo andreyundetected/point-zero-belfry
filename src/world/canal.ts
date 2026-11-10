@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { M } from '../render/materials';
 import { Batcher, mtx } from './batch';
-import { BARGE, BED_Y, BRIDGE, bridgeTop, CANAL, DECK_Y, PIER3, PIER7, PierSpec, QUAY_Z, WATER_Y } from './layout';
+import { BARGE, BED_Y, CANAL_BED_Y, CANAL_WATER_Y, BRIDGE, bridgeTop, CANAL, DECK_Y, PIER3, PIER7, PierSpec, QUAY_Z, WATER_Y } from './layout';
 import { world } from './colliders';
 import { groundH } from './terrain';
 import { lamp } from './lamps';
@@ -14,8 +14,11 @@ function wallRun(bt: Batcher, ax: number, az: number, bx: number, bz: number, to
   const ry = Math.atan2(bz - az, bx - ax);
   for (let i = 0; i < n; i++) {
     const t = (i + 0.5) / n, cx = ax + (bx - ax) * t, cz = az + (bz - az) * t, top = topFn(cx, cz), l = len / n + 0.04;
-    const h = top - BED_Y;
-    bt.box(M.stone, l, h, thick, mtx(cx, BED_Y + h / 2, cz, -ry), 1.6);
+    const bed = CANAL_BED_Y, h = top - bed;
+    bt.box(M.stone, l, h, thick, mtx(cx, bed + h / 2, cz, -ry), 1.6);
+    // wet streaks and a mooring ring now and then on the water side
+    if (Math.floor(cx * 3 + cz * 7) % 5 === 0) { const sx = Math.sign(cx) || 1; bt.box(M.dark, 0.6, 2.2, 0.02, mtx(cx - sx * (thick / 2 + 0.01), CANAL_WATER_Y + 1.6, cz, Math.PI / 2), 1); }
+    if (Math.floor(cz) % 9 === 0) { const sx = Math.sign(cx) || 1; bt.box(M.iron, 0.05, 0.3, 0.3, mtx(cx - sx * (thick / 2 + 0.03), CANAL_WATER_Y + 1.1, cz, 0), 1); }
     if (rail) {
       bt.box(M.cornice, l, 0.16, thick + 0.3, mtx(cx, top + 0.04, cz, -ry), 1.2);
       world.add(cx, cz, l / 2, 0.22, -ry, top - 0.2, top + RAIL_COL, 'rail');
@@ -35,13 +38,13 @@ export function buildCanal(scene: THREE.Scene, bt: Batcher) {
   const STAIRS: { side: number; z: number; dir: number }[] = [{ side: -1, z: 6, dir: 1 }, { side: 1, z: -6, dir: -1 }, { side: 1, z: 6, dir: 1 }, { side: -1, z: -6, dir: -1 }];
   for (const s of STAIRS) {
     const x = s.side * 5.3;
-    for (let k = 0; k < 10; k++) {
+    for (let k = 0; k < 15; k++) {
       const top = groundH(s.side * 6.8, s.z) - 0.04 - 0.3 * k, cz = s.z + s.dir * (0.25 + 0.5 * k);
-      bt.box(M.stone, 1.5, top - BED_Y, 0.52, mtx(x, BED_Y + (top - BED_Y) / 2, cz, 0), 1.2);
-      world.add(x, cz, 0.75, 0.26, 0, BED_Y, top, 'stair');
+      bt.box(M.stone, 1.5, top - CANAL_BED_Y, 0.52, mtx(x, CANAL_BED_Y + (top - CANAL_BED_Y) / 2, cz, 0), 1.2);
+      world.add(x, cz, 0.75, 0.26, 0, CANAL_BED_Y, top, 'stair');
     }
   }
-  const stairGaps = (side: number) => STAIRS.filter(s => s.side === side).map(s => (s.dir > 0 ? [s.z - 0.6, s.z + 5.6] : [s.z - 5.6, s.z + 0.6]) as [number, number]);
+  const stairGaps = (side: number) => STAIRS.filter(s => s.side === side).map(s => (s.dir > 0 ? [s.z - 0.6, s.z + 8.1] : [s.z - 8.1, s.z + 0.6]) as [number, number]);
   for (const side of [-1, 1]) {
     for (const [a, b] of gaps(CANAL.z0, QUAY_Z, stairGaps(side))) {
       const xs = side * (CANAL.x1 + 0.6);
@@ -52,8 +55,11 @@ export function buildCanal(scene: THREE.Scene, bt: Batcher) {
     // stair gaps still get plain walls on the water side below the stair so you can't walk into the water except via stairs
   }
   // north end of the canal: closed by a wall with the (closed) footbridge fence
-  bt.box(M.stone, 12.4, 6, 1.2, mtx(0, BED_Y + 3, CANAL.z0 - 0.6), 1.6);
-  world.add(0, CANAL.z0 - 0.6, 6.2, 0.6, 0, BED_Y, 3, 'solid');
+  bt.box(M.stone, 12.4, 6, 1.2, mtx(0, CANAL_BED_Y + 3, CANAL.z0 - 0.6), 1.6);
+  world.add(0, CANAL.z0 - 0.6, 6.2, 0.6, 0, CANAL_BED_Y, 3, 'solid');
+  // the lock gate at the harbour mouth holds the canal 1.7 m below the harbour
+  bt.box(M.wood, 12.4, WATER_Y - CANAL_BED_Y + 0.5, 0.6, mtx(0, (WATER_Y + CANAL_BED_Y + 0.5) / 2, QUAY_Z - 0.4, 0), 1); bt.box(M.iron, 12.6, 0.2, 0.8, mtx(0, WATER_Y + 0.6, QUAY_Z - 0.4, 0), 1);
+  world.add(0, QUAY_Z - 0.4, 6.2, 0.3, 0, CANAL_BED_Y, WATER_Y + 0.7, 'solid');
   // closed footbridge z=-84: boards across the entrance and a sign
   for (const side of [-1, 1]) {
     const x = side * 8.3, z = -82.5;
@@ -93,7 +99,7 @@ export function buildCanal(scene: THREE.Scene, bt: Batcher) {
       world.add(x, pz, seg / 2 + 0.01, 0.25, 0, top, top + RAIL_COL, 'rail');
     }
     // arch soffit under the deck, so the underside is stone and not hollow
-    const arch = th + 1.3 * (1 - Math.abs(x / 9) ** 2.2);
+    const arch = th + 1.3 * (1 - Math.abs(x / 9) ** 2.2) + 0.6;
     bt.box(M.stone, seg + 0.02, arch, 5.6, mtx(x, top - th - arch / 2 + 0.02, 0, 0), 1.6);
   }
   // D4: repairs on the north half of the bridge (sawhorses, planks, barrels): the walkway in the middle is 3 m wide and Ned stands on it
@@ -107,7 +113,8 @@ export function buildCanal(scene: THREE.Scene, bt: Batcher) {
 /** harbour + canal water */
 export function buildWater(scene: THREE.Scene) {
   const mat = new THREE.MeshPhysicalMaterial({ color: 0x03060a, roughness: 0.06, clearcoat: 1, envMapIntensity: 2 });
-  const w = new THREE.Mesh(new THREE.PlaneGeometry(700, 700), mat); w.rotation.x = -Math.PI / 2; w.position.set(0, WATER_Y, 0); scene.add(w);
+  const w = new THREE.Mesh(new THREE.PlaneGeometry(700, 340), mat); w.rotation.x = -Math.PI / 2; w.position.set(0, WATER_Y, QUAY_Z - 0.1 + 170); scene.add(w);
+  const c = new THREE.Mesh(new THREE.PlaneGeometry(CANAL.x1 - CANAL.x0 + 1, QUAY_Z - CANAL.z0), mat); c.rotation.x = -Math.PI / 2; c.position.set(0, CANAL_WATER_Y, (QUAY_Z + CANAL.z0) / 2 - 0.4); scene.add(c);
 }
 
 export function buildPiers(scene: THREE.Scene, bt: Batcher) {

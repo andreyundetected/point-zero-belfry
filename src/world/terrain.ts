@@ -1,5 +1,5 @@
 // Single source of truth for ground height. Everything stands on groundH(x,z).
-import { BARGE, BED_Y, bridgeTop, CANAL, DECK_Y, PIER3, PIER7, QUAY_Z, RECTS, ROADS, V2 } from './layout';
+import { BARGE, BED_Y, CANAL_BED_Y, bridgeTop, CANAL, DECK_Y, PIER3, PIER7, QUAY_Z, RECTS, ROADS, V2 } from './layout';
 
 export function hash(x: number, z: number): number {
   const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453;
@@ -47,7 +47,8 @@ export function hillH(x: number, z: number) {
   return 6 * g;
 }
 export function groundH(x: number, z: number): number {
-  if (inCanal(x, z) || inHarbour(z)) return BED_Y;
+  if (inCanal(x, z) && !inHarbour(z)) return CANAL_BED_Y;
+  if (inHarbour(z)) return BED_Y;
   let h = -z * SLOPE + hillH(x, z);
   const rd = roadDist(x, z);
   let inRect = false;
