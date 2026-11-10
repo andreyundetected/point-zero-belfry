@@ -25,25 +25,25 @@ export function buildTower(scene: THREE.Scene, bt: Batcher, pf: PropField) {
     bt.box(M.stone, len, 1.25, 0.5, mtx(px, top + 0.625, pz, a), 1.4); bt.box(M.cornice, len + 0.1, 0.12, 0.64, mtx(px, top + 1.3, pz, a), 1.2); world.add(px, pz, len / 2, 0.25, a, top - 0.2, top + 1.5, 'rail');
     const rx = cx + dx * (OCT - 0.5) + Math.cos(a) * 3.1 * 0, rz = cz + dz * (OCT - 0.5); void rx; void rz; }
   // ---- Tesla coil: stepped base, copper winding, toroid and a glowing sphere; four lightning rods on the rim
-  const coil = new THREE.Group(); coil.position.set(cx, top, cz + 0.5); scene.add(coil);
+  const coil = new THREE.Group(); coil.position.set(cx, top, cz - 1.5); scene.add(coil);
   const mk = (geo: THREE.BufferGeometry, mat: THREE.Material, y: number) => { const m = new THREE.Mesh(geo, mat); m.position.y = y; m.castShadow = true; coil.add(m); return m; };
   mk(new THREE.CylinderGeometry(1.9, 2.1, 0.4, 20), M.cornice, 0.2); mk(new THREE.CylinderGeometry(1.35, 1.6, 0.4, 20), brass, 0.6); mk(new THREE.CylinderGeometry(0.75, 0.95, 0.5, 20), ins, 1.05);
   mk(new THREE.CylinderGeometry(0.32, 0.38, 6.0, 16), ins, 4.4); for (let i = 0; i < 24; i++) mk(new THREE.TorusGeometry(0.44, 0.045, 6, 18), copper, 2.0 + i * 0.2).rotation.x = Math.PI / 2;
   for (let i = 0; i < 6; i++) mk(new THREE.CylinderGeometry(0.62 - i * 0.05, 0.62 - i * 0.05, 0.08, 18), brass, 7.55 + i * 0.12);
   const tor = mk(new THREE.TorusGeometry(1.25, 0.42, 14, 32), copper, 8.7); tor.rotation.x = Math.PI / 2; const ball = mk(new THREE.SphereGeometry(0.3, 14, 10), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xbfe0ff).multiplyScalar(3) }), 9.4);
-  world.add(cx, cz + 0.5, 2.1, 2.1, 0, top, top + 1.7, 'furn'); void ball;
-  tesla.toroid = new THREE.Vector3(cx, top + 8.7, cz + 0.5);
+  world.add(cx, cz - 1.5, 1.95, 1.95, 0, top, top + 1.7, 'furn'); void ball;
+  tesla.toroid = new THREE.Vector3(cx, top + 8.7, cz - 1.5);
   for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4 + Math.PI / 8, rx = cx + Math.sin(a) * (OCT - 1.3), rz = cz + Math.cos(a) * (OCT - 1.3); const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.09, 3.4, 8), copper); rod.position.set(rx, top + 1.7, rz); scene.add(rod); const tip = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), brass); tip.position.set(rx, top + 3.45, rz); scene.add(tip); tesla.rods.push(new THREE.Vector3(rx, top + 3.5, rz)); world.add(rx, rz, 0.12, 0.12, 0, top, top + 3.4, 'solid'); }
   const arcMat = new THREE.LineBasicMaterial({ color: 0xa8d8ff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, fog: false });
   for (let i = 0; i < 6; i++) { const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(Array.from({ length: 14 }, () => new THREE.Vector3())), arcMat); ln.frustumCulled = false; scene.add(ln); tesla.arcs.push(ln); }
   const gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.TextureLoader().load('/textures/procedural/lamp_halo.png'), color: 0x9fd0ff, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, fog: false, opacity: 0.9 })); gl.scale.setScalar(9); gl.position.copy(tesla.toroid); scene.add(gl); tesla.glow = gl;
-  tesla.light = { room: 'roof', x: cx, y: top + 8.4, z: cz + 0.5, color: 0x8fc4ff, intensity: 28, dist: 26, on: () => true }; roomLights.push(tesla.light);
+  tesla.light = { room: 'roof', x: cx, y: top + 8.4, z: cz - 1.5, color: 0x8fc4ff, intensity: 28, dist: 26, on: () => true }; roomLights.push(tesla.light);
   roomLights.push({ room: 'roof', x: cx - 5.2, y: top + 2.4, z: cz - 1.5, color: 0xffb070, intensity: 8, dist: 12, on: () => true });
   // ---- giant clockwork gears standing against the parapet (they turn slowly) and a stone belfry on the north-east rim
   for (const [a, r] of [[Math.PI * 0.5, 1.9], [Math.PI * 1.25, 1.5], [Math.PI * 1.75, 1.7]] as [number, number][]) {
     const g = new THREE.Group(); const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.14, 8, 28), brass); g.add(ring); for (let i = 0; i < 8; i++) { const sp = new THREE.Mesh(new THREE.BoxGeometry(0.1, r * 2, 0.08), brass); sp.rotation.z = i * Math.PI / 8; g.add(sp); }
     for (let i = 0; i < 20; i++) { const th = i / 20 * Math.PI * 2, t = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.28, 0.16), brass); t.position.set(Math.cos(th) * (r + 0.1), Math.sin(th) * (r + 0.1), 0); t.rotation.z = th; g.add(t); }
-    g.position.set(cx + Math.sin(a) * (OCT - 0.9), top + r + 0.5, cz + Math.cos(a) * (OCT - 0.9)); g.rotation.y = a + Math.PI / 2; scene.add(g); tesla.gears.push(g); g.traverse(o => { o.castShadow = true; });
+    g.position.set(cx + Math.sin(a) * (OCT - 0.75), top + r + 0.5, cz + Math.cos(a) * (OCT - 0.75)); g.rotation.y = a; scene.add(g); tesla.gears.push(g); g.traverse(o => { o.castShadow = true; });
   }
   { const bx = cx + 4.6, bz = cz - 4.6; for (const [dx, dz] of [[-1.2, 0], [1.2, 0]]) { bt.box(M.stone, 0.5, 3.4, 0.5, mtx(bx + dx, top + 1.7, bz + dz, 0), 1.4); world.add(bx + dx, bz + dz, 0.25, 0.25, 0, top, top + 3.4, 'furn'); } bt.box(M.stone, 3.2, 0.5, 0.6, mtx(bx, top + 3.55, bz, 0), 1.4); pf.add('village_q/bell', bx, bz, { y: top + 1.4, h: 1.5, collide: false }); }
   // ---- console with glowing gauges, a tool chest, a bench, the hatch down

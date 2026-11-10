@@ -61,10 +61,14 @@ kbd{font:11px monospace;border:1px solid #4a463c;border-radius:3px;padding:0 4px
 #newp img{width:56px;height:56px;border:1px solid #444;filter:grayscale(1)}#newp .t{font-size:11px;letter-spacing:2px;color:#ff6a58;text-transform:uppercase}#newp .n{font-size:17px;margin-top:2px}#newp .s{font-size:12px;color:var(--dim);margin-top:2px}
 #notes{position:fixed;right:14px;top:132px;width:300px;display:flex;flex-direction:column;gap:6px;pointer-events:none}
 .note{background:rgba(8,9,11,.86);border:1px solid #3a3228;border-left:3px solid #8a6a3a;padding:6px 10px;font-size:14px;transition:opacity .3s}
+#weapon{position:fixed;left:14px;bottom:62px;min-width:176px;height:34px;box-sizing:border-box;border:1px solid #3a3228;background:rgba(8,9,11,.78);padding:4px 10px;font-size:14px;display:none;align-items:center;gap:8px;pointer-events:none}
+#mini{bottom:104px!important}
+#wait{position:fixed;left:50%;top:40%;transform:translateX(-50%);font-size:46px;color:#d8c9a0;text-shadow:0 0 12px #000;display:none;animation:spin 2s linear infinite;pointer-events:none}@keyframes spin{from{transform:translateX(-50%) rotate(0)}to{transform:translateX(-50%) rotate(180deg)}}
+#stv .tab kbd{margin-left:6px}
 </style></head>
 <body>
 <canvas id="mini" width="176" height="176"></canvas><div id="pocket"><div class="ic">◌</div><div class="nm">Карман пуст</div></div><div id="newp"><img id="newp-img" alt=""><div><div class="t">Встречен новый человек</div><div class="n" id="newp-n"></div><div class="s" id="newp-s"></div></div></div>
-<div id="notes"></div><div id="hint"></div><div id="clock"></div><div id="cross"></div><div id="prompt"></div><div id="sub"></div><div id="thread"></div><div id="toast"></div>
+<div id="notes"></div><div id="weapon"><div class="ic">⌐</div><div class="nm"></div><kbd>1</kbd></div><div id="wait">⧗</div><div id="hint"></div><div id="clock"></div><div id="cross"></div><div id="prompt"></div><div id="sub"></div><div id="thread"></div><div id="toast"></div>
 <div id="sync"></div><div id="ghost"></div><div id="red"></div><div id="flash"></div><div id="fade"></div>
 <div id="pause" style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;font-size:28px;letter-spacing:4px;cursor:pointer;color:#d8d2c4">ПАУЗА — клик, чтобы продолжить</div>
 <div id="loading" style="position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#8d887c;font-size:22px;letter-spacing:5px;z-index:50"><div>ЗАТОН · 1947</div><div style="font-size:13px;letter-spacing:2px;margin-top:14px;opacity:.6">загрузка…</div></div>

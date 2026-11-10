@@ -14,7 +14,7 @@ const HOSTILE_IDS = new Set(['ignat', 'lovchiy', 'scar', 'cord']);
 export class Combat {
   dyn = new Map<string, Dyn>(); aiming = false; lastShooter = ''; reloadT = 0; fireCool = 0; suspicion = new Map<string, number>(); hits = 0; muzzle = 0;
   constructor(public g: Game) {
-    addEventListener('mousedown', e => { if (!document.pointerLockElement) return; if (e.button === 2) this.aiming = true; if (e.button === 0) this.shoot(); });
+    addEventListener('mousedown', e => { if (!document.pointerLockElement || (this.g as any).weapon !== 'gun') return; if (e.button === 2) this.aiming = true; if (e.button === 0) this.shoot(); });
     addEventListener('mouseup', e => { if (e.button === 2) this.aiming = false; });
     addEventListener('contextmenu', e => e.preventDefault());
   }
@@ -29,7 +29,7 @@ export class Combat {
     g.hud.bark('Тревога.', true); g.snd.boom(0.3, 0.3, 300);
   }
   shoot() {
-    const g = this.g, s = g.s; if (!s.hasGun || !this.aiming || g.open || g.runner.active || g.frozen || this.reloadT > 0 || this.fireCool > 0) return;
+    const g = this.g, s = g.s; if (!s.hasGun || (g as any).weapon !== 'gun' || g.open || g.runner.active || g.frozen || this.reloadT > 0 || this.fireCool > 0) return;
     if (s.mag <= 0) { g.hud.toast('Пусто', 1); return; }
     s.mag--; this.fireCool = 0.35; this.muzzle = 0.08; g.snd.shot();
     const o = g.cam.getWorldPosition(new THREE.Vector3()), dir = g.cam.getWorldDirection(new THREE.Vector3());
@@ -53,7 +53,7 @@ export class Combat {
   update(dt: number) {
     const g = this.g, s = g.s, b = g.player.body; this.fireCool = Math.max(0, this.fireCool - dt); this.muzzle = Math.max(0, this.muzzle - dt);
     if (this.reloadT > 0) { this.reloadT -= dt; if (this.reloadT <= 0) { const need = 6 - s.mag, take = Math.min(need, s.ammo); s.mag += take; s.ammo -= take; } }
-    g.cam.fov = this.aiming && s.hasGun ? 52 : 70; g.cam.updateProjectionMatrix();
+    g.cam.fov = this.aiming && (g as any).weapon === 'gun' ? 52 : 70; g.cam.updateProjectionMatrix();
     // enemy AI: each hunter routes around walls (nav grid), flanks from his own side, keeps a personal distance and only shoots with a clear line
     const hunters = [...this.dyn.entries()].filter(([, d]) => d.mode === 'hunt');
     for (const [id, d] of hunters) {

@@ -25,6 +25,14 @@ const rain = makeRain(scene);
 const { comp, grade, setScale } = makePost(renderer, scene, cam, W, H, SAT);
 const player = new Player(cam, renderer.domElement);
 const game = new Game(scene, cam, player, moon, hemi, renderer);
+// right hand: the revolver, shown with 1, put away with 2 (D7/H4)
+const gun = new THREE.Group(); { const steel = new THREE.MeshStandardMaterial({ color: 0x1a1b1d, metalness: 0.85, roughness: 0.35 }), wood = new THREE.MeshStandardMaterial({ color: 0x3a2618, roughness: 0.7 });
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.16, 10), steel); barrel.rotation.x = Math.PI / 2; barrel.position.set(0, 0.03, -0.11);
+  const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.021, 0.021, 0.04, 12), steel); drum.rotation.x = Math.PI / 2; drum.position.set(0, 0.025, -0.02);
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.035, 0.07), steel); frame.position.set(0, 0.02, -0.03); const grip = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.08, 0.035), wood); grip.position.set(0, -0.03, 0.02); grip.rotation.x = -0.35;
+  const glove = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.07), new THREE.MeshStandardMaterial({ color: 0x17140f, roughness: 0.85 })); glove.position.set(0, -0.03, 0.03);
+  gun.add(barrel, drum, frame, grip, glove); gun.position.set(0.2, -0.2, -0.38); gun.visible = false; cam.add(gun); }
+game.onWeapon = w => { gun.visible = w === 'gun'; };
 
 // start: tower roof, 22:03:30 - the prologue (spec 11.1). ?at=x,z,lookX,lookZ&t=mm:ss for debug viewpoints
 const at4 = q.get('at')?.split(',').map(Number); const tq = q.get('t');
@@ -36,7 +44,7 @@ if (debugPos) player.place(debugPos[0], debugPos[1], debugPos[2], debugPos[3], (
 else { player.place(TOWER.roofSpawn.x, TOWER.roofSpawn.z, -70, -63, 0, ROOF_Y()); }
 if (q.get('thread')) game.s.thread = q.get('thread')!;
 if (q.get('y')) player.body.y = q.get('y') === 'roof' ? ROOF_Y() : +q.get('y')!;
-if (q.get('gun')) { game.s.hasGun = true; game.s.mag = 6; game.s.ammo = 18; }
+if (q.get('gun')) { game.s.hasGun = true; game.s.mag = 6; game.s.ammo = 18; game.setWeapon('gun'); }
 const clock = new THREE.Clock(); let t = 0;
 declare global { interface Window { done?: boolean; info?: string; FREEZE?: boolean; player?: Player; game?: Game; dbg?: any } }
 window.player = player; window.game = game; (window as any).renderer = renderer; window.dbg = { createPerson, scene, THREE, fmt };

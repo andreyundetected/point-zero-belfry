@@ -27,6 +27,7 @@ export class GameState {
   talks = new Map<string, number>(); topics = new Set<string>(); everTalks = new Map<string, number>(); thoughts = new Set<string>();
   // knowledge with the game time it was learned at (B2): shown with ⟲ when it comes from later than now
   knownAt = new Map<string, number>();
+  lastSeen = new Map<string, { x: number; z: number; t: number }>();
   met = new Set<string>(); portraits: Record<string, string> = {};
   alive = true;
   hp = 2;

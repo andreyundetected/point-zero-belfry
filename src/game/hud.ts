@@ -32,6 +32,8 @@ export class Hud {
   private notes: { el: HTMLElement; t: number }[] = [];
   notify(text: string, glyph = '') { const box = $('notes'); const el = document.createElement('div'); el.className = 'note'; el.innerHTML = (glyph ? `<span class="glyph">${glyph}</span> ` : '') + text; box.appendChild(el); this.notes.push({ el, t: 4.5 }); while (this.notes.length > 3) { this.notes.shift()!.el.remove(); } }
   tickNotes(dt: number) { for (const n of this.notes) { n.t -= dt; if (n.t < 0.6) n.el.style.opacity = String(Math.max(0, n.t / 0.6)); } this.notes = this.notes.filter(n => { if (n.t <= 0) { n.el.remove(); return false; } return true; }); }
+  weapon(label: string | null) { const w = $('weapon'); w.style.display = label ? 'flex' : 'none'; if (label) (w.querySelector('.nm') as HTMLElement).textContent = label; }
+  waiting(on: boolean) { $('wait').style.display = on ? 'block' : 'none'; }
   lang() { return getLang(); }
   refresh() { $('hint').textContent = tr('hint.controls'); }
 }

@@ -25,19 +25,21 @@ function build() {
   for (const [t, x, z] of lab) { g.lineWidth = 4; g.strokeStyle = '#0a0b0d'; g.strokeText(t, px(x), pz(z)); g.fillStyle = '#a9a28f'; g.fillText(t, px(x), pz(z)); }
   return c;
 }
-export interface MapState { x: number; z: number; yaw: number; thread: string; time: number; t?: number; }
-const glow = (g: CanvasRenderingContext2D, x: number, y: number, r: number, a = 1) => { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(255,70,50,${0.95 * a})`); gr.addColorStop(0.25, `rgba(255,40,30,${0.55 * a})`); gr.addColorStop(1, 'rgba(255,20,10,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.fillStyle = `rgba(255,150,130,${a})`; g.beginPath(); g.arc(x, y, Math.max(1.6, r * 0.14), 0, 7); g.fill(); };
+export interface MapState { x: number; z: number; yaw: number; thread: string; time: number; t?: number; view?: { cx: number; cz: number; ppm: number }; places?: { x: number; z: number; name: string; kind: string }[]; }
+const glow = (g: CanvasRenderingContext2D, x: number, y: number, r: number, a = 1): void => { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(255,70,50,${0.95 * a})`); gr.addColorStop(0.25, `rgba(255,40,30,${0.55 * a})`); gr.addColorStop(1, 'rgba(255,20,10,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.fillStyle = `rgba(255,150,130,${a})`; g.beginPath(); g.arc(x, y, Math.max(1.6, r * 0.14), 0, 7); g.fill(); };
 function arrow(g: CanvasRenderingContext2D, x: number, y: number, yaw: number, s: number) { g.save(); g.translate(x, y); g.rotate(-yaw); g.fillStyle = '#e8e2d2'; g.strokeStyle = '#000'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(0, -s); g.lineTo(s * 0.62, s * 0.7); g.lineTo(0, s * 0.35); g.lineTo(-s * 0.62, s * 0.7); g.closePath(); g.fill(); g.stroke(); g.restore(); }
 function markers(st: MapState) { return threadMarkers(st.thread, st.t ?? 0); }
 /** nearest marker the dashed guide line points at */
 function nearest(st: MapState) { let best: { x: number; z: number } | undefined, d = 1e9; for (const m of markers(st)) { const dd = Math.hypot(m.x - st.x, m.z - st.z); if (dd < d) { d = dd; best = m; } } return best; }
 export function drawMain(cv: HTMLCanvasElement, st: MapState) {
-  cache ??= build(); const g = cv.getContext('2d')!; const k = Math.min(cv.width / cache.width, cv.height / cache.height); const ox = (cv.width - cache.width * k) / 2, oy = (cv.height - cache.height * k) / 2;
-  g.fillStyle = '#07080a'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(cache, ox, oy, cache.width * k, cache.height * k);
+  cache ??= build(); const g = cv.getContext('2d')!; const v = st.view ?? { cx: (BOUNDS.x0 + BOUNDS.x1) / 2, cz: 0, ppm: Math.min(cv.width / cache.width, cv.height / cache.height) * PPM };
+  const k = v.ppm / PPM, ox = cv.width / 2 - px(v.cx) * k, oy = cv.height / 2 - pz(v.cz) * k;
+  g.fillStyle = '#07080a'; g.fillRect(0, 0, cv.width, cv.height); g.imageSmoothingEnabled = true; g.drawImage(cache, ox, oy, cache.width * k, cache.height * k);
   const X = (x: number) => ox + px(x) * k, Z = (z: number) => oy + pz(z) * k, pulse = 0.75 + 0.25 * Math.sin(st.time * 3);
+  for (const p of st.places ?? []) { if (p.kind === 'person') { g.fillStyle = '#8aa0b8'; g.beginPath(); g.arc(X(p.x), Z(p.z), 4, 0, 7); g.fill(); g.font = '12px serif'; g.fillStyle = '#aab8c8'; g.fillText(p.name, X(p.x) + 6, Z(p.z) - 4); } else { g.fillStyle = '#c8b27a'; g.save(); g.translate(X(p.x), Z(p.z)); g.rotate(Math.PI / 4); g.fillRect(-3, -3, 6, 6); g.restore(); } }
   const n = nearest(st); if (n) { g.setLineDash([6, 7]); g.strokeStyle = 'rgba(255,70,50,.5)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(X(st.x), Z(st.z)); g.lineTo(X(n.x), Z(n.z)); g.stroke(); g.setLineDash([]); }
-  for (const m of markers(st)) { glow(g, X(m.x), Z(m.z), 22 * pulse, 1); g.strokeStyle = `rgba(255,80,60,${0.5 * pulse})`; g.lineWidth = 1; g.beginPath(); g.arc(X(m.x), Z(m.z), 12 + 5 * pulse, 0, 7); g.stroke(); }
-  arrow(g, X(st.x), Z(st.z), st.yaw, 11);
+  for (const m of markers(st)) { glow(g, X(m.x), Z(m.z), 16 * pulse, 1); if ((m as any).label) { g.font = 'italic 13px serif'; g.fillStyle = '#ff9a88'; g.fillText((m as any).label, X(m.x) + 12, Z(m.z) + 4); } }
+  arrow(g, X(st.x), Z(st.z), st.yaw, 10);
 }
 export function drawMini(cv: HTMLCanvasElement, st: MapState) {
   cache ??= build(); const g = cv.getContext('2d')!, R = 46, S = cv.width / (2 * R * PPM) ; // 92 m window

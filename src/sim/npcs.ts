@@ -61,7 +61,7 @@ const add = (d: NpcDef) => { NPCS.push(d); return d; };
 
 // ============ WEST
 add({ id: 'crane', name: { ru: 'Эвелина Крайн', en: 'Evelina Crane' }, key: true, look: { body: 'liza', coat: 0x26292d, trou: 0x1c1c1e, long: true, hat: 'veil', extra: ['cane'], scale: 1.0 },
-  sched: f => { const y = roofY(); const sc = s(-70, -64.2, faceTo(-70, -64.2, -70, -56), 'idle', 0, y); const po = f.at('prologueOver' as const); const go = po !== undefined ? Math.max(at(22, 5), po + 25) : at(22, 15); sc.wait(go, 'idle').walkDirect([[-70, -57.5], [-70, -54.8]], 1.3, 'walk', y).hide(sc.ct + 0.5);
+  sched: f => { const y = roofY(); const sc = s(-70, -64.2, faceTo(-70, -64.2, -70, -56), 'idle', 0, y); const po = f.at('prologueOver' as const); const go = po !== undefined ? Math.max(at(22, 5), po + 25) : at(22, 15); sc.wait(go, 'idle').walkDirect([[-67.2, -62], [-67.2, -56.5], [-70, -54.8]], 1.3, 'walk', y).hide(sc.ct + 0.5);
     sc.show(sc.ct + 40, -70, -53.4, 'walk', Math.PI, undefined).walk([[-62, -50], [-57, -43]], 1.3).hide(); return sc.done(); } });
 add({ id: 'lidia', name: { ru: 'Лидия', en: 'Lidia' }, key: true, look: { body: 'liza', coat: 0x4a4238, trou: 0x2e2c2a, skirt: false, hat: 'scarf', scale: 0.97, hair: 0x3a2a1a },
   sched: () => { const y = roofY(); const sc = s(-73.9, -59.3, 1.6, 'fix', 0, y); sc.wait(at(22, 15), 'fix').walkDirect([[-72, -57.5], [-70, -54.8]], 1.2, 'walk', y).hide(sc.ct + 0.5);

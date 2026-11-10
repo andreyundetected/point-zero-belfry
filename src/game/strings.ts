@@ -1,7 +1,7 @@
 // All UI strings are keys. Russian is the source language; English is kept short and conversational.
 export type Lang = 'ru' | 'en';
 export const UI: Record<string, { ru: string; en: string }> = {
-  'hint.controls': { ru: 'WASD ходить · Q автоход · Shift бег · Пробел прыжок · C присесть · E действие · Tab Створка · T ждать', en: 'WASD move · Q auto-walk · Shift run · Space jump · C crouch · E use · Tab Device · T wait' },
+  'hint.controls': { ru: 'WASD ходить · Shift бег · Пробел прыжок · C присесть · E действие · Tab Створка · M карта · J люди · I карман · N нить · T ждать · 1 револьвер · 2 Створка', en: 'WASD move · Shift run · Space jump · C crouch · E use · Tab Device · M map · J people · I pocket · N thread · T wait · 1 revolver · 2 Device' },
   'tab.time': { ru: 'Время', en: 'Time' }, 'tab.thread': { ru: 'Нить', en: 'Thread' }, 'tab.people': { ru: 'Люди', en: 'People' },
   'tab.map': { ru: 'Карта', en: 'Map' }, 'tab.pocket': { ru: 'Карман', en: 'Pocket' }, 'tab.messages': { ru: 'Сообщения', en: 'Messages' }, 'tab.branch': { ru: 'Эта ветка', en: 'This branch' },
   'jump': { ru: 'Прыжок', en: 'Jump' }, 'jump.hold': { ru: 'Предпросмотр — P', en: 'Preview — P' },
