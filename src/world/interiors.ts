@@ -9,7 +9,7 @@ import { groundH } from './terrain';
 // ============ doors, interactables, room lights, furniture helpers
 export interface RoomLight { room: string; x: number; y: number; z: number; color: number; intensity: number; dist: number; on: (t: number, f: any) => boolean; shootable?: boolean; shot?: boolean; }
 export const roomLights: RoomLight[] = [];
-export interface Door { id: string; pivot: THREE.Group; box: ReturnType<typeof world.add>; open: boolean; target: number; locked: (t: number, f: any) => string | null; x: number; z: number; y: number; label: string; hingeRy: number; }
+export interface Door { id: string; pivot: THREE.Group; box: ReturnType<typeof world.add>; open: boolean; target: number; locked: (t: number, f: any) => string | null; x: number; z: number; y: number; label: string; hingeRy: number; note?: THREE.Object3D; }
 export const doors: Door[] = [];
 const leafMat = new THREE.MeshStandardMaterial({ color: 0x3a2c20, roughness: 0.8 });
 
@@ -27,7 +27,18 @@ export function makeWorldDoor(scene: THREE.Scene, id: string, cx: number, cz: nu
   const box = world.add(cx, cz, w / 2 + 0.03, 0.08, ry, y, y + h, 'door');
   const d: Door = { id, pivot, box, open: false, target: 0, locked: o.locked ?? (() => null), x: cx, z: cz, y, label: o.label ?? 'Дверь', hingeRy: ry }; doors.push(d); return d;
 }
-export function updateDoors(dt: number) {
+/** a paper note pinned to the outside of a door leaf, shown while the door is locked (e.g. Orven's «Ушёл в 22:02») */
+export function pinNote(d: Door, lines: string[], side = 1) {
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 192; const g = cv.getContext('2d')!;
+  g.fillStyle = '#d8d0bc'; g.fillRect(0, 0, 256, 192); g.fillStyle = '#2a2622'; g.font = 'italic 30px Georgia, serif'; g.textAlign = 'center';
+  lines.forEach((l, i) => g.fillText(l, 128, 56 + i * 44));
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.225), new THREE.MeshStandardMaterial({ map: tex, roughness: 1 }));
+  const leaf = ((d.pivot as any).inner as THREE.Group).children[0] as THREE.Mesh; const w = (leaf.geometry as THREE.BoxGeometry).parameters.width;
+  m.position.set(w / 2, 1.45, side * 0.045); if (side < 0) m.rotation.y = Math.PI; m.rotation.z = 0.04; ((d.pivot as any).inner as THREE.Group).add(m); m.visible = false; d.note = m;
+}
+export function updateDoors(dt: number, t = 0, f?: any) {
+  for (const d of doors) if (d.note) d.note.visible = !!d.locked(t, f);
   for (const d of doors) { const inner = (d.pivot as any).inner as THREE.Group, tgt = d.open ? 1.75 : 0; inner.rotation.y += (tgt - inner.rotation.y) * Math.min(1, dt * 7); d.box.off = d.open; }
 }
 export interface Interactable { id: string; x: number; y: number; z: number; r?: number; at?: (c: any) => { x: number; y: number; z: number } | null; label: (c: any) => string | null; use: (c: any) => void; ok?: (c: any) => boolean; }

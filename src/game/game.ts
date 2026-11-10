@@ -266,7 +266,7 @@ export class Game implements StvHost, Ctx {
     this.burn.update(s.t, s.flags, b.x, b.z, dt); const fl = this.burn.lights(this.time); this.pool.update(b.x, b.z, [...extra, ...fl], !!inside);
     this.fx.update(dt, [], Math.max(this.cs.glow * 0.4, this.burn.share())); this.snd.setFire(this.burn.share());
     { const f = this.scene.fog as THREE.FogExp2 | null; if (f) f.density = 0.035 - 0.026 * Math.max(0, Math.min(1, (b.y - 4) / 22)); }
-    updateDoors(dt); updateTower(dt, Math.hypot(b.x + 70, b.z + 58) < 70);
+    updateDoors(dt, this.s.t, this.s.flags); updateTower(dt, Math.hypot(b.x + 70, b.z + 58) < 70);
     // npcs
     this.npcs.update(s.t, b.x, b.z, dt, b.y, undefined, id => { const h = this.talkHold; if (h && h.id === id) return { x: h.x, y: h.y, z: h.z, ry: h.ry, a: 'talk', hidden: false }; return this.combat.override(id); });
     this.combat.update(dt); this.pilot.update(dt); this.markT -= dt; if (this.markT <= 0) { this.markT = 0.08; updateMarks(this); }

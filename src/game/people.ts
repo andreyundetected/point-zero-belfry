@@ -61,6 +61,8 @@ export class Person {
 export async function createPerson(look0: Look, id = ''): Promise<Person> {
   const look: Look = look0.body === 'james' ? { ...look0, body: 'remy', wide: look0.wide ?? 1.1 } : look0.body === 'michelle' ? { ...look0, body: 'liza' } : look0; // james has a hoodie and headphones baked into one mesh: not 1947
   const p = new Person(look); p.id = id;
+  // nobody appears before the animation libraries are in: otherwise a fresh person stands in the bind T-pose until the clips load
+  await Promise.all([loadUal(), gl('people/mixamo/mixamo_anims')]);
   const g = await gl('people/mixamo/' + look.body); const root = SU.clone(g.scene) as THREE.Group; p.root.add(root);
   root.traverse((m: any) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; } });
   p.root.updateMatrixWorld(true);
@@ -116,7 +118,7 @@ function clothe(root: THREE.Object3D, o: Look): THREE.SkinnedMesh {
     if (e === 'lantern') { const l = new THREE.Group(); const cage = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.2, 0.12), dark); const f = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.14, 0.08), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffc080).multiplyScalar(3) })); l.add(cage, f); att(bone('mixamorigRightHand'), l, [0, -0.18, 0.05]); }
     if (e === 'case') { const c = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.28, 0.12), new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.6 })); att(bone('mixamorigRightHand'), c, [0, -0.25, 0.04]); }
     if (e === 'revolver') { const r = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.05, 0.2), dark); att(bone('mixamorigRightHand'), r, [0, 0.0, 0.1]); }
-    if (e === 'apron') { const a = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.6), new THREE.MeshStandardMaterial({ color: 0xcfc9bb, side: THREE.DoubleSide, roughness: 1 })); a.position.set(0, -0.3, 0.2); a.scale.setScalar(boneUnit(hips)); a.position.multiplyScalar(boneUnit(hips)); hips.add(a); }
+    if (e === 'apron') { const a = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.46), new THREE.MeshStandardMaterial({ color: 0x4a4136, side: THREE.DoubleSide, roughness: 1 })); a.position.set(0, -0.2, 0.17); a.scale.setScalar(boneUnit(hips)); a.position.multiplyScalar(boneUnit(hips)); hips.add(a); }
     if (e === 'badge') { const bd = new THREE.Mesh(new THREE.CircleGeometry(0.018, 10), new THREE.MeshStandardMaterial({ color: 0xb87333, metalness: 0.8, roughness: 0.3 })); bd.position.set(0, 0.09, 0.125); const u = boneUnit(head); bd.scale.setScalar(u); bd.position.multiplyScalar(u); head.add(bd); }
     if (e === 'ribbon') { const rb = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.08, 0.02), new THREE.MeshStandardMaterial({ color: 0xa00a0a, emissive: 0x2a0000 })); att(head, rb, [0, 0.05, -0.12]); }
     if (e === 'scar') { const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.012, 0.11), new THREE.MeshBasicMaterial({ color: 0x1a1010 })); sc.rotation.z = 0.5; att(head, sc, [0.03, 0.07, 0.112]); }

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { at } from '../sim/time';
 import { M } from '../render/materials';
 import { Batcher, mtx } from './batch';
 import { buildCanal, buildPiers, buildWater } from './canal';
@@ -8,7 +9,7 @@ import { buildGround } from './ground';
 import { lamp, finalizeLamps } from './lamps';
 import { BOUNDS, BRIDGE, QUAY_Z, ROADS } from './layout';
 import { PropField } from './props';
-import { buildInteriors, makeDoor, makeWorldDoor } from './interiors';
+import { buildInteriors, makeDoor, makeWorldDoor, pinNote } from './interiors';
 import { buildTower } from './tower';
 import { buildFomaAndD8 } from './ruins';
 import { buildDecor } from './decor';
@@ -42,7 +43,9 @@ export function buildZaton(scene: THREE.Scene): Zaton {
   buildFomaAndD8(scene);
   // doors in the wall gaps (hollow buildings)
   const T = 0.15;
-  makeDoor(scene, 'orven.door', 'orven', pOrven.dcx!, -T, { locked: t => (t >= 9 * 60 + 25 ? 'Заперто. Записка: «Закрыто. Срочное — Канатная, 11»' : null), label: 'Лавка Орвена' });
+  // D2: Orven locks up and leaves at 22:02 (or after the talk, not before 22:06): from then on the door is locked and the note hangs on it
+  const orvenDoor = makeDoor(scene, 'orven.door', 'orven', pOrven.dcx!, -T, { locked: (t, f) => { const tl = f?.at?.('talk_orven'); const leave = tl !== undefined ? Math.max(at(22, 6), tl + 20) : at(22, 2, 10); return t >= leave ? 'Заперто.' : null; }, label: 'Лавка Орвена' });
+  pinNote(orvenDoor, ['Ушёл в 22:02.', 'Буду через', '3 часа. — О.']);
   makeDoor(scene, 'tavern.door', 'tavern', pTavern.dcx!, -T, { label: 'Таверна «Якорь»' });
   makeDoor(scene, 'tavern.back', 'tavern', -4.5, -9 + T, { label: 'Задний двор' });
   makeDoor(scene, 'contora.door', 'contora', pContora.dcx!, -T, { locked: (t, f) => (f.has('officeOpen') || t >= 12 * 60 + 5 ? null : 'Контора закрыта. Курьеров впускают по жетону — стучи в окошко.'), label: 'Курьерская контора' });
