@@ -5,6 +5,9 @@ import { roomLights } from '../world/interiors';
 import { lamps } from '../world/lamps';
 import type { Game } from './game';
 import { lineOfSight } from './physics';
+import { insideSite } from '../sim/sites';
+import { tableTop } from '../world/interiors';
+import { nameOf } from './dialogue';
 import { route } from '../sim/nav';
 
 // Stealth + gunplay (spec 8.8, 8.10). Revolver: 6 in the cylinder, 3 s reload, you die from 2 hits, enemies from 1-2.
@@ -68,16 +71,20 @@ export class Combat {
       d.a = moving ? 'run' : sees ? 'shoot' : 'idle';
       d.cool -= dt; if (d.cool <= 0 && sees) { d.cool = 1.5 + (hashId(id) % 5) * 0.25; const lit = this.litAt(b.x, b.z); const hitP = 0.3 * lit * (g.player.crouching ? 0.6 : 1) * (dist > 12 ? 0.5 : 1); g.snd.shot(); if (Math.random() < hitP) { this.hits++; this.lastShooter = id; g.hurt(0.8); if (this.hits >= 2) { s.dead = true; g.finish('dead'); } } }
     }
-    // suspicion by vision cones (50 deg, 4-14 m depending on light)
-    if (!s.flags.has('alarm')) for (const d of NPCS) { if (!this.hostile(d)) continue; const p = g.npcs.pose(d.id); if (!p || p.hidden || p.a === 'die') continue;
-      const dx = b.x - p.x, dz = b.z - p.z, dist = Math.hypot(dx, dz), lit = this.litAt(b.x, b.z), range = 4 + 10 * lit; if (dist > range || Math.abs(b.y - p.y) > 2.5) continue;
-      const ang = Math.atan2(dx, dz) - p.ry, da = Math.abs(Math.atan2(Math.sin(ang), Math.cos(ang))); if (da > 0.44) continue;
-      if (!lineOfSight(p.x, p.z, p.y + 1.55, b.x, b.z, b.y + 1.5)) continue;
-      if (this.zoneAllows(d, dist)) continue; const k = (this.suspicion.get(d.id) ?? 0) + dt * (g.player.keys.ShiftLeft ? 2 : 1) * (g.player.crouching ? 0.4 : 1); this.suspicion.set(d.id, k);
-      if (k > 2.2) { this.alarm('seen'); g.hud.bark('Кто там?!', true); }
+    // D5: Cord's men are not hostile by sight. Only explicit triggers: a gun out in the tavern hall, a theft seen, a shot, coming back to
+    // their table after two warnings. Leaving the tavern never starts a fight. Vision cones only matter for the orphanage guards at the cart
+    // after 22:30 and for the pier-3 disguise (handled by the dialogue).
+    if (!s.flags.has('alarm')) {
+      const inTav = g.sceneInside === 'tavern' && s.t < at1215;
+      if (inTav && (g as any).weapon === 'gun' && cordInHall(g)) { this.gunT += dt; if (this.gunT > 1.2) { g.hud.sub(nameOfNpc('ignat'), 'Ствол! У него ствол!', 2.5); this.alarm('gun'); } } else this.gunT = 0;
+      if (inTav && s.t < at1212 && cordInHall(g)) { const dd = Math.hypot(b.x - tableX(g), b.z - tableZ(g)); if (dd < 1.6) { if (!this.nearTable) { this.nearTable = true; this.warns++; if (this.warns === 1) g.hud.sub(nameOfNpc('ignat'), 'Стол занят. Отойди.', 2.5); else if (this.warns === 2) g.hud.sub(nameOfNpc('ignat'), 'Я сказал — отойди.', 2.5); else { g.hud.sub(nameOfNpc('ignat'), 'Ну всё.', 2); this.alarm('table'); } } } else if (dd > 2.4) this.nearTable = false; }
+      for (const d of NPCS) { if (d.role !== 'guard') continue; const p = g.npcs.pose(d.id); if (!p || p.hidden || s.t < 30 * 60) continue;
+        const dx = b.x - p.x, dz = b.z - p.z, dist = Math.hypot(dx, dz); if (dist > 6 || Math.hypot(b.x - 52, b.z + 57) > 4) continue;
+        const ang = Math.atan2(dx, dz) - p.ry, da = Math.abs(Math.atan2(Math.sin(ang), Math.cos(ang))); if (da > 0.44 || !lineOfSight(p.x, p.z, p.y + 1.55, b.x, b.z, b.y + 1.5)) continue;
+        const k = (this.suspicion.get(d.id) ?? 0) + dt; this.suspicion.set(d.id, k); if (k > 3) { g.hud.sub(nameOfNpc(d.id), 'Отойди от повозки!', 2); this.alarm('cart'); } }
     }
   }
-  /** where being seen is fine (spec 8.5, 6.3): sitting in the tavern, walking about the orphanage with permission, disguise on the pier */
+  gunT = 0; warns = 0; nearTable = false;
   zoneAllows(d: NpcDef, dist: number) { const g = this.g, s = g.s; if (this.aiming && s.hasGun) return false; if (s.flags.has('scarAlert')) return false;
     if (g.sceneInside === 'tavern' && s.t < 12 * 60 && !s.flags.has('jetonStolen')) return true; void dist; void d; return d.role === 'guard' && s.flags.has('gateOpen'); }
   /** 0..1 how visible the player is here: nearest lit lamp/window/fire (spec 8.8) */
@@ -88,4 +95,8 @@ export class Combat {
   }
   private streetLight(x: number, z: number) { let b = 0; for (const l of lamps) { if (!l.on) continue; const d = Math.hypot(l.x - x, l.z - z); if (d < 12) b = Math.max(b, 1 - d / 12); } return b; }
 }
+const at1212 = 12 * 60, at1215 = 15 * 60;
+const cordInHall = (g: Game) => ['ignat', 'lovchiy', 'cm1', 'cm2', 'cm3'].some(id => { const p = g.npcs.pose(id); return !!p && !p.hidden && insideSite('tavern', p.x, p.z); });
+const tableX = (_g: Game) => tableTop.x, tableZ = (_g: Game) => tableTop.z;
+const nameOfNpc = (id: string) => nameOf(id);
 const hashId = (s: string) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); };

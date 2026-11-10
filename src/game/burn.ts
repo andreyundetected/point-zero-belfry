@@ -15,6 +15,8 @@ function seeds(f: Flags): Seed[] {
   if (!tap) out.push({ id: 'foma', t: at(22, 30), x: -40, z: -17, v }, { id: 'post', t: at(22, 36), x: -22, z: -15, v }, { id: 'kanat', t: at(22, 45), x: -52, z: 40, v }, { id: 'north', t: at(22, 40), x: -60, z: -45, v: v * 0.9 }, { id: 'bank', t: at(22, 38), x: 22, z: -35, v: v * 0.9 });
   return out;
 }
+/** D6: Rynochnaya (Foma, D8) burns 22:30-22:48 and is only smouldering ruins from 22:50; other houses blaze ~28 min, then smoulder */
+export function burnEnd(b: Placed, start: number): number { const k = b.id.split('#')[0]; return k === 'foma' || k === 'D8' ? at(22, 48) : start + 28 * 60; }
 export function burnStart(b: Placed, f: Flags): number {
   if (NEVER.has(b.id)) return Infinity; let best = Infinity;
   for (const s of seeds(f)) { const d = Math.max(0, Math.hypot(b.x - s.x, b.z - s.z) - 6); if (s.cap !== undefined && d > s.cap) continue; best = Math.min(best, s.t + d / s.v + hash(b.x, b.z) * 40); }
@@ -50,14 +52,14 @@ export class Burn {
   }
   rebuild(f: Flags) { this.fv = f.hash(); this.starts.clear(); for (const b of placed) { const s = burnStart(b, f); if (s < Infinity) this.starts.set(b, s); } }
   /** is a point inside a building that is burning hard (the jump is refused there) */
-  fireAt(x: number, z: number, t: number, f: Flags): boolean { for (const b of this.starts.keys()) { const s = this.starts.get(b)!; if (t < s + 30) continue; const dx = x - b.x, dz = z - b.z, c = Math.cos(b.ry), sn = Math.sin(b.ry), lx = dx * c - dz * sn, lz = dx * sn + dz * c; if (Math.abs(lx) < b.w / 2 + 1 && lz < 1 && lz > -b.depth - 1) return true; } void f; return false; }
+  fireAt(x: number, z: number, t: number, f: Flags): boolean { for (const b of this.starts.keys()) { const s = this.starts.get(b)!; if (t < s + 30 || t > burnEnd(b, s)) continue; const dx = x - b.x, dz = z - b.z, c = Math.cos(b.ry), sn = Math.sin(b.ry), lx = dx * c - dz * sn, lz = dx * sn + dz * c; if (Math.abs(lx) < b.w / 2 + 1 && lz < 1 && lz > -b.depth - 1) return true; } void f; return false; }
   /** burning fraction of the city (for the glow in the sky) and the nearest burning buildings (for lights) */
   update(t: number, f: Flags, px: number, pz: number, dt: number) {
     this.t += dt; this.mat.uniforms.uTime.value = this.t; this.smat.uniforms.uTime.value = this.t;
     const ver = f.hash(); if (ver !== this.fv) { this.fv = ver; this.starts.clear(); for (const b of placed) { const s = burnStart(b, f); if (s < Infinity) this.starts.set(b, s); } }
     this.refresh = (this.refresh ?? 0) - dt; if (this.refresh > 0) return; this.refresh = 0.7;
     const cand: { b: Placed; d: number; k: number; age: number }[] = []; let burning = 0;
-    for (const [b, s] of this.starts) { if (t < s) continue; burning++; const d = Math.hypot(b.x - px, b.z - pz); if (d < 130) cand.push({ b, d, k: Math.min(1, (t - s) / 100), age: t - s }); }
+    for (const [b, s] of this.starts) { if (t < s) continue; burning++; const d = Math.hypot(b.x - px, b.z - pz); const end = burnEnd(b, s), k = t > end ? 0 : Math.min(1, (t - s) / 100) * Math.min(1, (end - t) / 90); if (d < 130) cand.push({ b, d, k, age: t - s }); }
     cand.sort((a, b) => a.d - b.d); const use = cand.slice(0, MAXB); this.active = use.map(u => u.b); this.burning = burning; this.lightList = use.slice(0, 8).map(u => ({ x: u.b.x, z: u.b.z, y: u.b.base + Math.min(8, u.b.H * 0.6), k: u.k }));
     const pos = (this.flames.geometry.attributes.position as THREE.BufferAttribute), sz = this.flames.geometry.attributes.aSize as THREE.BufferAttribute, ph = this.flames.geometry.attributes.aPhase as THREE.BufferAttribute;
     const spos = (this.smoke.geometry.attributes.position as THREE.BufferAttribute), ssz = this.smoke.geometry.attributes.aSize as THREE.BufferAttribute, sph = this.smoke.geometry.attributes.aPhase as THREE.BufferAttribute;

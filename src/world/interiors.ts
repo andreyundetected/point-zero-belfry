@@ -25,7 +25,7 @@ export function makeWorldDoor(scene: THREE.Scene, id: string, cx: number, cz: nu
   const leaf = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.07), o.red ? M.RED : o.mat ?? leafMat); leaf.position.set(w / 2, h / 2, 0); leaf.castShadow = true;
   const inner = new THREE.Group(); inner.add(leaf); pivot.add(inner); (pivot as any).inner = inner; scene.add(pivot);
   const box = world.add(cx, cz, w / 2 + 0.03, 0.08, ry, y, y + h, 'door');
-  const d: Door = { id, pivot, box, open: false, target: 0, locked: o.locked ?? (() => null), x: cx, z: cz, y, label: o.label ?? 'door', hingeRy: ry }; doors.push(d); return d;
+  const d: Door = { id, pivot, box, open: false, target: 0, locked: o.locked ?? (() => null), x: cx, z: cz, y, label: o.label ?? 'Дверь', hingeRy: ry }; doors.push(d); return d;
 }
 export function updateDoors(dt: number) {
   for (const d of doors) { const inner = (d.pivot as any).inner as THREE.Group, tgt = d.open ? 1.75 : 0; inner.rotation.y += (tgt - inner.rotation.y) * Math.min(1, dt * 7); d.box.off = d.open; }

@@ -40,13 +40,16 @@ export function buildFomaAndD8(scene: THREE.Scene) {
   const box = (mat: THREE.Material, w: number, h: number, d: number, lx: number, lz: number, ly = 0, col = true) => { const p = L(lx, lz); bF.box(mat, w, h, d, mtx(p.x, fy + ly + h / 2, p.z, 0), 1.2); if (col) world.add(p.x, p.z, w / 2, d / 2, 0, fy + ly, fy + ly + h, 'furn'); };
   box(M.wood, 5.2, 1.0, 0.5, -0.4, -2.6); for (let k = 0; k < 14; k++) box(M.iron, 0.03, 1.2, 0.03, -2.9 + k * 0.4, -2.6, 1.0, false); box(M.iron, 5.2, 0.03, 0.03, -0.4, -2.6, 2.1, false);  // counter with the grille
   box(M.plaster, 3.9, 3.0, 0.25, -1.1, -5.15); box(M.plaster, 1.1, 3.0, 0.25, 2.8, -5.15);                                                               // partition, doorway at lx 1.35..2.25
-  for (const lx of [-2.6, -0.8, 1.0]) box(M.wood, 1.5, 2.0, 0.4, lx, -4.8, 0); box(M.wood, 0.9, 0.5, 0.6, 2.8, -7.2); box(M.wood, 0.8, 1.7, 0.4, 0.2, -7.4);
+  // F1/F3: real open shelves (back panel + boards); goods stand on the boards. The doorway to the storeroom (lx 0.85..2.25) stays clear.
+  const BOARDS = [0.45, 0.95, 1.45, 1.95], SHELVES = [-2.4, -0.7];
+  for (const lx of SHELVES) { box(M.wood, 1.5, 2.05, 0.04, lx, -4.98, 0, false); for (const y of BOARDS) box(M.wood, 1.5, 0.04, 0.38, lx, -4.8, y - 0.04, false); for (const sx of [-0.73, 0.73]) box(M.wood, 0.04, 2.05, 0.38, lx + sx, -4.8, 0, false); const p = L(lx, -4.8); world.add(p.x, p.z, 0.77, 0.21, 0, fy, fy + 2.05, 'furn'); }
+  box(M.wood, 0.9, 0.5, 0.6, 2.8, -7.2); box(M.wood, 0.8, 1.7, 0.4, -0.6, -7.4);
   const board = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.05, 0.4), new THREE.MeshStandardMaterial({ color: 0x6a5a40, roughness: 1 })); const bp = FOMA_SPOT(); board.position.set(bp.x, fy + 0.03, bp.z); gi.add(board); addMark(board, (c: any) => c.s.thread === 'gun' || c.s.knows('know_gun_under_floor'), (c: any) => !c.s.flags.has('gunTaken'));
   roomLights.push({ room: 'foma', x: L(0, -2.2).x, y: fy + 2.4, z: L(0, -2.2).z, color: 0xffc080, intensity: 6, dist: 8, on: (t: number, fl: any) => t < 29 * 60 && !fl.has('lampsShot') });
   bF.flush(gi); world.tagFrom(i0, 'fomaIntact');
   const pf = new PropField(); const sh = (p: string, lx: number, lz: number, o: any) => { const q = L(lx, lz); pf.add(p, q.x, q.z, { collide: false, ...o }); };
-  for (let k = 0; k < 6; k++) { sh('dungeon/candle', -2.8 + k * 0.9, -4.55, { s: 0.35, y: fy + 1.0 + (k % 2) * 0.9 }); sh('dungeon/plate', -2.5 + k * 0.8, -4.6, { s: 0.25, y: fy + 0.5 }); }
-  sh('dungeon/chest', 0.2, -7.4, { h: 0.65, collide: false }); pf.build(gi);
+  { const SH = [-2.4, -0.7], BD = [0.45, 0.95, 1.45, 1.95]; let k = 0; for (const lx of SH) for (const y of BD.slice(0, 3)) { sh(k % 2 ? 'dungeon/plate' : 'dungeon/candle', lx + ((k * 0.37) % 1 - 0.5) * 0.9, -4.8, { s: k % 2 ? 0.22 : 0.3, y: fy + y }); k++; } }
+  sh('dungeon/chest', -2.0, -7.3, { h: 0.65, collide: false }); pf.build(gi);
   makeDoor(scene, 'foma.door', 'foma', P.dcx!, -0.15, { locked: () => 'Заперто наглухо. Ставни закрыты.' });
   // shutters (outside, closed 22:00)
   const shut = new THREE.Mesh(new THREE.BoxGeometry(2.8, 2.2, 0.06), M.wood); const sp = L(-2.1, 0.12); shut.position.set(sp.x, fy + 1.9, sp.z); shut.castShadow = true; gi.add(shut);

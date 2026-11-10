@@ -96,6 +96,11 @@ export function buildCanal(scene: THREE.Scene, bt: Batcher) {
     const arch = th + 1.3 * (1 - Math.abs(x / 9) ** 2.2);
     bt.box(M.stone, seg + 0.02, arch, 5.6, mtx(x, top - th - arch / 2 + 0.02, 0, 0), 1.6);
   }
+  // D4: repairs on the north half of the bridge (sawhorses, planks, barrels): the walkway in the middle is 3 m wide and Ned stands on it
+  for (let x = -4.2; x <= 4.2; x += 1.4) { const top = bridgeTop(x); bt.box(M.wood, 0.1, 0.9, 1.8, mtx(x, top + 0.45, -1.6, 0), 1); }
+  { const top = bridgeTop(0); bt.box(M.wood, 8.8, 0.08, 0.3, mtx(0, top + 0.95, -0.85, 0), 1); bt.box(M.wood, 8.8, 0.08, 0.3, mtx(0, top + 0.55, -0.85, 0), 1);
+    for (let i = 0; i < 5; i++) bt.box(M.wood, 3.2, 0.06, 0.25, mtx(-2.5 + i * 1.2, top + 0.2 + i * 0.06, -1.9 + (i % 2) * 0.3, 0.2 * (i - 2)), 1);
+    for (const x of [-3.8, -1.6, 2.4]) world.add(x, -1.6, 0.75, 0.95, 0, bridgeTop(x), bridgeTop(x) + 1.5, 'rail'); }
   for (const x of [-8.3, 0, 8.3]) for (const sz of [-1, 1]) lamp(scene, x, sz * 2.75, bridgeTop(x) + RAIL_H);
 }
 

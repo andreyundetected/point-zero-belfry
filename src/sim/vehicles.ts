@@ -9,8 +9,8 @@ const s = (x: number, z: number, ry = 0, a = 'v', t = 0) => new Sched(x, z, ry, 
 export const VEHICLES: VehicleDef[] = [
   { id: 'craneCar', kind: 'car', sched: () => { const sc = s(-55.5, -36.5, Math.PI, 'v', 0); sc.wait(at(22, 6)).walk([[-53, -38], [-46, -35], [-38, -33], [-30, -30], [-22, -28], [-14.6, -28], [-14.6, 0], [-14.6, 56]], 7).hide();
     sc.show(at(22, 52, 0), -14.6, 18, 'v', 0).walk([[-14.6, 40], [-12.6, 55]], 6).wait(at(22, 52, 50)).walk([[-14.6, 40], [-14.6, -30]], 7).hide(); return sc.done(); } },
-  { id: 'cordCar', kind: 'car', sched: f => { const sc = s(-14.6, -40, 0, 'v', 0); sc.hide(0).show(at(22, 15, 20), -14.6, -34, 'v', 0).walk([[-14.6, -2], [-9, 0], [9, 0], [14.8, 1], [14.8, 16.5], [30, 17], [58, 17.8]], 8).wait(at(22, 31, 30))
-      .walk([[30, 17], [14.8, 16.5], [14.8, 1], [9, 0], [-9, 0], [-14.6, 2], [-14.6, 50], [-12.6, 56]], 8).wait(at(22, 36)).walk([[-14.6, 40], [-14.6, -40]], 8).hide(); void f; return sc.done(); } },
+  { id: 'cordCar', kind: 'car', sched: f => { const sc = s(-14.6, -40, 0, 'v', 0); sc.hide(0).show(at(22, 15, 20), -14.6, -34, 'v', 0).walk([[-14.6, -2], [-9, 1.0], [9, 1.0], [14.8, 1], [14.8, 16.5], [30, 17], [58, 17.8]], 8).wait(at(22, 31, 30))
+      .walk([[30, 17], [14.8, 16.5], [14.8, 1], [9, 1.0], [-9, 1.0], [-14.6, 2], [-14.6, 50], [-12.6, 56]], 8).wait(at(22, 36)).walk([[-14.6, 40], [-14.6, -40]], 8).hide(); void f; return sc.done(); } },
   { id: 'tram', kind: 'cart' as const, sched: f => { const sc = s(-84, -9.6, Math.PI / 2, 'v', 0); const stuck = !f.has('tapCut');
     if (stuck) { sc.walk([[-18, -9.6]], 4.5).walk([[-52, -9.6]], 4.5).wait(at(22, 13)); sc.cx = -52; sc.cz = -9.6; return sc.end().kfs; }
     for (let i = 0; i < 8; i++) { sc.walk([[-18, -9.6]], 5).wait(sc.ct + 20).walk([[-84, -9.6]], 5).wait(sc.ct + 20); } return sc.done(); } },

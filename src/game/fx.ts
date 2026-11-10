@@ -34,6 +34,11 @@ export class Fx {
     }
     for (const [id, o] of this.fires) if (!seen.has(id)) o.g.visible = false;
   }
+  /** D4: the warehouse blast, visible over the roofs from the bridge: flash, a fireball rising into a column of fire, then smoke */
+  blast(x: number, y: number, z: number) { const g = new THREE.Group(); g.position.set(x, y, z); this.scene.add(g); const fl = new THREE.PointLight(0xffb060, 400, 260, 1.2); fl.position.y = 12; g.add(fl);
+    const parts: { s: THREE.Sprite; v: number; r: number; smoke: boolean }[] = [];
+    for (let i = 0; i < 46; i++) { const smoke = i > 26; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: smoke ? smokeTex[i % 4] : glowTex, color: smoke ? 0x161412 : 0xffa040, blending: smoke ? THREE.NormalBlending : THREE.AdditiveBlending, transparent: true, depthWrite: false, fog: false, opacity: smoke ? 0.0 : 1 })); sp.position.set((hash(i, 7) - 0.5) * 14, 4 + hash(i, 8) * 6, (hash(i, 9) - 0.5) * 10); g.add(sp); parts.push({ s: sp, v: 6 + hash(i, 3) * 10, r: 6 + hash(i, 4) * 10, smoke }); }
+    let t = 0; const tick = () => { t += 1 / 60; fl.intensity = Math.max(0, 400 * (1 - t / 1.6)); for (const p of parts) { p.s.position.y += p.v / 60 * (p.smoke ? 0.8 : 1); const sc = p.r * (0.4 + t * (p.smoke ? 0.7 : 0.5)); p.s.scale.setScalar(sc); const m = p.s.material as THREE.SpriteMaterial; m.opacity = p.smoke ? Math.min(0.75, t * 0.5) * Math.max(0, 1 - (t - 4) / 6) : Math.max(0, 1 - t / 2.4); } if (t < 10) requestAnimationFrame(tick); else this.scene.remove(g); }; tick(); }
   /** white water burst and rings (D4) */
   splash(x: number, y: number, z: number) { const g = new THREE.Group(); g.position.set(x, y, z); this.scene.add(g); const parts: THREE.Sprite[] = []; for (let i = 0; i < 18; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xdde6ee, transparent: true, depthWrite: false, opacity: 0.9 })); s.userData.v = [(hash(i, 1) - 0.5) * 2.4, 2 + hash(i, 2) * 4, (hash(i, 3) - 0.5) * 2.4]; s.scale.setScalar(0.4); g.add(s); parts.push(s); }
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.45, 32), new THREE.MeshBasicMaterial({ color: 0xbfcad4, transparent: true, opacity: 0.7, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; g.add(ring);

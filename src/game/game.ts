@@ -249,6 +249,7 @@ export class Game implements StvHost, Ctx {
       if (this.waitHeld && !wait) { this.hud.toast('Рядом враг — ждать нельзя', 1.5); this.waitHeld = false; }
     }
     this.time += dt; s.clampT();
+    if (wasT < at(22, 12) && s.t >= at(22, 12) && Math.hypot(this.player.body.x - 66, this.player.body.z - 32) < 260) this.fx.blast(66, groundH(66, 32), 32);
     // D8: 23:00 is not the end: the world freezes and the Stvorka asks where to go back to; 'The Empty Hour' only if you choose to stay
     if (s.t >= WINDOW && !s.ended && !this.frozen && !this.open && !this.jumpBusy) { this.hud.toast(getLang() === 'ru' ? 'Окно закрывается.' : 'The window is closing.', 3); this.openTab('time'); }
     p.frozen = this.open || talking || this.jumpBusy || this.frozen || this.pilot.aboard || this.paused || this.waitHeld; this.hud.waiting(this.waitHeld); if (!this.pilot.aboard) p.update(dt); else p.apply();
