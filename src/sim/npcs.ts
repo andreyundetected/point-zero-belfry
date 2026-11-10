@@ -67,7 +67,7 @@ add({ id: 'lidia', name: { ru: 'Лидия', en: 'Lidia' }, key: true, look: { b
   sched: () => { const y = roofY(); const sc = s(-73.9, -59.3, 1.6, 'fix', 0, y); sc.wait(at(22, 15), 'fix').walkDirect([[-72, -57.5], [-70, -54.8]], 1.2, 'walk', y).hide(sc.ct + 0.5);
     sc.show(at(22, 40), -70, -51.6, 'cry', Math.PI, undefined); return sc.end().kfs; } });
 add({ id: 'fern', name: { ru: 'Ферн', en: 'Fern' }, key: true, look: { body: 'james', coat: 0x3a352e, trou: 0x252628, hat: 'cap', extra: ['lantern'], scale: 0.96, hair: 0xb8b8b0 },
-  sched: () => { const y = roofY(); const sc = s(-65.4, -54.9, -1.6, 'idle', 0, y); sc.wait(at(22, 5), 'idle').walkDirect([[-67.5, -55.5], [-70, -54.8]], 1.2, 'walk', y).hide(sc.ct + 0.5);
+  sched: () => { const y = roofY(); const sc = s(-66.2, -57.0, -1.6, 'idle', 0, y); sc.wait(at(22, 5), 'idle').walkDirect([[-67.5, -55.5], [-70, -54.8]], 1.2, 'walk', y).hide(sc.ct + 0.5);
     sc.show(at(22, 7), -71.4, -52.9, 'walk', 0).walk([[-67, -47]], 1.1).wait(at(22, 22), 'idle', 0).walk([[-68, -43.5]], 1, 'walk').wait(at(22, 22) + 40, 'lantern', faceTo(-68, -43.5, -70, -54)).end(); return sc.kfs; } });
 add({ id: 'stern', name: { ru: 'Штерн', en: 'Stern' }, key: true, look: { body: 'james', coat: 0x2b2a28, trou: 0x1c1c1e, hat: 'fedora', extra: ['case'] },
   sched: f => { const y = BASEMENT_Y(); const sc = s(-72.4, -60.4, 1.2, 'fix', 0, y);
@@ -92,7 +92,7 @@ add({ id: 'tilda', name: { ru: 'Тильда', en: 'Tilda' }, key: true, look: {
 add({ id: 'lukyan', name: { ru: 'Лукьян', en: 'Lukyan' }, key: true, look: { body: 'james', coat: 0x3a352e, trou: 0x252628, hat: 'cap', extra: ['beard'], scale: 1.02, hair: 0x3a3632 },
   sched: f => { const sc = s(-3.8, 63.8, Math.PI / 2, 'idle', 0, -0.62);
     const shot = !(f.has('tildaWarned') && f.at('tildaWarned')! < at(22, 24));
-    sc.wait(at(22, 24), 'idle').walk([[-3.2, 66], [-3.0, 62.6]], 0.6, 'walk', -0.62).wait(at(22, 29, 40), 'talk', Math.PI * 0.9);
+    sc.wait(at(22, 24), 'idle').walk([[-3.2, 66], [-3.0, 62.6]], 1.0, 'walk', -0.62).wait(at(22, 29, 40), 'talk', Math.PI * 0.9);
     if (!shot) return sc.end('idle').kfs;
     sc.walk([[-5.2, 61.6]], 1, 'walk').wait(at(22, 33), 'talk', Math.PI * 1.1); sc.walk([[-5.6, 61.2]], 0.8, 'hit').wait(at(22, 33, 5), 'die', Math.PI * 1.1).end('die'); return sc.kfs; } });
 export const NED_RAIL = { x: 0.6, z: 1.85 };
@@ -107,8 +107,8 @@ add({ id: 'ned', name: { ru: 'Нед', en: 'Ned' }, key: true, look: { body: 're
     // the jump: climb the parapet, step over, fall 6 m into the canal
     sc.wait(jumpAt, 'rail', 0).walkDirect([[r.x, 2.45]], 0.5, 'push', deck + 1.15).wait(sc.ct + 1.2, 'idle', 0).walkDirect([[r.x, 3.5]], 1.4, 'die', deck + 0.6).walkDirect([[r.x, 4.1]], 0.45, 'die', -4.6).hide(sc.ct + 0.2); return sc.done(); } });
 add({ id: 'agata', name: { ru: 'Агата', en: 'Agata' }, key: true, look: { body: 'liza', coat: 0x6b6358, trou: 0x2e2c2a, skirt: true, long: true, hat: 'none', extra: ['apron'], scale: 1.0, hair: 0x6a5a48 },
-  sched: () => { const b = inSite('tavern', -0.5, -8.0); const sc = s(b.x, b.z, Math.PI / 2 * -1, 'idle', 0, b.y); const sw = inSite('tavern', 2.4, -1.8);
-    sc.wait(at(22, 14), 'idle', faceTo(b.x, b.z, TAV(0, -3).x, TAV(0, -3).z)).walk([[sw.x, sw.z]], 1, 'walk', sw.y).wait(at(22, 30), 'sweep', 0).walk([[b.x, b.z]], 1, 'walk', b.y).end('idle'); return sc.kfs; } });
+  sched: () => { const b = inSite('tavern', 1.7, -7.9); const sc = s(b.x, b.z, Math.PI / 2 * -1, 'idle', 0, b.y); const sw = inSite('tavern', 2.4, -1.8);
+    sc.wait(at(22, 14), 'wipe', faceTo(b.x, b.z, TAV(1.7, -7).x, TAV(1.7, -7).z)).walk([[sw.x, sw.z]], 1, 'walk', sw.y).wait(at(22, 30), 'sweep', 0).walk([[b.x, b.z]], 1, 'walk', b.y).end('idle'); return sc.kfs; } });
 const cmLook = (i: number): Look => vary('cord' + i, { body: 'remy', coat: 0, long: i % 2 === 0 });
 add({ id: 'ignat', name: { ru: 'Игнат', en: 'Ignat' }, key: true, look: { body: 'james', coat: 0x2e2c2a, trou: 0x1c1c1e, hat: 'none', scale: 1.0, hair: 0x2a2622 },
   sched: f => { const p = seat(5); const sc = s(p.x, p.z, p.ry, 'sittalk', 0, p.y);
@@ -119,11 +119,11 @@ add({ id: 'lovchiy', name: { ru: 'Ловчий', en: 'Lovchiy' }, key: true, loo
     if (f.has('lovchiyDead')) { sc.wait(f.at('lovchiyDead')!, 'sit').wait(f.at('lovchiyDead')! + 0.1, 'die'); return sc.end('die').kfs; }
     sc.wait(at(22, 12), 'sittalk').wait(at(22, 15), 'idle', p.ry).walk([[TAV_DOOR.x, TAV_DOOR.z], [16, 9], [16, 18], [60, 19.5]], 2.6, 'run').wait(at(22, 20), 'idle', 0).end(); return sc.kfs; } });
 for (let i = 0; i < 6; i++) add({ id: 'cm' + (i + 1), name: { ru: 'Человек Корда', en: "Cord's man" }, look: cmLook(i), role: 'cord',
-  sched: f => { const idx = [0, 3, 4, 6, 7, 8][i], p = seat(idx); const sc = s(p.x, p.z, p.ry, i % 2 ? 'sit' : 'sittalk', 0, p.y);
-    sc.wait(at(22, 12, i * 2), i % 2 ? 'sit' : 'sittalk').walk([[TAV_DOOR.x, TAV_DOOR.z], [16, 9], [16, 18], [52 + i * 1.8, 20 - (i % 2) * 1.4]], 3.4, 'run').wait(at(22, 20), 'idle', 0.2 * i);
+  sched: f => { const idx = [0, 3, 4, 6, 7, 8][i]; const stand = i === 4 ? { ...TAV(-5.4, -1.0), ry: -Math.PI / 2, a: 'smoke' } : i === 5 ? { ...TAV(-2.6, -6.4), ry: Math.PI, a: 'drink' } : null; const p = stand ?? seat(idx); const sc = s(p.x, p.z, p.ry, stand ? stand.a : i % 2 ? 'sit' : 'sittalk', 0, p.y);
+    sc.wait(at(22, 12, i * 2), stand ? stand.a : i % 2 ? 'sit' : 'sittalk').walk([[TAV_DOOR.x, TAV_DOOR.z], [16, 9], [16, 18], [52 + i * 1.8, 20 - (i % 2) * 1.4]], 3.4, 'run').wait(at(22, 20), 'idle', 0.2 * i);
     if (i < 2) sc.wait(at(22, 30), 'idle', 0.2 * i).walk([[38, 19], [16, 17], [14, 0], [9, 0], [-9, 0], [-14, 0], [-14, 50], [-12, 56.5 + i * 1.2]], 1.35, 'walk').end('idle', Math.PI / 2); else sc.end(); void f; return sc.kfs; } });
 add({ id: 'scar', name: { ru: 'Шрам', en: 'Scar' }, key: true, look: { body: 'james', coat: 0x1d1e20, trou: 0x1c1c1e, hat: 'fedora', extra: ['scar'], scale: 1.03 },
-  sched: f => { const bar = inSite('tavern', -2.0, -6.2); const sc = s(bar.x, bar.z, Math.PI / 2, 'idle', 0, bar.y); const ig = seat(5);
+  sched: f => { const bar = inSite('tavern', -2.0, -6.2); const sc = s(bar.x, bar.z, Math.PI / 2, 'drink', 0, bar.y); const ig = seat(5);
     if (f.has('jetonStolen') || f.has('nedLeftEarly')) { const t0 = at(22, 4);
       sc.wait(at(22, 3, 50), 'idle').walk([[ig.x + 0.4, ig.z + 0.4]], 1.2, 'walk', ig.y).wait(t0 + 5, 'talk', ig.ry).wait(t0 + 30, 'yell').walk([[TAV(-3.2, -1.2).x, TAV(-3.2, -1.2).z]], 1, 'walk', ig.y).wait(at(22, 6), 'idle')
         .walk([[TAV_DOOR.x, TAV_DOOR.z], [16, 9], [14, 0], [9, 0], [-14, 0], [-14, 50], [-12, 56]], 1.35).end('idle'); return sc.kfs; }
@@ -136,7 +136,7 @@ add({ id: 'foma', name: { ru: 'Фома', en: 'Foma' }, key: true, look: { body:
   // D6: behind the counter; 22:28 smells gas; 22:30 runs out with his box and stands in the street until the end
   sched: f => { const i = inSite('foma', -0.2, -3.5); const door = loc('foma', 0, 1.2); const sc = s(i.x, i.z, 0, 'idle', 0, i.y);
     const leave = f.has('fomaWarned') ? Math.max(at(22, 24), f.at('fomaWarned')! + 30) : at(22, 30);
-    sc.wait(Math.min(leave - 90, at(22, 28)), 'idle').walk([[loc('foma', -1.5, -3.5).x, loc('foma', -1.5, -3.5).z]], 0.7, 'walk', i.y).wait(leave, 'phone', Math.PI * 0.5)
+    sc.wait(Math.min(leave - 90, at(22, 28)), 'idle').walk([[loc('foma', -1.5, -3.5).x, loc('foma', -1.5, -3.5).z]], 1.0, 'walk', i.y).wait(leave, 'phone', Math.PI * 0.5)
       .walk([[loc('foma', 0, -1.0).x, loc('foma', 0, -1.0).z], [loc('foma', 0, 0.4).x, loc('foma', 0, 0.4).z], [door.x + 1.5, door.z + 4]], 3.2, 'run').wait(sc.ct + 4, 'idle', Math.PI).end('cry', Math.PI); return sc.kfs; } });
 add({ id: 'gayl', name: { ru: 'Гейл', en: 'Gayl' }, key: true, look: { body: 'james', coat: 0x3a352e, trou: 0x252628, hat: 'none', scale: 1.0, hair: 0x6a6a64 },
   sched: f => { const p = inSite('contora', -1.25, -5.0); const sc = s(p.x, p.z, Math.PI, 'idle', 0, p.y); const yard = { x: 41.5, z: 33.5 };
@@ -157,7 +157,7 @@ KIDS.forEach((k, i) => add({ id: k.n, name: k.n === 'anka' ? { ru: 'Анка', e
   sched: () => { const bed = inSite('priyut', 4 + (i % 3) * 1.9, -3.2 - Math.floor(i / 3) * 3.3, 1); const sc = s(bed.x, bed.z, Math.PI / 2, i % 2 ? 'sit' : 'idle', 0, bed.y);
     const yard = { x: 51 + (i % 3) * 1.1, z: -57.4 + Math.floor(i / 3) * 1.1 };
     sc.wait(at(22, 30, i * 4), 'idle').walk([[loc('priyut', 5.7, -2).x, loc('priyut', 5.7, -2).z], [loc('priyut', 1.2, 0.8).x, loc('priyut', 1.2, 0.8).z], [yard.x, yard.z]], 1.1, 'walk').wait(at(22, 38), 'idle', Math.PI * 0.8).hide(at(22, 38, 30 + i)); return sc.done(); } }));
-for (let i = 0; i < 3; i++) add({ id: 'ggrd' + (i + 1), name: { ru: 'Охранник в сером', en: 'Grey-coated guard' }, role: 'guard', look: { ...vary('guard' + i, { body: 'remy', coat: 0 }), coat: COAT.grey, extra: ['revolver'] },
+for (let i = 0; i < 3; i++) add({ id: 'ggrd' + (i + 1), name: { ru: 'Охранник в сером', en: 'Grey-coated guard' }, role: 'guard', look: { ...vary('guard' + i, { body: 'remy', coat: 0 }), coat: COAT.grey },
   sched: f => { const yard = { x: 46 + i * 3.4, z: -55 + (i % 2) * 1.2 }, gate = { x: 49.4 + i * 1.2, z: -48.5 };
     const sc = s(yard.x, yard.z, 0, 'idle', at(22, 20)); sc.ct = at(22, 20); sc.wait(at(22, 24), 'idle', 0.4 * i).walk([[gate.x, gate.z]], 1.2, 'walk').wait(at(22, 25, 10), 'consume', Math.PI)
       .walk([[yard.x, yard.z]], 1.2, 'walk').wait(at(22, 40), 'idle', i);
@@ -166,7 +166,7 @@ for (let i = 0; i < 3; i++) add({ id: 'ggrd' + (i + 1), name: { ru: 'Охран�
     sc.walkBy(w.overBridge(o), at(22, 45)).walkBy(w.toPier(o), at(22, 49, 40)).wait(at(22, 50), 'idle', Math.PI / 2).end('idle', Math.PI / 2); return sc.kfs; } });
 // ============ SOUTH: Kanatnaya
 add({ id: 'tikhon', name: { ru: 'Тихон', en: 'Tikhon' }, key: true, look: { body: 'remy', coat: 0x26292d, trou: 0x2e2c2a, hat: 'cap', scale: 0.98, hair: 0x3a2a1a },
-  sched: f => { const t = inSite('tikhon', -1.6, -3.4), door = loc('tikhon', 0, 0.9); const sc = s(t.x, t.z, Math.PI * 1.2, 'fix', 0, t.y);
+  sched: f => { const t = inSite('tikhon', -1.4, -2.45), door = loc('tikhon', 0, 0.9); const sc = s(t.x, t.z, Math.PI * 1.2, 'fix', 0, t.y);
     if (f.has('tikhonDead')) return sc.hide(f.at('tikhonDead')!).done();
     if (f.has('tikhonHurt')) { const tf = f.at('tikhonHurt')!; sc.wait(tf, 'fix').wait(tf + 0.1, 'die').end('die'); return sc.kfs; }
     if (f.has('tikhonTurned')) return sc.wait(at(23, 0), 'fix').end('idle').kfs;
@@ -184,8 +184,8 @@ for (let i = 0; i < 3; i++) add({ id: 'dock' + (i + 1), name: { ru: 'Челов�
 add({ id: 'harrow', name: { ru: 'Виктор Харроу', en: 'Victor Harrow' }, key: true, look: { body: 'james', coat: 0xb8b2a4, trou: 0x3a3a38, long: true, hat: 'none', scale: 1.04, hair: 0xd0d0cc },
   sched: () => { const sc = s(-42, 82, 0, 'idle', 0); sc.hide(0); return sc.done(); } });
 // Bridge patrol (spec 8.3): only when the fuse was pulled (tapCut): two of Cord's men check a pass or a courier token from 22:18
-for (let i = 0; i < 2; i++) add({ id: 'patrol' + (i + 1), name: { ru: 'Патрульный Корда', en: "Cord's patrol" }, role: 'cord', look: { ...vary('patrol' + i, { body: 'remy', coat: 0 }), coat: 0x1d1e20, hat: 'peaked', extra: ['revolver'] },
-  sched: f => { const sc = s(-8.6, i ? 1.6 : -1.6, -Math.PI / 2, 'idle', 0); if (!f.has('tapCut')) return sc.hide(0).done(); const t0 = Math.max(f.at('tapCut')!, at(22, 18)); sc.hide(0).show(t0, -8.6, i ? 1.6 : -1.6, 'pistol', -Math.PI / 2).end('pistol', -Math.PI / 2); return sc.kfs; } });
+for (let i = 0; i < 2; i++) add({ id: 'patrol' + (i + 1), name: { ru: 'Патрульный Корда', en: "Cord's patrol" }, role: 'cord', look: { ...vary('patrol' + i, { body: 'remy', coat: 0 }), coat: 0x1d1e20, hat: 'peaked' },
+  sched: f => { const sc = s(-8.6, i ? 1.6 : -1.6, -Math.PI / 2, 'idle', 0); if (!f.has('tapCut')) return sc.hide(0).done(); const t0 = Math.max(f.at('tapCut')!, at(22, 18)); sc.hide(0).show(t0, -8.6, i ? 1.6 : -1.6, 'idle', -Math.PI / 2).end(i ? 'smoke' : 'fold', -Math.PI / 2); return sc.kfs; } });
 // ============ civilians (deterministic loops; alive on the streets and in the tavern)
 const CIVS: { id: string; body: Look['body']; coat: number; hat: Look['hat']; x: number; z: number; pts: [number, number][]; sp: number; ph: number; long?: boolean; skirt?: boolean }[] = [
   { id: 'civ1', body: 'james', coat: COAT.a, hat: 'fedora', x: -60, z: -5.2, pts: [[-30, -5.2], [-45, -5.2]], sp: 1.2, ph: 0 },
@@ -199,7 +199,7 @@ const CIVS: { id: string; body: Look['body']; coat: number; hat: Look['hat']; x:
 ];
 for (const c of CIVS) add({ id: c.id, name: { ru: 'Прохожий', en: 'Passer-by' }, civ: true, look: { ...vary(c.id, { body: c.body === 'james' ? 'remy' : c.body, coat: 0, skirt: c.skirt }) }, sched: () => walkLoop(c.x, c.z, c.pts, c.sp, c.ph) });
 // tavern regulars
-const reg = [{ id: 'sailor', lx: -4.6, lz: -2.0, body: 'remy' as const, coat: COAT.c, hat: 'cap' as const }, { id: 'docker1', lx: -4.6, lz: -6.0, body: 'james' as const, coat: COAT.d, hat: 'cap' as const }, { id: 'docker2', lx: -3.9, lz: -6.6, body: 'remy' as const, coat: COAT.a, hat: 'cap' as const }, { id: 'oldman', lx: 3.0, lz: -7.0, body: 'james' as const, coat: COAT.b, hat: 'none' as const }];
+const reg = [{ id: 'sailor', lx: -5.5, lz: -1.6, body: 'remy' as const, coat: COAT.c, hat: 'cap' as const }, { id: 'docker1', lx: -4.6, lz: -6.0, body: 'james' as const, coat: COAT.d, hat: 'cap' as const }, { id: 'docker2', lx: -3.9, lz: -6.6, body: 'remy' as const, coat: COAT.a, hat: 'cap' as const }, { id: 'oldman', lx: 3.0, lz: -7.0, body: 'james' as const, coat: COAT.b, hat: 'none' as const }];
 for (const r of reg) add({ id: r.id, name: { ru: 'Посетитель', en: 'Regular' }, civ: true, look: { ...vary(r.id, { body: r.body === 'james' ? 'remy' : r.body, coat: 0 }) },
-  sched: () => { const p = inSite('tavern', r.lx, r.lz); const sc = s(p.x, p.z, faceTo(p.x, p.z, TAV(r.lx + 1, r.lz).x, TAV(r.lx + 1, r.lz).z), 'sit', 0, p.y); sc.wait(at(22, 12), 'sittalk').wait(at(23, 0), 'kneel', 0).end('kneel'); return sc.kfs; } });
+  sched: () => { const p = inSite('tavern', r.lx, r.lz); const win = r.id === 'sailor'; const sc = s(p.x, p.z, win ? faceTo(p.x, p.z, TAV(r.lx, r.lz + 2).x, TAV(r.lx, r.lz + 2).z) : faceTo(p.x, p.z, TAV(r.lx + 1, r.lz).x, TAV(r.lx + 1, r.lz).z), win ? 'idle' : 'sit', 0, p.y); sc.wait(at(22, 12), win ? 'drink' : 'sittalk').wait(at(23, 0), 'kneel', 0).end('kneel'); return sc.kfs; } });
 void SITES; void TAV_YARD; void SEATS;

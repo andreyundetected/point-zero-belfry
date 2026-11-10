@@ -27,8 +27,9 @@ export function loadModel(path: string): Promise<Model> {
 }
 export interface PropOpts { ry?: number; h?: number; l?: number; s?: number; y?: number; collide?: boolean; tilt?: number; kind?: string; yOff?: number; }
 interface Inst { path: string; x: number; z: number; o: PropOpts; }
+export const allFields: PropField[] = [];
 export class PropField {
-  inst: Inst[] = [];
+  inst: Inst[] = []; constructor() { allFields.push(this); }
   add(path: string, x: number, z: number, o: PropOpts = {}) { this.inst.push({ path, x, z, o }); }
   async build(scene: THREE.Object3D) {
     const by = new Map<string, Inst[]>(); for (const i of this.inst) (by.get(i.path) ?? by.set(i.path, []).get(i.path)!).push(i);

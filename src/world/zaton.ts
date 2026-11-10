@@ -57,7 +57,7 @@ export function buildZaton(scene: THREE.Scene): Zaton {
   row({ id: 'rynok:n', a: [-88, -8], b: [-14, -8], side: -1, seed: 2, fmin: 2, fmax: 3, shopP: 0.3, signs: {} });
   row({ id: 'bashn:w', a: [-68, -30], b: [-68, -8], side: 1, seed: 3, fmin: 2, fmax: 3, wmin: 5, wmax: 7 });
   row({ id: 'bashn:e', a: [-68, -30], b: [-68, -8], side: -1, seed: 4, fmin: 2, fmax: 3, wmin: 5, wmax: 7 });
-  row({ id: 'tower_sq:n', a: [-83, -52.6], b: [-53, -52.6], side: 1, off: 0.6, seed: 5, fmin: 3, fmax: 3, wmin: 7, wmax: 9 }); // D1-D3 (+ tower fills its lot)
+  row({ id: 'tower_sq:n', a: [-83, -52.6], b: [-53, -52.6], side: -1, off: 0.6, seed: 5, fmin: 3, fmax: 3, wmin: 7, wmax: 9 }); // D1-D3 (+ tower fills its lot)
   row({ id: 'tower_sq:w', a: [-83.6, -52], b: [-83.6, -30], side: 1, off: 0.2, seed: 6, fmin: 2, fmax: 3, wmin: 6, wmax: 8 });
   row({ id: 'klyuch:1', a: [-53, -38], b: [-46, -35], side: 1, off: 2.6, seed: 7, fmin: 2, fmax: 2, wmin: 4, wmax: 5 });
   row({ id: 'klyuch:2', a: [-38, -33], b: [-30, -30], side: 1, off: 2.6, seed: 8, fmin: 2, fmax: 3, wmin: 4, wmax: 6 });
@@ -110,7 +110,7 @@ export function buildZaton(scene: THREE.Scene): Zaton {
     }
   };
   for (const id of ['bereg', 'rynok', 'nab', 'sklad', 'priyut', 'kanat', 'gavan', 'gavanE', 'bashn']) lampLine(id, 6, 20);
-  for (const [x, z] of [[-76, -45], [-60, -45], [-76, -35], [-60, -35], [-14.6, 36], [-20, 2], [-46, -31.6], [20.5, 15], [19.5, 3]] as [number, number][]) lamp(scene, x, z);
+  for (const [x, z] of [[-76, -45], [-60, -45], [-76, -35], [-60, -35], [-14.6, 36], [-20, 2], [-47.8, -36.3], [19.2, 15.6], [19.2, 2.4]] as [number, number][]) lamp(scene, x, z);
 
   // pier and barge lamps, a hanging lantern at the bend of the alley
   for (const [x, z] of [[-11.8, 62], [-11.8, 72], [-40.4, 66], [-40.4, 78]] as [number, number][]) lamp(scene, x, z, -0.5);

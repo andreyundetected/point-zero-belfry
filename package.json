@@ -11,11 +11,12 @@
     "sim:baseline": "tsx tests/baseline.ts",
     "sim:solve": "tsx tests/solve.ts",
     "sim:hash": "tsx tests/hash.ts",
-    "test": "npm run sim:baseline --silent > /dev/null && npm run sim:dialogues --silent && npm run sim:solve --silent && npm run sim:hash --silent",
+    "test": "npm run sim:baseline --silent > /dev/null && npm run sim:dialogues --silent && npm run sim:solve --silent && npm run sim:hash --silent && tsx tests/speeds.ts",
     "test:world": "node tools/test_physics.cjs && node tools/test_boot.cjs && node tools/test_flow.cjs && node tools/test_foma.cjs && node tools/test_chain.cjs && node tools/test_combat.cjs",
     "sim:dialogues": "tsx tests/dialogues.ts",
     "desktop": "npm run build && electron .",
-    "desktop:pack": "npm run build && electron-packager . okno --platform=win32 --arch=x64 --out=release --overwrite --ignore=\"^/(src|tests|tools|docs|reference_old|assets|release)\""
+    "desktop:pack": "npm run build && electron-packager . okno --platform=win32 --arch=x64 --out=release --overwrite --ignore=\"^/(src|tests|tools|docs|reference_old|assets|release)\"",
+    "check": "tsc --noEmit && npm test --silent && node tools/check.cjs"
   },
   "devDependencies": {
     "@types/three": "^0.187.0",

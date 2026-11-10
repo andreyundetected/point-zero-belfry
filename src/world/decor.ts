@@ -61,7 +61,7 @@ export function buildDecor(scene: THREE.Scene, props: PropField) {
   for (const x of [-56, -44, -30]) line(x, 32.4, x + 2, 39.6, groundH(x, 36) + 5.2);
   line(40, -62, 60, -61, groundH(50, -58) + 5.0); line(40, -58, 60, -57, groundH(50, -58) + 4.6);
   // ---- life: a pug at pier 7, a cat on the tavern step
-  props.add('characters/animal_pug', -12.5, 56.2, { h: 0.6, ry: 1.2 }); props.add('characters/animal_cat', 19.2, 13.6, { h: 0.35, ry: -1.4, y: groundH(19.2, 13.6) + 0.15 });
+  props.add('characters/animal_pug', -12.5, 56.2, { h: 0.6, ry: 1.2 }); props.add('characters/animal_cat', 18.9, 13.6, { h: 0.35, ry: -1.4 });
   // ---- far shore across the harbour: dotted lights, a lighthouse with a sweeping beam (Mayak island, spec 4)
   const halo = new THREE.TextureLoader().load('/textures/procedural/lamp_halo.png');
   for (let i = 0; i < 46; i++) { const x = -160 + i * 7 + hash(i, 1) * 6, z = 150 + hash(i, 2) * 50; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, color: hash(i, 3) < 0.3 ? 0xffb070 : 0xffd9a0, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.45 + hash(i, 4) * 0.4, fog: false })); sp.scale.setScalar(2 + hash(i, 5) * 3); sp.position.set(x, 3 + hash(i, 6) * 6, z); scene.add(sp); }

@@ -3,7 +3,7 @@ import { M, WALLS } from '../render/materials';
 import { Batcher } from './batch';
 import { building, BuildingInfo, BuildingOpts } from './building';
 import { world } from './colliders';
-import { ROADS, V2 } from './layout';
+import { RECTS, ROADS, V2 } from './layout';
 import { groundH, hash, roadDist, inCanal } from './terrain';
 
 export interface Placed extends BuildingInfo { id: string; }
@@ -21,6 +21,7 @@ export function fits(cx: number, cz: number, w: number, d: number, ry: number, m
   for (const [x, z] of obbSamples(cx, cz, w + margin * 2, d, ry)) {
     if (inCanal(x, z) || z > 56) return false;
     const rd = roadDist(x, z); if (rd.d < 0.4) return false;
+    for (const r of RECTS) if (r.kind !== 'yard' && x > r.x0 - 0.3 && x < r.x1 + 0.3 && z > r.z0 - 0.3 && z < r.z1 + 0.3) return false; // squares, quays and yards stay open
     if (world.inside(x, z, ['building'], 0.15)) return false;
   }
   // corners of existing neighbours inside this one

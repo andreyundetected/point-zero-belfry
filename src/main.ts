@@ -10,6 +10,7 @@ import { at, fmt } from './sim/time';
 import { ROOF_Y } from './sim/npcs';
 import { TOWER } from './world/tower';
 import { groundH } from './world/terrain';
+import { toggleDebug } from './world/debugview';
 
 const q = new URLSearchParams(location.search), SAT = +(q.get('sat') ?? 0.2);
 const W = innerWidth, H = innerHeight;
@@ -58,4 +59,5 @@ function frame() {
 }
 frame();
 if (q.get('lineup')) { const Lt = new THREE.PointLight(0xfff2e0, 60, 20); Lt.position.set(-60, 3, -38); scene.add(Lt); const looks: any[] = [{ body: 'remy', coat: 0x2b2a28, hat: 'fedora' }, { body: 'remy', coat: 0x4a4238, hat: 'cap', long: true }, { body: 'liza', coat: 0x26292d, skirt: true, long: true, hat: 'scarf' }, { body: 'michelle', coat: 0x3a352e, hat: 'none' }, { body: 'liza', coat: 0x4a4238, hat: 'veil', long: true }, { body: 'james', coat: 0x1d1e20, hat: 'peaked' }]; looks.forEach((l, i) => createPerson(l, 'L' + i).then(p => { p.root.position.set(-63 + i * 1.2, 0, -42); p.root.position.y = groundH(-63 + i * 1.2, -42); p.root.rotation.y = 0; scene.add(p.root); p.anim('idle'); (window as any).__lp = ((window as any).__lp ?? []).concat(p); })); }
-zaton.ready.then(() => { const ld = document.getElementById('loading'); if (ld) ld.style.display = 'none'; window.done = true; window.info = 'ok'; if (q.get('board')) { game.s.pocket = 'cap'; game.s.learn('helm_ok'); game.pilot.board(); } window.done = true; window.info = 'ok'; if (!debugPos && !q.get('noprologue')) setTimeout(() => game.runner.start('prologue'), 1200); });
+addEventListener('keydown', e => { if (e.code === 'F3') { e.preventDefault(); toggleDebug(scene); } });
+zaton.ready.then(() => { if (q.get('debug')) toggleDebug(scene, true); const ld = document.getElementById('loading'); if (ld) ld.style.display = 'none'; window.done = true; window.info = 'ok'; if (q.get('board')) { game.s.pocket = 'cap'; game.s.learn('helm_ok'); game.pilot.board(); } window.done = true; window.info = 'ok'; if (!debugPos && !q.get('noprologue')) setTimeout(() => game.runner.start('prologue'), 1200); });

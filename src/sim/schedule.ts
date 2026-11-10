@@ -2,7 +2,7 @@ import { walkY as groundH } from '../world/terrain';
 import { route } from './nav';
 // Keyframed NPC schedules. Between kf[i] and kf[i+1]: if kf[i].go the NPC walks (linear), otherwise holds the pose until the next key.
 export interface Kf { t: number; x: number; z: number; y?: number; a: string; ry?: number; go?: boolean; hide?: boolean; speed?: number; }
-export interface NpcPose { x: number; z: number; y: number; a: string; ry: number; hidden: boolean; walking: boolean; }
+export interface NpcPose { x: number; z: number; y: number; a: string; ry: number; hidden: boolean; walking: boolean; speed?: number; }
 
 export class Sched {
   kfs: Kf[] = []; cx: number; cz: number; cy: number | undefined; cry: number; ca: string; ct: number;
@@ -47,7 +47,7 @@ export function poseAt(kfs: Kf[], t: number): NpcPose {
     const u = Math.max(0, Math.min(1, (t - k.t) / Math.max(1e-6, n.t - k.t)));
     const x = k.x + (n.x - k.x) * u, z = k.z + (n.z - k.z) * u, y0 = k.y, y1 = n.y;
     const y = y0 !== undefined && y1 !== undefined ? y0 + (y1 - y0) * u : (y1 !== undefined && u > 0.5 ? y1 : y0 !== undefined && u <= 0.5 ? y0 : groundH(x, z));
-    return { x, z, y, a: k.a, ry: Math.atan2(n.x - k.x, n.z - k.z), hidden: false, walking: true };
+    return { x, z, y, a: k.a, ry: Math.atan2(n.x - k.x, n.z - k.z), hidden: false, walking: true, speed: Math.hypot(n.x - k.x, n.z - k.z) / Math.max(1e-3, n.t - k.t) };
   }
   return { x: k.x, z: k.z, y: k.y ?? groundH(k.x, k.z), a: k.a, ry: k.ry ?? 0, hidden: false, walking: false };
 }

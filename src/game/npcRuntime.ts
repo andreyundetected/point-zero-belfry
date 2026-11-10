@@ -33,7 +33,7 @@ export class NpcRuntime {
       const p = this.poses.get(id)!; per.root.position.set(p.x, p.y, p.z);
       // ease the turn
       const cur = per.root.rotation.y; let d = p.ry - cur; d = Math.atan2(Math.sin(d), Math.cos(d)); per.root.rotation.y = cur + d * Math.min(1, dt * 8);
-      let a = p.a; if (a === 'sit' || a === 'sittalk' || a === 'cry') per.root.position.y -= 0.38 * (per.look.scale ?? 1); per.anim(a === 'v' ? 'idle' : a);
+      let a = p.a; if (a === 'sit' || a === 'sittalk' || a === 'cry') per.root.position.y -= 0.38 * (per.look.scale ?? 1); per.anim(a === 'v' ? 'idle' : a); if ((p as any).walking && (p as any).speed) { const sp = (p as any).speed; per.setRate(a === 'run' ? Math.max(0.6, Math.min(1.4, sp / 3.6)) : Math.max(0.6, Math.min(1.4, sp / 1.3))); } else per.setRate(/drink|smoke|wipe|dice/.test(a) ? 0.45 : 1);
       const dd = Math.hypot(p.x - px, p.z - pz); per.root.traverse(o => { (o as THREE.Mesh).castShadow = dd < 10; }); per.update(dt);
     }
   }

@@ -11,7 +11,7 @@ const MAP: Record<string, string> = { mixamorigHips: 'pelvis', mixamorigSpine: '
   mixamorigLeftUpLeg: 'thigh_l', mixamorigLeftLeg: 'calf_l', mixamorigLeftFoot: 'foot_l', mixamorigRightUpLeg: 'thigh_r', mixamorigRightLeg: 'calf_r', mixamorigRightFoot: 'foot_r' };
 /** our animation names -> where they come from */
 const UAL: Record<string, string> = { idle: 'Idle_Loop', talk: 'Idle_Talking_Loop', fold: 'Idle_FoldArms_Loop', rail: 'Idle_Rail_Loop', lantern: 'Idle_Lantern_Loop', sit: 'Sitting_Idle_Loop', sittalk: 'Sitting_Talking_Loop',
-  drive: 'Driving_Loop', carry: 'Walk_Carry_Loop', pistol: 'Pistol_Idle_Loop', aim: 'Pistol_Aim_Neutral', no: 'Idle_No_Loop', phone: 'Idle_TalkingPhone_Loop', fix: 'Fixing_Kneeling', pickup: 'PickUp_Table', interact: 'Interact', yes: 'Yes', cry: 'Sitting_Idle_Loop', push: 'Push_Loop', punch: 'Punch_Jab', consume: 'Consume', yell: 'Idle_Rail_Call', formal: 'Walk_Formal_Loop', sweep: 'Farm_Harvest', hit2: 'Hit_Chest' };
+  drive: 'Driving_Loop', carry: 'Walk_Carry_Loop', pistol: 'Pistol_Idle_Loop', aim: 'Pistol_Aim_Neutral', no: 'Idle_No_Loop', phone: 'Idle_TalkingPhone_Loop', fix: 'Fixing_Kneeling', pickup: 'PickUp_Table', interact: 'Interact', drink: 'Consume', smoke: 'Consume', wipe: 'Interact', dice: 'Interact', yes: 'Yes', cry: 'Sitting_Idle_Loop', push: 'Push_Loop', punch: 'Punch_Jab', consume: 'Consume', yell: 'Idle_Rail_Call', formal: 'Walk_Formal_Loop', sweep: 'Farm_Harvest', hit2: 'Hit_Chest' };
 const MIX: Record<string, string> = { walk: 'walk', run: 'run', shoot: 'idle-shooting', die: 'dying', hit: 'hit-reaction', kneel: 'kneel', creep: 'crouch-walking', reload: 'reloading' };
 const ONCE = new Set(['die', 'hit', 'hit2', 'pickup', 'interact', 'punch', 'consume']);
 
@@ -52,6 +52,8 @@ export class Person {
   rest: { p: THREE.Vector3; q: THREE.Quaternion; s: THREE.Vector3 }[] = [];
   snapshot() { this.rest = this.body.skeleton.bones.map(b => ({ p: b.position.clone(), q: b.quaternion.clone(), s: b.scale.clone() })); }
   restore() { this.body.skeleton.bones.forEach((b, i) => { const r = this.rest[i]; if (r) { b.position.copy(r.p); b.quaternion.copy(r.q); b.scale.copy(r.s); } }); this.root.updateMatrixWorld(true); }
+  /** E2: the stride matches the ground speed (no sliding) */
+  setRate(r: number) { if (this.action) this.action.timeScale = r; }
   update(dt: number) { this.mixer.update(dt); this.meshMixer.update(dt); }
   dispose() { this.root.removeFromParent(); this.mixer.stopAllAction(); this.meshMixer.stopAllAction(); }
 }

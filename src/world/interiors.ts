@@ -85,7 +85,7 @@ export function buildInteriors(scene: THREE.Scene, bt: Batcher, pf: PropField) {
     const tp = loc('tavern', 0.2, -3.6); tableTop.x = tp.x; tableTop.z = tp.z; tableTop.y = floorY('tavern') + 0.82;
     for (let i = 0; i < 6; i++) { const q = loc('tavern', -1.2 + i * 0.4, -3.6 + (i % 2 ? 0.3 : -0.3)); bt.box(copper, 0.07, 0.015, 0.07, mtx(q.x, tableTop.y, q.z, 0), 1); }
     // bar items + guest rooms are decor
-    const kit = F.box(wood, 1.2, 0.9, 0.7, -4.8, -8.3, 0, 0); void kit;
+    const kit = F.box(wood, 1.2, 0.9, 0.7, 3.6, -8.3, 0, 0); void kit;
   }
   // ---------------- ORVEN
   { const F = new Furn('orven', bt, pf);
@@ -99,7 +99,7 @@ export function buildInteriors(scene: THREE.Scene, bt: Batcher, pf: PropField) {
   // ---------------- CONTORA
   { const F = new Furn('contora', bt, pf);
     F.stairs(4.0, 1.3, -3.8, -7.5);
-    F.box(wood, 5.4, 1.05, 0.5, 0.05, -3.2); for (let k = 0; k < 8; k++) F.box(iron, 0.03, 1.1, 0.03, -2.6 + k * 0.62, -3.2, 0, 1.05, { collide: false }); // grille over the counter
+    F.box(wood, 5.4, 1.05, 0.5, 0.05, -3.2); { const c = loc('contora', 0.05, -3.2), S = SITES.contora; world.add(c.x, c.z, 2.7, 0.25, S.ry, floorY('contora'), floorY('contora') + 2.4, 'building'); const w2 = loc('contora', 4.48, -3.2); world.add(w2.x, w2.z, 0.24, 0.12, S.ry, floorY('contora'), floorY('contora') + 3.0, 'building'); F.box(M.plaster2, 0.45, 3.0, 0.24, 4.48, -3.2, 0, 0, { collide: false }); } for (let k = 0; k < 8; k++) F.box(iron, 0.03, 1.1, 0.03, -2.6 + k * 0.62, -3.2, 0, 1.05, { collide: false }); // grille over the counter
     F.box(wood, 2.6, 0.45, 0.5, -3.3, -0.8); F.box(wood, 1.9, 1.2, 0.05, -3.5, -7.7, 0, 0.9, { collide: false });
     for (let k = 0; k < 12; k++) F.box(copper, 0.12, 0.12, 0.02, -4.2 + (k % 6) * 0.3, -7.66, 0, 1.4 + Math.floor(k / 6) * 0.3, { collide: false });
     F.light('contora', -1.0, -4.0, 0, 2.4, 0xffd9a0, 7, 10); F.light('contora', 0.5, -5.0, 1, 2.4, 0xffd9a0, 6, 9);

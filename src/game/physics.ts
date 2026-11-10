@@ -10,7 +10,7 @@ export const newBody = (x: number, z: number): Body => ({ x, y: groundH(x, z), z
 export function supportAt(x: number, z: number, feetY: number, r = R * 0.6): number {
   const gh = groundH(x, z); let s = feetY < gh - 1.2 ? -1e9 : gh; // below ground (cellar): only boxes support
   for (const b of world.near(x, z)) {
-    if (b.off || b.y1 > feetY + STEP) continue;
+    if (b.off || b.kind === 'surf' || b.y1 > feetY + STEP) continue;
     if (circleHitsBox(x, z, r, b) && b.y1 > s) s = b.y1;
   }
   return s;
@@ -24,7 +24,7 @@ function circleHitsBox(x: number, z: number, r: number, b: Box): boolean {
 function resolveHoriz(p: Body, head: number) {
   for (let it = 0; it < 3; it++) {
     for (const b of world.near(p.x, p.z)) {
-      if (b.off || p.y + STEP >= b.y1 || p.y + head <= b.y0) continue; // below step height or above head: not a wall
+      if (b.off || b.kind === 'surf' || p.y + STEP >= b.y1 || p.y + head <= b.y0) continue; // below step height or above head: not a wall
       const dx = p.x - b.cx, dz = p.z - b.cz, lx = dx * b.cos - dz * b.sin, lz = dx * b.sin + dz * b.cos;
       const nx = Math.max(-b.hx, Math.min(b.hx, lx)), nz = Math.max(-b.hz, Math.min(b.hz, lz));
       let ox = lx - nx, oz = lz - nz, d2 = ox * ox + oz * oz, px = 0, pz = 0;
