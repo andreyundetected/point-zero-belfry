@@ -150,13 +150,16 @@ add({ id: 'agnia', name: { ru: 'Матушка Агния', en: 'Mother Agnia' }
 add({ id: 'anna', name: { ru: 'Анна', en: 'Anna' }, key: true, look: { body: 'liza', coat: 0x5a5a58, trou: 0x2a2a2a, skirt: true, long: true, hat: 'nun', extra: ['apron'], scale: 1.0, hair: 0x6a5a48 },
   sched: () => { const dorm = inSite('priyut', 6, -5, 1); const sc = s(dorm.x, dorm.z, Math.PI, 'idle', 0, dorm.y);
     const yard = { x: 52.5, z: -56.5 };
-    sc.wait(at(22, 30), 'idle').walk([[loc('priyut', 5.7, -2).x, loc('priyut', 5.7, -2).z], [loc('priyut', 1.2, 0.8).x, loc('priyut', 1.2, 0.8).z], [yard.x, yard.z]], 1.2, 'walk').wait(at(23, 0), 'idle', 0.5).end(); return sc.kfs; } });
+    const top = inSite('priyut', 5.7, -7.6, 1), foot = inSite('priyut', 5.7, -1.9, 0);
+    sc.wait(at(22, 29, 40), 'idle').walkDirect([[top.x, top.z]], 1.1, 'walk', top.y).walkDirect([[foot.x, foot.z]], 0.95, 'walk', foot.y).walk([[loc('priyut', 1.2, 0.8).x, loc('priyut', 1.2, 0.8).z], [yard.x, yard.z]], 1.2, 'walk').wait(at(23, 0), 'idle', 0.5).end(); return sc.kfs; } });
 const KIDS = [{ n: 'anka', b: 'liza' as const, c: 0x4a4238, k: 0.62 }, { n: 'misha', b: 'remy' as const, c: 0x3a352e, k: 0.6 }, { n: 'kid3', b: 'liza' as const, c: 0x26292d, k: 0.58 }, { n: 'kid4', b: 'remy' as const, c: 0x4a4238, k: 0.64 },
   { n: 'kid5', b: 'liza' as const, c: 0x3a352e, k: 0.6 }, { n: 'kid6', b: 'remy' as const, c: 0x26292d, k: 0.57 }];
 KIDS.forEach((k, i) => add({ id: k.n, name: k.n === 'anka' ? { ru: 'Анка', en: 'Anka' } : k.n === 'misha' ? { ru: 'Миша', en: 'Misha' } : { ru: 'Ребёнок', en: 'Child' }, key: k.n === 'anka', look: { body: k.b, coat: k.c, trou: 0x252628, skirt: k.b === 'liza', hat: 'none', scale: k.k, extra: k.n === 'anka' ? ['ribbon'] : [] },
   sched: () => { const bed = inSite('priyut', 4 + (i % 3) * 1.9, -3.2 - Math.floor(i / 3) * 3.3, 1); const sc = s(bed.x, bed.z, Math.PI / 2, i % 2 ? 'sit' : 'idle', 0, bed.y);
     const yard = { x: 51 + (i % 3) * 1.1, z: -57.4 + Math.floor(i / 3) * 1.1 };
-    sc.wait(at(22, 30, i * 4), 'idle').walk([[loc('priyut', 5.7, -2).x, loc('priyut', 5.7, -2).z], [loc('priyut', 1.2, 0.8).x, loc('priyut', 1.2, 0.8).z], [yard.x, yard.z]], 1.1, 'walk').wait(at(22, 38), 'idle', Math.PI * 0.8).hide(at(22, 38, 30 + i)); return sc.done(); } }));
+    // down the stairs (lx 5.7, top at lz -8 on storey 1, foot at lz -2.3), then out of the door and into the yard
+    const top = inSite('priyut', 5.7, -7.6, 1), foot = inSite('priyut', 5.7, -1.9, 0);
+    sc.wait(at(22, 30, i * 4), 'idle').walkDirect([[top.x, top.z]], 1.05, 'walk', top.y).walkDirect([[foot.x, foot.z]], 0.95, 'walk', foot.y).walk([[loc('priyut', 1.2, 0.8).x, loc('priyut', 1.2, 0.8).z], [yard.x, yard.z]], 1.1, 'walk').wait(at(22, 38), 'idle', Math.PI * 0.8).hide(at(22, 38, 30 + i)); return sc.done(); } }));
 for (let i = 0; i < 3; i++) add({ id: 'ggrd' + (i + 1), name: { ru: 'Охранник в сером', en: 'Grey-coated guard' }, role: 'guard', look: { ...vary('guard' + i, { body: 'remy', coat: 0 }), coat: COAT.grey },
   sched: f => { const yard = { x: 46 + i * 3.4, z: -55 + (i % 2) * 1.2 }, gate = { x: 49.4 + i * 1.2, z: -48.5 };
     const sc = s(yard.x, yard.z, 0, 'idle', at(22, 20)); sc.ct = at(22, 20); sc.wait(at(22, 24), 'idle', 0.4 * i).walk([[gate.x, gate.z]], 1.2, 'walk').wait(at(22, 25, 10), 'consume', Math.PI)

@@ -35,9 +35,10 @@ export class NpcRuntime {
       // ease the turn
       const cur = per.root.rotation.y; let d = p.ry - cur; d = Math.atan2(Math.sin(d), Math.cos(d)); per.root.rotation.y = cur + d * Math.min(1, dt * 8);
       let a = p.a; if (a === 'sit' || a === 'sittalk' || a === 'cry') per.root.position.y -= 0.38 * (per.look.scale ?? 1); per.anim(a === 'v' ? 'idle' : a); if ((p as any).walking && (p as any).speed) { const sp = (p as any).speed; per.setRate(a === 'run' || a === 'run_gun' ? Math.max(0.7, Math.min(1.3, sp / 2.8)) : Math.max(0.75, Math.min(1.3, sp / 1.35))); } else per.setRate(/drink|smoke|wipe|dice/.test(a) ? 0.45 : 1);
-      const dd = Math.hypot(p.x - px, p.z - pz); if (per.shadowNear !== dd < 10) { per.shadowNear = dd < 10; per.root.traverse(o => { (o as THREE.Mesh).castShadow = dd < 10; }); }
+      const dd = Math.hypot(p.x - px, p.z - pz); if (per.shadowNear !== dd < 10) { per.shadowNear = dd < 10; per.body.castShadow = dd < 10; }
       // eyes: the speaker always, bystanders when you come close and are in front of them
       per.lookTarget.copy(this.lookAt); per.lookOn = id === this.talkingTo || (dd < 5 && !(p as any).walking) || (dd < 3);
+      per.far = dd > 12;
       per.update(dt);
     }
   }

@@ -70,7 +70,9 @@ export class Person {
   restore() { this.body.skeleton.bones.forEach((b, i) => { const r = this.rest[i]; if (r) { b.position.copy(r.p); b.quaternion.copy(r.q); b.scale.copy(r.s); } }); this.root.updateMatrixWorld(true); }
   /** E2: the stride matches the ground speed (no sliding) */
   setRate(r: number) { if (this.action) this.action.timeScale = r; }
-  update(dt: number) { this.mixer.update(dt); this.meshMixer.update(dt); this.gaze(dt); }
+  /** distance from the camera, set by the runtime; far people animate every other frame */
+  far = false; private skip = 0; private acc = 0;
+  update(dt: number) { if (this.far) { this.acc += dt; if ((this.skip = 1 - this.skip)) return; dt = this.acc; this.acc = 0; } this.mixer.update(dt); this.meshMixer.update(dt); this.gaze(dt); }
   dispose() { this.root.removeFromParent(); this.mixer.stopAllAction(); this.meshMixer.stopAllAction(); }
 }
 
@@ -80,7 +82,9 @@ export async function createPerson(look0: Look, id = ''): Promise<Person> {
   // nobody appears before the animation libraries are in: otherwise a fresh person stands in the bind T-pose until the clips load
   await Promise.all([loadUal(), gl('people/mixamo/mixamo_anims')]);
   const g = await gl('people/mixamo/' + look.body); const root = SU.clone(g.scene) as THREE.Group; p.root.add(root);
-  root.traverse((m: any) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; } });
+  // the clothes are painted onto the body (clothe()), so the pack's trousers/shorts/sneakers/zipper shells only cost triangles: drop them (remy 50k -> 37k)
+  const drop: THREE.Object3D[] = []; root.traverse((m: any) => { if (m.isSkinnedMesh && /Shorts|Pants|Sneaker|Zipper/i.test(m.name || '')) drop.push(m); }); for (const d of drop) d.removeFromParent();
+  root.traverse((m: any) => { if (m.isMesh) { m.castShadow = /Body/i.test(m.name || ''); m.receiveShadow = true; m.frustumCulled = false; } });
   p.root.updateMatrixWorld(true);
   // --- scale: head bone at ~1.62 m (children: x0.6)
   let head: THREE.Object3D | undefined; root.traverse(o => { if (o.name === 'mixamorigHead') head = o; });
