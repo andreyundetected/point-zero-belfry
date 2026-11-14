@@ -262,6 +262,8 @@ export class Game implements StvHost, Ctx {
     if (Math.floor(wasT) !== Math.floor(s.t) || this.lastCs === '') { this.lastCs = 'x'; this.applyCity(s.t); setClock(s.t); }
     else if (this.cs.lampsFlicker) this.applyCity(s.t);
     const b = p.body; const inside = this.insideRoom(); this.sceneInside = inside ?? ''; this.hemi.intensity = inside ? 0.12 : 0.7; this.moon.intensity = inside ? 0.0 : 1.0; this.snd.setMuffled(!!inside);
+    // the moon's shadow box (48 m) follows the player, snapped to shadow texels so the shadows do not swim; indoors the shadow pass is skipped altogether
+    this.moon.castShadow = !inside; { const tx = 48 / 2048; const sx = Math.round((b.x + 10) / tx) * tx, sz = Math.round((b.z + 8) / tx) * tx; this.moon.target.position.set(sx, 0, sz); this.moon.position.set(sx - 18, 30, sz - 12); this.moon.target.updateMatrixWorld(); }
     const extra = roomLights.filter(l => l.on(s.t, s.flags) && !l.shot && (inside ? l.room === inside : Math.hypot(l.x - b.x, l.z - b.z) < 14 && (l.room !== 'cellar' || b.y < -2))).map(l => ({ x: l.x, y: l.y, z: l.z, color: l.color, intensity: l.intensity, dist: l.dist }));
     if (this.pilot.aboard) { const m = this.pilot.mesh.position, ry = this.pilot.s.ry; extra.push({ x: m.x + Math.sin(ry) * 1.2, y: m.y + 2.6, z: m.z + Math.cos(ry) * 1.2, color: 0xffd0a0, intensity: 6, dist: 9 }); }
     this.burn.update(s.t, s.flags, b.x, b.z, dt); const fl = this.burn.lights(this.time); this.pool.update(b.x, b.z, [...extra, ...fl], !!inside);

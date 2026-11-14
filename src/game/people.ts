@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SU from 'three/addons/utils/SkeletonUtils.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { A } from '../render/materials';
 
 // Mixamo bodies + clothing shell + code hats + UAL animations retargeted (spec 3.5 / asset guide 4)
@@ -83,7 +84,7 @@ export async function createPerson(look0: Look, id = ''): Promise<Person> {
   await Promise.all([loadUal(), gl('people/mixamo/mixamo_anims')]);
   const g = await gl('people/mixamo/' + look.body); const root = SU.clone(g.scene) as THREE.Group; p.root.add(root);
   // the clothes are painted onto the body (clothe()), so the pack's trousers/shorts/sneakers/zipper shells only cost triangles: drop them (remy 50k -> 37k)
-  const drop: THREE.Object3D[] = []; root.traverse((m: any) => { if (m.isSkinnedMesh && /Shorts|Pants|Sneaker|Zipper/i.test(m.name || '')) drop.push(m); }); for (const d of drop) d.removeFromParent();
+  const drop: THREE.Object3D[] = []; root.traverse((m: any) => { if (m.isSkinnedMesh && /Shorts|Pants|Sneaker|Zipper|Eyel/i.test(m.name || '')) drop.push(m); }); for (const d of drop) d.removeFromParent();
   root.traverse((m: any) => { if (m.isMesh) { m.castShadow = /Body/i.test(m.name || ''); m.receiveShadow = true; m.frustumCulled = false; } });
   p.root.updateMatrixWorld(true);
   // --- scale: head bone at ~1.62 m (children: x0.6)
@@ -129,7 +130,11 @@ function clothe(root: THREE.Object3D, o: Look): THREE.SkinnedMesh {
     case 'nun': { const c = new THREE.Mesh(new THREE.SphereGeometry(0.125, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.66), new THREE.MeshStandardMaterial({ color: 0xcfcabc, roughness: 1 })); hg.add(c); hg.position.set(0, 0.1, -0.01); break; }
     default: hasHat = false;
   }
-  if (hasHat) { hg.traverse(m => { m.castShadow = true; }); hg.scale.setScalar(hu); hg.position.multiplyScalar(hu); head.add(hg); }
+  if (hasHat) { // one merged mesh per hat: a hat was 2-3 draw calls per person
+    const parts: THREE.BufferGeometry[] = []; let mat: THREE.Material = hm; hg.updateMatrixWorld(true);
+    hg.children.slice().forEach(ch => { const me = ch as THREE.Mesh; if (!me.isMesh || (me.material as THREE.MeshStandardMaterial).transparent) return; const g = me.geometry.clone(); g.applyMatrix4(me.matrix); if (g.attributes.uv2) g.deleteAttribute('uv2'); parts.push(g); mat = me.material as THREE.Material; hg.remove(me); });
+    if (parts.length) { const merged = mergeGeometries(parts.map(g => g.index ? g.toNonIndexed() : g), false); if (merged) { const m = new THREE.Mesh(merged, mat); hg.add(m); } }
+    hg.traverse(m => { m.castShadow = true; }); hg.scale.setScalar(hu); hg.position.multiplyScalar(hu); head.add(hg); }
   // small attachments in bone-local units
   const att = (parent: THREE.Object3D, obj: THREE.Object3D, pos: [number, number, number], rot: [number, number, number] = [0, 0, 0]) => { const u = boneUnit(parent); obj.scale.setScalar(u); obj.position.set(pos[0] * u, pos[1] * u, pos[2] * u); obj.rotation.set(...rot); obj.traverse(m => { m.castShadow = true; }); parent.add(obj); };
   const dark = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5, metalness: 0.4 });

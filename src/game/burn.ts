@@ -25,24 +25,30 @@ export function burnStart(b: Placed, f: Flags): number {
 }
 /** procedural sprites: a licking multi-tongue flame (hot core, ragged edge) and a ragged smoke puff */
 function blob(kind: 'flame' | 'smoke') {
-  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d')!; g.clearRect(0, 0, 128, 128);
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d')!; g.clearRect(0, 0, 256, 256);
   if (kind === 'flame') {
-    const tongue = (x: number, h: number, w: number, a: number) => { const gr = g.createLinearGradient(0, 124, 0, 124 - h); gr.addColorStop(0, `rgba(255,255,255,${a})`); gr.addColorStop(0.55, `rgba(255,255,255,${a * 0.75})`); gr.addColorStop(1, 'rgba(255,255,255,0)');
-      g.fillStyle = gr; g.beginPath(); g.moveTo(x - w, 124); g.bezierCurveTo(x - w * 1.1, 124 - h * 0.45, x - w * 0.25, 124 - h * 0.7, x + (Math.sin(x) * 6), 124 - h); g.bezierCurveTo(x + w * 0.25, 124 - h * 0.7, x + w * 1.1, 124 - h * 0.45, x + w, 124); g.closePath(); g.fill(); };
-    g.filter = 'blur(3px)'; [[30, 70, 18, 0.8], [52, 108, 22, 1], [76, 96, 21, 0.95], [98, 66, 17, 0.8], [64, 84, 26, 1], [42, 56, 16, 0.7], [88, 50, 15, 0.7]].forEach(a => tongue(a[0], a[1], a[2], a[3]));
-    g.filter = 'none'; const core = g.createRadialGradient(64, 112, 2, 64, 108, 40); core.addColorStop(0, 'rgba(255,255,255,1)'); core.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = core; g.fillRect(0, 60, 128, 68);
-  } else { const im = g.createImageData(128, 128); for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++) { const u = (x - 64) / 64, v = (y - 64) / 64, n = 0.5 + 0.5 * Math.sin(x * 0.45 + y * 0.3) * Math.cos(y * 0.5 - x * 0.2), a = Math.max(0, 1 - Math.hypot(u, v)) ** 1.2 * (0.7 + 0.3 * n), i = (y * 128 + x) * 4; im.data[i] = im.data[i + 1] = im.data[i + 2] = 255; im.data[i + 3] = Math.round(a * 255); } g.putImageData(im, 0, 0); }
+    // a 2x2 atlas of four different tongue sets, so neighbouring particles never look like copies
+    const tongue = (x: number, h: number, w: number, a: number, lean: number) => { const gr = g.createLinearGradient(0, 124, 0, 124 - h); gr.addColorStop(0, `rgba(255,255,255,${a})`); gr.addColorStop(0.5, `rgba(255,255,255,${a * 0.8})`); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = gr; g.beginPath(); g.moveTo(x - w, 124); g.bezierCurveTo(x - w * 1.15, 124 - h * 0.4, x - w * 0.2 + lean * 0.5, 124 - h * 0.72, x + lean, 124 - h); g.bezierCurveTo(x + w * 0.2 + lean * 0.5, 124 - h * 0.72, x + w * 1.15, 124 - h * 0.4, x + w, 124); g.closePath(); g.fill(); };
+    const sets: [number, number, number, number, number][][] = [
+      [[34, 66, 17, 0.75, -6], [58, 110, 22, 1, 4], [84, 90, 20, 0.9, 10], [100, 58, 14, 0.7, 6], [66, 80, 26, 1, 0]],
+      [[28, 54, 14, 0.7, -8], [50, 92, 20, 0.95, -4], [70, 118, 21, 1, 2], [96, 76, 18, 0.85, 12], [60, 70, 28, 1, 0], [112, 44, 10, 0.6, 8]],
+      [[40, 100, 24, 1, -10], [72, 72, 19, 0.9, 0], [92, 104, 20, 0.95, 8], [56, 50, 16, 0.75, -3], [66, 86, 30, 1, 0]],
+      [[30, 80, 16, 0.8, -4], [52, 60, 15, 0.8, -8], [68, 116, 24, 1, 0], [90, 84, 18, 0.9, 10], [106, 62, 14, 0.7, 12], [64, 76, 30, 1, 2]]];
+    sets.forEach((set, i) => { g.save(); g.translate((i % 2) * 128, Math.floor(i / 2) * 128); g.filter = 'blur(1.5px)'; set.forEach(a => tongue(...a)); g.filter = 'none';
+      const core = g.createRadialGradient(64, 114, 2, 64, 110, 34); core.addColorStop(0, 'rgba(255,255,255,1)'); core.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = core; g.fillRect(0, 70, 128, 58); g.restore(); });
+  } else { const im = g.createImageData(256, 256); for (let y = 0; y < 256; y++) for (let x = 0; x < 256; x++) { const u = (x - 128) / 128, v = (y - 128) / 128, n = 0.5 + 0.5 * Math.sin(x * 0.22 + y * 0.15) * Math.cos(y * 0.25 - x * 0.1), a = Math.max(0, 1 - Math.hypot(u, v)) ** 1.2 * (0.7 + 0.3 * n), i = (y * 256 + x) * 4; im.data[i] = im.data[i + 1] = im.data[i + 2] = 255; im.data[i + 3] = Math.round(a * 255); } g.putImageData(im, 0, 0); }
   return new THREE.CanvasTexture(c); }
 const flame = blob('flame'), smokeT = blob('smoke');
-const MAXB = 30, PPB = 60, SPB = 4;
+const MAXB = 30, PPB = 120, SPB = 4;
 export class Burn {
   sparks!: THREE.Points; kmat!: THREE.ShaderMaterial;
   starts = new Map<Placed, number>(); active: Placed[] = []; flames: THREE.Points; smoke: THREE.Points; chars: THREE.InstancedMesh; mat: THREE.ShaderMaterial; smat: THREE.ShaderMaterial; t = 0; fv = ''; count = 0;
   constructor(public scene: THREE.Scene) {
     const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MAXB * PPB * 3), 3)); fg.setAttribute('aSize', new THREE.BufferAttribute(new Float32Array(MAXB * PPB), 1)); fg.setAttribute('aPhase', new THREE.BufferAttribute(new Float32Array(MAXB * PPB), 1)); fg.setDrawRange(0, 0);
     this.mat = new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, map: { value: flame }, uScale: { value: 520 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
-      vertexShader: 'attribute float aSize; attribute float aPhase; uniform float uTime, uScale; varying float vP; void main(){ float k = fract(uTime*0.9+aPhase); vec3 p = position + vec3(sin(aPhase*40.+uTime*3.)*0.3, k*0.9*aSize*0.2, cos(aPhase*30.+uTime*2.)*0.3); vec4 mv = modelViewMatrix*vec4(p,1.); gl_PointSize = min(260.0, aSize*(1.0-k*0.45)*uScale/max(0.5,-mv.z)); gl_Position = projectionMatrix*mv; vP = k; }',
-      fragmentShader: 'uniform sampler2D map; varying float vP; void main(){ vec4 c = texture2D(map, vec2(gl_PointCoord.x, 1.0-gl_PointCoord.y)); vec3 col = mix(vec3(1.0,0.62,0.16), vec3(0.85,0.16,0.02), vP); gl_FragColor = vec4(col*c.a*0.5, c.a*(1.0-vP*0.6)*0.6); }' });
+      vertexShader: 'attribute float aSize; attribute float aPhase; uniform float uTime, uScale; varying float vP; varying float vM; void main(){ vM = aPhase; float k = fract(uTime*(0.55+fract(aPhase*3.1)*0.35)+aPhase); float rise = aSize*1.3; vec3 p = position + vec3(sin(aPhase*40.+uTime*2.5+k*6.)*0.1*aSize, k*rise, cos(aPhase*30.+uTime*2.)*0.1*aSize); vec4 mv = modelViewMatrix*vec4(p,1.); float s = aSize*(0.8+0.5*fract(aPhase*5.3))*(1.4-1.1*k)*min(1.0, 0.3+k*4.0); gl_PointSize = min(140.0, s*uScale/max(0.5,-mv.z)); gl_Position = projectionMatrix*mv; vP = k; }',
+      fragmentShader: 'uniform sampler2D map; varying float vP; varying float vM; void main(){ float fx = fract(vM*7.0) > 0.5 ? 1.0-gl_PointCoord.x : gl_PointCoord.x; float q = floor(fract(vM*13.0)*4.0); vec2 uv = (vec2(fx, 1.0-gl_PointCoord.y) + vec2(mod(q,2.0), floor(q/2.0))) * 0.5; vec4 c = texture2D(map, uv); vec3 col = mix(vec3(1.0,0.88,0.5), mix(vec3(1.0,0.55,0.12), vec3(0.9,0.22,0.03), smoothstep(0.35,1.0,vP)), smoothstep(0.0,0.3,vP)); float a = pow(c.a, 1.6)*pow(1.0-vP, 2.2)*min(1.0, vP*8.0); gl_FragColor = vec4(col*a*1.1, a*0.7); }' });
     this.flames = new THREE.Points(fg, this.mat); this.flames.frustumCulled = false; this.flames.renderOrder = 4; scene.add(this.flames);
     const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MAXB * SPB * 3), 3)); sg.setAttribute('aSize', new THREE.BufferAttribute(new Float32Array(MAXB * SPB), 1)); sg.setAttribute('aPhase', new THREE.BufferAttribute(new Float32Array(MAXB * SPB), 1)); sg.setDrawRange(0, 0);
     this.smat = new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, map: { value: smokeT }, uScale: { value: 520 } }, transparent: true, depthWrite: false, fog: false,
@@ -73,10 +79,15 @@ export class Burn {
     let n = 0, sn = 0; const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(); let ci = 0;
     use.forEach(({ b, k, age }) => {
       const c = Math.cos(b.ry), sn_ = Math.sin(b.ry), P = (lx: number, ly: number, lz: number) => [b.x + lx * c + lz * sn_, b.base + ly, b.z - lx * sn_ + lz * c];
-      const nF = Math.min(PPB, 22 + Math.round(b.w * 3.2 * k)); const wane = age > 1500 ? 0.8 : 1;
-      for (let i = 0; i < nF; i++) { const r1 = hash(b.x + i, b.z), r2 = hash(i, b.z * 1.3), r3 = hash(b.x * 0.7, i + 3);
-        const kind = i % 3, lx = (r1 - 0.5) * b.w, ly = kind === 0 ? b.H * (0.75 + 0.3 * r2) : b.H * (0.12 + 0.7 * r2), lz = kind === 2 ? -r3 * b.depth : 0.5 + r3 * 0.4;
-        const [x, y, z] = P(lx, ly, lz); pos.setXYZ(n, x, y, z); sz.setX(n, (2.4 + r3 * 2.2) * k * wane * (kind === 0 ? 1.4 : 1)); ph.setX(n, r1 * 7.3); n++; }
+      // where a house really burns: out of the window openings (bay grid of the generator), along the eave, and a column above the roof
+      const wane = age > 1500 ? 0.8 : 1, FH = 3.1, bays = Math.max(2, Math.round(b.w / 2.3)), bw = b.w / bays, floors = Math.max(1, b.floors);
+      const put = (lx: number, ly: number, lz: number, size: number, seed: number) => { if (n >= MAXB * PPB) return; const [x, y, z] = P(lx, ly, lz); pos.setXYZ(n, x, y, z); sz.setX(n, size * k * wane); ph.setX(n, hash(seed, lx + ly) * 7.3); n++; };
+      // a source = a small column of 4-6 overlapping puffs rising ~2 m: windows first (the sprite at the sill, licking up the wall), then the eave, then the roof
+      let budget = Math.hypot(b.x - px, b.z - pz) < 45 ? PPB : 40; const src = (lx: number, ly: number, lz: number, size: number, cnt: number, seed: number) => { for (let j = 0; j < cnt && budget > 0; j++, budget--) put(lx + (hash(seed, j) - 0.5) * 0.45 * size, ly + hash(j, seed) * 0.9 * size - 0.3 * size, lz, size * (0.6 + 0.6 * hash(j + 5, seed)), seed * 7 + j); };
+      const wins: [number, number, number][] = []; for (let f = 0; f < floors; f++) for (let bI = 0; bI < bays; bI++) { const r = hash(b.x + bI, b.z + f); if (r > 0.3) wins.push([-b.w / 2 + bw * (bI + 0.5), 0.35 + f * FH + 1.9, r]); }
+      wins.sort((a, b2) => a[2] - b2[2]); for (const [lx, ly, r] of wins.slice(0, Math.min(6, Math.floor(budget * 0.5 / 10)))) src(lx, ly, 0.3, 0.9 + r * 0.4, 10, Math.round(lx * 10 + ly));
+      for (let e = 0; e < bays && budget > 8; e++) { const lx = -b.w / 2 + (e + 0.5) * bw, r = hash(e, b.x); src(lx, b.H + 0.1, -0.5 - r * 1.5, 1.2 + r * 0.7, 8, e + 11); }
+      for (let c2 = 0; c2 < 3 && budget > 0; c2++) { const r = hash(c2, b.z + 2); src((r - 0.5) * b.w * 0.5, b.H + 0.4, -b.depth * (0.25 + 0.5 * hash(c2, b.x)), 1.5 + r * 0.8, 12, c2 + 31); }
       if (k > 0.2) for (let i = 0; i < 10; i++) { const [x, y, z] = P((hash(i, b.z) - 0.5) * b.w * 0.8, b.H * 0.8, -b.depth * hash(b.x, i)); kpos.setXYZ(kn, x, y, z); kph.setX(kn, hash(i + 3, b.x + b.z)); kn++; }
       for (let i = 0; i < SPB; i++) { const [x, y, z] = P((hash(i, b.x) - 0.5) * b.w * 0.8, b.H, -b.depth * (0.2 + 0.6 * hash(b.z, i))); spos.setXYZ(sn, x, y, z); ssz.setX(sn, 7 + hash(i, b.z) * 6); sph.setX(sn, hash(b.x, i + b.z)); sn++; }
       m4.compose(new THREE.Vector3(...(P(0, b.H / 2 - 1.4, -b.depth / 2) as [number, number, number])), q.setFromEuler(new THREE.Euler(0, b.ry, 0)), new THREE.Vector3(b.w + 0.25, b.H + 1.2, b.depth + 0.25)); this.chars.setMatrixAt(ci++, m4);
