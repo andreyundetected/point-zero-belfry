@@ -20,7 +20,7 @@ import { setFomaState } from '../world/ruins';
 import { setClock, updateTower } from '../world/tower';
 import { world } from '../world/colliders';
 import { R, HEIGHT, STEP, lineOfSight } from './physics';
-import { groundH } from '../world/terrain';
+import { groundH, surfaceAt } from '../world/terrain';
 import { NPCS } from '../sim/npcs';
 import { VEHICLES } from '../sim/vehicles';
 import { Vehicles } from './vehicles';
@@ -54,7 +54,7 @@ export class Game implements StvHost, Ctx {
       if (!c.s.knows('helm_ok') && c.s.pocket !== 'cap') { c.hud.bark('Охрана не подпустит. Надо сказать «Я».', true); const d = c.npcs.pose('dock1'); if (d && !d.hidden) c.runner.start('guard.pier3'); return; }
       c.pilot.board(); } });
     addEventListener('keydown', e => this.key(e));
-    this.menu = new Menu(this);
+    this.menu = new Menu(this); this.ui.onLine = () => this.snd.play('interface/click_002', 0.1); this.ui.onPick = () => this.snd.play('interface/click_004', 0.14);
     // losing the pointer lock (Esc, alt-tab) opens the pause menu; the menu itself asks for the lock back
     document.addEventListener('pointerlockchange', () => { const locked = !!document.pointerLockElement; if (locked) { this.hadLock = true; if (!this.menu.open) this.paused = false; } else if (this.hadLock && !this.menu.onTitle && !this.open && !this.ui.open && !this.runner.active && !this.s.ended && !this.jumpBusy && !this.menu.open) this.menu.pause(); });
     addEventListener('keyup', e => { if (e.code === 'KeyT') this.waitHeld = false; });
@@ -74,14 +74,14 @@ export class Game implements StvHost, Ctx {
   // ---------------- Ctx (for dialogues and content)
   advance(sec: number) { this.s.t = Math.min(WINDOW, this.s.t + sec); }
   bark(ru: string, force = false) { if (this.menu?.onTitle) return false; return this.hud.bark(ru, force); }
-  thread(key: string) { if (this.s.thread === key) return; this.s.thread = key; const th = THREADS[key]; if (th) this.hud.thread(pick(th), 7); this.sinceThread = 0; }
+  thread(key: string) { if (this.s.thread === key) return; this.s.thread = key; this.snd.play('interface/bong_001', 0.18); const th = THREADS[key]; if (th) this.hud.thread(pick(th), 7); this.sinceThread = 0; }
   flag(n: FlagName) { this.s.setFlag(n); this.sim.flags = this.s.flags; }
-  give(i: ItemId) { this.s.give(i); this.hud.toast(itemName(i)); }
+  give(i: ItemId) { this.s.give(i); this.hud.toast(itemName(i)); this.snd.play('rpg_foley/cloth_belt.ogg', 0.5); }
   take(i: ItemId) { if (this.s.pocket === i) { this.s.pocket = undefined; this.s.held = undefined; } }
   learn(id: string) {
     if (this.s.knows(id)) return; this.s.learn(id); const f = FACTS[id]; if (!f) return;
     const future = f.t !== undefined && f.t > this.s.t + 30; const txt = pick(f);
-    this.hud.notify((getLang() === 'ru' ? 'Узнал: ' : 'Learned: ') + txt, future ? `⟲ ${fmt(f.t!)}` : '');
+    this.snd.play('interface/confirmation_001', 0.25); this.hud.notify((getLang() === 'ru' ? 'Узнал: ' : 'Learned: ') + txt, future ? `⟲ ${fmt(f.t!)}` : '');
     this.note('fact_' + id, (future ? `⟲ ${fmt(f.t!)}: ` : '') + f.ru, (future ? `⟲ ${fmt(f.t!)}: ` : '') + f.en, f.who);
   }
   note(id: string, ru: string, en: string, who?: string, red = false) { this.s.note({ id, t: this.s.t, ru, en, who, red }); }
@@ -194,6 +194,7 @@ export class Game implements StvHost, Ctx {
   openTab(tab: 'time' | 'map' | 'people' | 'pocket') { this.stv.tab = tab; if (!this.open) this.toggleStvorka(); else this.stv.render(); }
   toggleStvorka() {
     if (this.jumpBusy || this.frozen) return; if (this.open && this.s.t >= WINDOW) return; this.open = !this.open;
+    this.snd.play(this.open ? 'interface/open_001' : 'interface/close_001', 0.3);
     if (this.open) { document.exitPointerLock?.(); this.stv.show(this.s.t); } else { this.stv.hide(); this.hideGhosts(); this.previewing = false; this.player.dom.requestPointerLock?.(); }
     this.hud.thread(THREADS[this.s.thread] ? pick(THREADS[this.s.thread]) : '', this.open ? 99 : 0.01);
   }
@@ -204,7 +205,7 @@ export class Game implements StvHost, Ctx {
     const consider = (x: number, y: number, z: number, r: number, label: string | null, fn: () => void) => {
       if (!label) return; const dx = x - p.x, dz = z - p.z, d = Math.hypot(dx, dz); if (d > r || Math.abs(y - p.y) > 2.2) return; const cosA = d < 0.5 ? 1 : (dx * fx + dz * fz) / d; if (cosA < 0.35) return; const score = d - cosA; if (!best || score < best.d) best = { d: score, label, fn };
     };
-    for (const d of doors) { const lk = d.locked(this.s.t, this.s.flags); consider(d.x, d.y, d.z, 1.9, lk && !d.open ? `${d.label}: ${lk}` : (d.open ? 'Закрыть дверь' : 'Открыть дверь'), () => { if (lk && !d.open) { this.hud.bark(lk.split('.')[0] + '.', true); this.snd.play('rpg_foley/metal_latch.ogg', 0.5); onBark(this, 'locked:' + d.id); return; } d.open = !d.open; this.snd.play('rpg_foley/door_' + (d.open ? 'open_' : 'close_') + (1 + (this.s.t | 0) % 4) + '.ogg', 0.7); }); }
+    for (const d of doors) { const lk = d.locked(this.s.t, this.s.flags); consider(d.x, d.y, d.z, 1.9, lk && !d.open ? `${d.label}: ${lk}` : (d.open ? 'Закрыть дверь' : 'Открыть дверь'), () => { if (lk && !d.open) { this.hud.bark(lk.split('.')[0] + '.', true); this.snd.play('rpg_foley/metal_latch.ogg', 0.5); onBark(this, 'locked:' + d.id); return; } d.open = !d.open; this.snd.play('rpg_foley/door_' + (d.open ? 'open_' + (1 + (this.s.t | 0) % 2) : 'close_' + (1 + (this.s.t | 0) % 4)) + '.ogg', 0.7); }); }
     for (const it of interactables) { if (it.ok && !it.ok(this)) continue; const q = it.at ? it.at(this) : { x: it.x, y: it.y, z: it.z }; if (!q) continue; consider(q.x, q.y, q.z, it.r ?? 1.6, it.label(this), () => it.use(this)); }
     for (const d of NPCS) { const po = this.npcs.pose(d.id); if (!po || po.hidden) continue; const cid = pickConv(d.id, this); if (!cid) continue; consider(po.x, po.y, po.z, 2.5, `Говорить: ${nameOf(d.id)}`, () => this.talk(d.id, cid)); }
     void cam; return best as { d: number; label: string; fn: () => void } | null;
@@ -273,7 +274,7 @@ export class Game implements StvHost, Ctx {
     if (this.menu.onTitle) this.menu.cinematic(dt);
     this.seenT -= dt; if (this.seenT <= 0) { this.seenT = 1; for (const id of this.s.met) { const q = this.npcs.pose(id); if (q && !q.hidden && Math.hypot(q.x - p.body.x, q.z - p.body.z) < 25 && lineOfSight(p.body.x, p.body.z, p.body.y + 1.6, q.x, q.z, q.y + 1.5)) this.s.lastSeen.set(id, { x: q.x, z: q.z, t: s.t }); } }
     this.miniT -= dt; if (this.miniT <= 0) { this.miniT = 0.1; drawMini(document.getElementById('mini') as HTMLCanvasElement, { x: p.body.x, z: p.body.z, yaw: p.yaw, thread: s.thread, time: performance.now() / 1000, t: s.t }); this.hud.pocket(s.pocket ? itemName(s.pocket) : null); this.hud.threadBar(THREADS[s.thread] && !this.open && !talking ? pick(THREADS[s.thread]) : ''); this.hud.weapon(s.hasGun ? `${this.weapon === 'gun' ? '▸ ' : ''}${getLang() === 'ru' ? 'Револьвер' : 'Revolver'} ${s.mag}/${s.ammo}` : null); }
-    { const b0 = p.body, sp = Math.hypot(b0.vx, b0.vz); if (b0.grounded && sp > 0.8 && !p.frozen) { this.stepT -= dt * (sp > 4 ? 1.6 : 1); if (this.stepT <= 0) { this.stepT = 0.5; const kind = this.sceneInside || b0.y > 20 ? 'wood' : 'concrete'; this.snd.play(`impact/footstep_${kind}_00${(Math.random() * 5) | 0}`, p.crouching ? 0.12 : 0.28); } } }
+    { const b0 = p.body, sp = Math.hypot(b0.vx, b0.vz); if (b0.grounded && sp > 0.8 && !p.frozen) { this.stepT -= dt * (sp > 4 ? 1.6 : 1); if (this.stepT <= 0) { this.stepT = 0.5; const sf = surfaceAt(b0.x, b0.z); const kind = this.sceneInside || b0.y > 20 || (b0.z > 56 && b0.y < 0) ? 'wood' : sf === 'yard' ? 'grass' : 'concrete'; this.snd.play(`impact/footstep_${kind}_00${(Math.random() * 5) | 0}`, (p.crouching ? 0.12 : 0.28) * (kind === 'wood' ? 1.2 : 1)); } } }
     // city state + lights
     if (Math.floor(wasT) !== Math.floor(s.t) || this.lastCs === '') { this.lastCs = 'x'; this.applyCity(s.t); setClock(s.t); }
     else if (this.cs.lampsFlicker) this.applyCity(s.t);
@@ -284,7 +285,7 @@ export class Game implements StvHost, Ctx {
     if (this.combat.muzzle > 0) { const c = this.cam.position, f = new THREE.Vector3(0, 0, -1).applyQuaternion(this.cam.quaternion); extra.push({ x: c.x + f.x * 0.6, y: c.y - 0.1, z: c.z + f.z * 0.6, color: 0xffc070, intensity: 40, dist: 9 }); }
     if (this.pilot.aboard) { const m = this.pilot.mesh.position, ry = this.pilot.s.ry; extra.push({ x: m.x + Math.sin(ry) * 1.2, y: m.y + 2.6, z: m.z + Math.cos(ry) * 1.2, color: 0xffd0a0, intensity: 6, dist: 9 }); }
     this.burn.update(s.t, s.flags, b.x, b.z, dt); const fl = this.burn.lights(this.time); this.pool.update(b.x, b.z, [...extra, ...fl], !!inside);
-    this.fx.update(dt, [], Math.max(this.cs.glow * 0.4, this.burn.share())); this.snd.setFire(this.burn.share());
+    this.fx.update(dt, [], Math.max(this.cs.glow * 0.4, this.burn.share())); this.snd.setFire(Math.max(this.burn.share(), this.burn.nearFire(b.x, b.z, 18) ? 0.9 : 0));
     { const f = this.scene.fog as THREE.FogExp2 | null; if (f) f.density = 0.035 - 0.026 * Math.max(0, Math.min(1, (b.y - 4) / 22)); }
     updateDoors(dt, this.s.t, this.s.flags); updateTower(dt, Math.hypot(b.x + 70, b.z + 58) < 70);
     // npcs

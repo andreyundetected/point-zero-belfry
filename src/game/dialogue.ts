@@ -71,7 +71,8 @@ export class DialogueUI {
     });
     this.root.addEventListener('click', e => { const t = (e.target as HTMLElement).closest('.opt,.sys') as HTMLElement | null; if (t && this.choiceFn) this.choiceFn(+t.dataset.i!); else if (this.resolve) { const r = this.resolve; this.resolve = undefined; r(); } });
   }
-  show(l: Line): Promise<void> {
+  onLine?: () => void; onPick?: () => void;
+  show(l: Line): Promise<void> { this.onLine?.();
     this.open = true; this.root.style.display = 'block'; this.free();
     const who = l.act ? '' : `<div class="who">${nameOf(l.who)}</div>`;
     const isTik = l.who === 'tik' && !l.act; const body = isTik ? `«${en(l.ru, l.en)}»` : en(l.ru, l.en);
@@ -80,7 +81,7 @@ export class DialogueUI {
   }
   private sysIdx = -1;
   /** spoken lines in quotes, actions in italics in brackets, system buttons small and grey at the bottom (A6) */
-  choose(cs: { text: string; glyph?: string; kind: 'say' | 'act' | 'sys' }[]): Promise<number> {
+  choose(cs: { text: string; glyph?: string; kind: 'say' | 'act' | 'sys' }[]): Promise<number> { this.onPick?.();
     this.open = true; this.root.style.display = 'block'; this.nChoices = cs.length; this.sel = 0; this.free();
     const main = cs.map((c, i) => ({ c, i })).filter(x => x.c.kind !== 'sys'), sys = cs.map((c, i) => ({ c, i })).filter(x => x.c.kind === 'sys');
     this.sysIdx = sys.length ? sys[0].i : -1; let n = 0;

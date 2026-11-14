@@ -77,9 +77,10 @@ export class Menu {
     this.items = Array.from(this.root.querySelectorAll('.mi')) as HTMLElement[]; this.sel = 0; this.mark();
   }
   private mark() { this.items.forEach((el, i) => el.classList.toggle('on', i === this.sel)); }
+  private tick(n = 'click_001') { this.g.snd.init(); this.g.snd.play('interface/' + n, 0.25); }
   private set(k: string, el: HTMLInputElement) { const v = +el.value; if (k === 'sens') setSetting('sens', v); if (k === 'volume') setSetting('volume', v); if (k === 'fov') setSetting('fov', v); const lab = document.getElementById('v-' + k); if (lab) lab.textContent = k === 'volume' ? Math.round(v * 100) + '%' : k === 'fov' ? v + '°' : v.toFixed(2); }
   private act(a: string, el?: HTMLElement) {
-    void el;
+    void el; this.tick(a === 'back' || a === 'resume' ? 'back_001' : 'confirmation_002');
     if (a.startsWith('q:')) { setSetting('quality', a.slice(2) as Quality); this.render(); return; }
     if (a.startsWith('lang:')) { setLang(a.slice(5) as 'ru' | 'en'); this.g.hud.refresh(); this.render(); return; }
     if (a.startsWith('hints:')) { setSetting('hints', a.endsWith('1')); this.render(); return; }
@@ -98,8 +99,8 @@ export class Menu {
   private key(e: KeyboardEvent) {
     if (!this.open) { if (e.code === 'Escape' && !this.g.open && !this.g.ui.open && !this.g.runner.active && !this.g.s.ended && this.g.hadLock) { this.pause(); e.stopImmediatePropagation(); } return; }
     e.stopImmediatePropagation();
-    if (e.code === 'ArrowDown' || e.code === 'KeyS') { this.sel = (this.sel + 1) % this.items.length; this.mark(); }
-    if (e.code === 'ArrowUp' || e.code === 'KeyW') { this.sel = (this.sel + this.items.length - 1) % this.items.length; this.mark(); }
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') { this.sel = (this.sel + 1) % this.items.length; this.mark(); this.tick(); }
+    if (e.code === 'ArrowUp' || e.code === 'KeyW') { this.sel = (this.sel + this.items.length - 1) % this.items.length; this.mark(); this.tick(); }
     if (e.code === 'Enter' || e.code === 'Space') { const it = this.items[this.sel]; if (it) this.act(it.dataset.act!, it); }
     if (e.code === 'Escape') { if (this.screen === 'settings' || this.screen === 'controls' || this.screen === 'about') this.act('back'); else if (this.screen === 'pause') this.resume(); }
   }
