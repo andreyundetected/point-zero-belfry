@@ -12,6 +12,7 @@ import { TOWER } from './world/tower';
 import { groundH } from './world/terrain';
 import { toggleDebug } from './world/debugview';
 import { onSettings, PRESET } from './game/settings';
+import { makeSplashes, makeChimneySmoke, makeFogBanks } from './render/weatherfx';
 
 const q = new URLSearchParams(location.search), SAT = +(q.get('sat') ?? 0.2);
 const W = innerWidth, H = innerHeight;
@@ -23,7 +24,7 @@ const cam = new THREE.PerspectiveCamera(W < H ? 80 : 70, W / H, 0.05, 260); scen
 const { moon, hemi } = setupAtmosphere(scene);
 const zaton = buildZaton(scene);
 const dev = makeDevice(); cam.add(dev.obj);
-const rain = makeRain(scene);
+const rain = makeRain(scene); const splashes = makeSplashes(scene); let smokeTick: ((t: number) => void) | null = null, fogTick: ((t: number) => void) | null = null;
 const { comp, grade, setScale } = makePost(renderer, scene, cam, W, H, SAT);
 const player = new Player(cam, renderer.domElement);
 const game = new Game(scene, cam, player, moon, hemi, renderer);
@@ -33,6 +34,7 @@ const gun = new THREE.Group(); { const steel = new THREE.MeshStandardMaterial({ 
   const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.021, 0.021, 0.04, 12), steel); drum.rotation.x = Math.PI / 2; drum.position.set(0, 0.025, -0.02);
   const frame = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.035, 0.07), steel); frame.position.set(0, 0.02, -0.03); const grip = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.08, 0.035), wood); grip.position.set(0, -0.03, 0.02); grip.rotation.x = -0.35;
   const glove = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.07), new THREE.MeshStandardMaterial({ color: 0x17140f, roughness: 0.85 })); glove.position.set(0, -0.03, 0.03);
+  const flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.TextureLoader().load('/textures/procedural/soft_glow.png'), color: 0xffd090, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, depthTest: false })); flash.position.set(0, 0.03, -0.21); flash.scale.setScalar(0.16); flash.visible = false; gun.add(flash); (gun as any).flash = flash;
   gun.add(barrel, drum, frame, grip, glove); gun.position.set(0.2, -0.2, -0.38); gun.visible = false; cam.add(gun); }
 game.onWeapon = w => { gun.visible = w === 'gun'; }; game.onHands = v => { dev.obj.visible = v; if (!v) gun.visible = false; else gun.visible = game.weapon === 'gun'; };
 
@@ -58,10 +60,10 @@ function frame() {
   for (const p of (window as any).__lp ?? []) p.update(0.016);
   const dt = Math.min(clock.getDelta(), 0.05); t += dt;
   acc += dt; accN++; if (accN >= 90) { const avg = acc / accN; acc = 0; accN = 0; if (!q.get('scale') && !fixedScale) { const ns = avg > 0.026 ? Math.max(0.5, scale - 0.15) : avg < 0.0155 ? Math.min(1, scale + 0.1) : scale; if (Math.abs(ns - scale) > 0.01) { scale = ns; setScale(scale); } } }
-  game.update(dt); { const bm = (scene as any).__beam; if (bm) bm.material.opacity = 0.15 + 0.85 * Math.max(0, Math.sin(t * 0.9) ** 3); } const shown = fmt(game.s.t, true); if (shown !== lastShown) { lastShown = shown; dev.setTime(shown); } (rain as any).mesh.visible = !game.sceneInside; rain(t, cam.position.x, cam.position.z); grade.uniforms.time.value = t; comp.render();
+  game.update(dt); { const fl = (gun as any).flash as THREE.Sprite; fl.visible = game.combat.muzzle > 0; if (fl.visible) fl.scale.setScalar(0.12 + Math.random() * 0.1); gun.position.z = -0.38 + game.combat.muzzle * 0.5; } { const bm = (scene as any).__beam; if (bm) bm.material.opacity = 0.15 + 0.85 * Math.max(0, Math.sin(t * 0.9) ** 3); } const shown = fmt(game.s.t, true); if (shown !== lastShown) { lastShown = shown; dev.setTime(shown); } (rain as any).mesh.visible = !game.sceneInside; rain(t, cam.position.x, cam.position.z); splashes(t, cam.position.x, cam.position.z, !game.sceneInside && cam.position.y < 12); smokeTick?.(t); fogTick?.(t); (scene as any).__puddleTick?.(t); grade.uniforms.jump.value = game.jumpFx; grade.uniforms.time.value = t; comp.render();
   if (!window.FREEZE) requestAnimationFrame(frame);
 }
 frame();
 if (q.get('lineup')) { const Lt = new THREE.PointLight(0xfff2e0, 60, 20); Lt.position.set(-60, 3, -38); scene.add(Lt); const looks: any[] = [{ body: 'remy', coat: 0x2b2a28, hat: 'fedora' }, { body: 'remy', coat: 0x4a4238, hat: 'cap', long: true }, { body: 'liza', coat: 0x26292d, skirt: true, long: true, hat: 'scarf' }, { body: 'michelle', coat: 0x3a352e, hat: 'none' }, { body: 'liza', coat: 0x4a4238, hat: 'veil', long: true }, { body: 'james', coat: 0x1d1e20, hat: 'peaked' }]; looks.forEach((l, i) => createPerson(l, 'L' + i).then(p => { p.root.position.set(-63 + i * 1.2, 0, -42); p.root.position.y = groundH(-63 + i * 1.2, -42); p.root.rotation.y = 0; scene.add(p.root); p.anim(q.get('anim') ?? 'idle'); (window as any).__lp = ((window as any).__lp ?? []).concat(p); })); }
 addEventListener('keydown', e => { if (e.code === 'F3') { e.preventDefault(); toggleDebug(scene); } });
-zaton.ready.then(() => { if (q.get('debug')) toggleDebug(scene, true); const ld = document.getElementById('loading'); if (ld) ld.style.display = 'none'; window.done = true; window.info = 'ok'; if (q.get('board')) { game.s.pocket = 'cap'; game.s.learn('helm_ok'); game.pilot.board(); } window.done = true; window.info = 'ok'; if (!debugPos && !q.get('noprologue')) setTimeout(() => game.menu.showTitle(), 300); });
+zaton.ready.then(() => { smokeTick = makeChimneySmoke(scene); fogTick = makeFogBanks(scene); if (q.get('debug')) toggleDebug(scene, true); const ld = document.getElementById('loading'); if (ld) ld.style.display = 'none'; window.done = true; window.info = 'ok'; if (q.get('board')) { game.s.pocket = 'cap'; game.s.learn('helm_ok'); game.pilot.board(); } window.done = true; window.info = 'ok'; if (!debugPos && !q.get('noprologue')) setTimeout(() => game.menu.showTitle(), 300); });

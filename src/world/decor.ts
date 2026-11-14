@@ -6,11 +6,12 @@ import { groundH, hash, surfaceAt, walkY } from './terrain';
 import { placed } from './city';
 import { world } from './colliders';
 import { PropField } from './props';
+import { puddleRipples } from '../render/weatherfx';
 
 // density rules (spec 3.6): puddles in ruts and gutters, rubbish at walls, telegraph poles + wires, posters, laundry, rails
 export function buildDecor(scene: THREE.Scene, props: PropField) {
   // ---- puddles (instanced discs) only on road surface, along the curb and the ruts
-  const pud = new THREE.MeshPhysicalMaterial({ color: 0x020306, roughness: 0.02, clearcoat: 1, envMapIntensity: 1.6, transparent: true, opacity: 0.88 });
+  const pud = new THREE.MeshPhysicalMaterial({ color: 0x020306, roughness: 0.02, clearcoat: 1, envMapIntensity: 1.6, transparent: true, opacity: 0.88 }); (scene as any).__puddleTick = puddleRipples(pud);
   const spots: [number, number, number][] = [];
   for (const r of ROADS) for (let k = 0; k < r.pts.length - 1; k++) {
     const [ax, az] = r.pts[k], [bx, bz] = r.pts[k + 1], len = Math.hypot(bx - ax, bz - az), dx = (bx - ax) / len, dz = (bz - az) / len;

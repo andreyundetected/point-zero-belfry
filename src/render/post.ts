@@ -11,10 +11,10 @@ export function makePost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, cam:
   comp.addPass(new RenderPass(scene, cam));
   comp.addPass(new UnrealBloomPass(new THREE.Vector2(W / 2, H / 2), 0.55, 0.6, 0.9));
   const grade = new ShaderPass({
-    uniforms: { tDiffuse: { value: null }, time: { value: 0 }, sat: { value: sat }, res: { value: new THREE.Vector2(W, H) } },
+    uniforms: { tDiffuse: { value: null }, time: { value: 0 }, sat: { value: sat }, res: { value: new THREE.Vector2(W, H) }, jump: { value: 0 } },
     vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-    fragmentShader: `uniform sampler2D tDiffuse;uniform float time,sat;uniform vec2 res;varying vec2 vUv; float h(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
- void main(){ vec3 c=texture2D(tDiffuse,vUv).rgb; float l=dot(c,vec3(.2126,.7152,.0722)); vec3 mono=vec3(l)*vec3(.94,.98,1.05);
+    fragmentShader: `uniform sampler2D tDiffuse;uniform float time,sat,jump;uniform vec2 res;varying vec2 vUv; float h(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
+ void main(){ vec2 uv=vUv; vec3 c; if (jump>0.001) { /* the jump: a ring of distortion racing outward, the colours tearing apart for a moment */ vec2 d2=uv-.5; float r=length(d2); float ring=exp(-pow((r-jump*0.9)*9.0,2.0)); uv+=d2*ring*0.08; float ca=(0.004+ring*0.02)*jump; c=vec3(texture2D(tDiffuse,uv+d2*ca).r,texture2D(tDiffuse,uv).g,texture2D(tDiffuse,uv-d2*ca).b); } else c=texture2D(tDiffuse,uv).rgb; float l=dot(c,vec3(.2126,.7152,.0722)); vec3 mono=vec3(l)*vec3(.94,.98,1.05);
   float red=smoothstep(.78,.92,(c.r-max(c.g,c.b))/max(c.r,1e-4))*smoothstep(.03,.1,c.r);
   float fire=smoothstep(.04,.16,l)*step(1.25,c.r/max(c.g,1e-3))*step(1.5,c.g/max(c.b,1e-3));
   vec3 col=mix(mix(mono,c,sat),vec3(c.r*1.25,c.g*.6,c.b*.6),red); col=mix(col,vec3(c.r*1.1,c.g*.68,c.b*.3),fire*.92);

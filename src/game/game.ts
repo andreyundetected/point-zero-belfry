@@ -121,7 +121,7 @@ export class Game implements StvHost, Ctx {
     for (let r = 0.3; r <= 1.5; r += 0.3) for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (ok(px, pz, y)) return { x: px, z: pz, y }; }
     return null;
   }
-  menu!: Menu; saveT = 0; onHands?: (v: boolean) => void;
+  menu!: Menu; saveT = 0; jumpFx = 0; onHands?: (v: boolean) => void;
   handsVisible(v: boolean) { this.onHands?.(v); }
   /** autosave: after jumps, finished talks and every 20 s; `force` from the pause menu */
   autosave(force = false) { if (!force && (this.menu.open || this.runner.active || this.jumpBusy)) return false; const ok = saveGame(this); if (ok) this.saveT = 20; return ok; }
@@ -147,7 +147,8 @@ export class Game implements StvHost, Ctx {
     this.burn.rebuild(tmp); const spot = this.freeSpot(b.x, b.z, b.y);
     if (!spot) { const fire = this.burn.fireAt(b.x, b.z, target, tmp); this.burn.rebuild(keepFlags); this.sim.setFlags(keepFlags); this.cs = this.sim.city(oldT); this.applyCity(oldT, true); this.snd.play('digital/phaser_down1.ogg', 0.7); this.hud.bark(fire ? 'Там горит.' : 'Там стена.', true); this.hud.toast(fire ? 'Там горит' : 'Там нельзя стоять', 2.5); this.jumpBusy = false; return; }
     this.snd.play('digital/phase_jump' + (1 + (s.jumps % 5)) + '.ogg', 0.9);
-    this.hud.flash(1); this.hud.fade(true, 380); await new Promise(r => setTimeout(r, 700));
+    { const t0 = performance.now(); const anim = () => { const u = (performance.now() - t0) / 1100; this.jumpFx = u < 1 ? Math.sin(u * Math.PI) : 0; if (u < 1) requestAnimationFrame(anim); }; anim(); }
+    this.hud.flash(0.6); this.hud.fade(true, 380); await new Promise(r => setTimeout(r, 700));
     // new universe: flags reset, knowledge + pocket stay
     s.flags = tmp; s.changes = []; s.talks.clear(); s.topics.clear(); s.thoughts.clear(); s.t = target; s.jumps++; s.held = s.pocket; s.worldItems.clear(); s.universeStart = target;
     this.sim.setFlags(s.flags); b.x = spot.x; b.z = spot.z; b.y = spot.y; b.vy = 0; b.vx = b.vz = 0;
@@ -277,6 +278,7 @@ export class Game implements StvHost, Ctx {
     // the moon's shadow box (48 m) follows the player, snapped to shadow texels so the shadows do not swim; indoors the shadow pass is skipped altogether
     this.moon.castShadow = !inside && this.renderer.shadowMap.enabled; { const tx = 48 / 2048; const sx = Math.round((b.x + 10) / tx) * tx, sz = Math.round((b.z + 8) / tx) * tx; this.moon.target.position.set(sx, 0, sz); this.moon.position.set(sx - 18, 30, sz - 12); this.moon.target.updateMatrixWorld(); }
     const extra = roomLights.filter(l => l.on(s.t, s.flags) && !l.shot && (inside ? l.room === inside : Math.hypot(l.x - b.x, l.z - b.z) < 14 && (l.room !== 'cellar' || b.y < -2))).map(l => ({ x: l.x, y: l.y, z: l.z, color: l.color, intensity: l.intensity, dist: l.dist }));
+    if (this.combat.muzzle > 0) { const c = this.cam.position, f = new THREE.Vector3(0, 0, -1).applyQuaternion(this.cam.quaternion); extra.push({ x: c.x + f.x * 0.6, y: c.y - 0.1, z: c.z + f.z * 0.6, color: 0xffc070, intensity: 40, dist: 9 }); }
     if (this.pilot.aboard) { const m = this.pilot.mesh.position, ry = this.pilot.s.ry; extra.push({ x: m.x + Math.sin(ry) * 1.2, y: m.y + 2.6, z: m.z + Math.cos(ry) * 1.2, color: 0xffd0a0, intensity: 6, dist: 9 }); }
     this.burn.update(s.t, s.flags, b.x, b.z, dt); const fl = this.burn.lights(this.time); this.pool.update(b.x, b.z, [...extra, ...fl], !!inside);
     this.fx.update(dt, [], Math.max(this.cs.glow * 0.4, this.burn.share())); this.snd.setFire(this.burn.share());
