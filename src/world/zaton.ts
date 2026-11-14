@@ -113,7 +113,7 @@ export function buildZaton(scene: THREE.Scene): Zaton {
     }
   };
   for (const id of ['bereg', 'rynok', 'nab', 'sklad', 'priyut', 'kanat', 'gavan', 'gavanE', 'bashn']) lampLine(id, 6, 20);
-  for (const [x, z] of [[-76, -45], [-60, -45], [-76, -35], [-60, -35], [-14.6, 36], [-20, 2], [-47.8, -36.3], [19.2, 15.6], [19.2, 2.4]] as [number, number][]) lamp(scene, x, z);
+  for (const [x, z] of [[-76, -45], [-60, -45], [-76, -35], [-60, -35], [-14.6, 36], [-20, 2], [-47.8, -36.3], [-34.6, -30.4], [19.2, 15.6], [19.2, 2.4]] as [number, number][]) lamp(scene, x, z);
 
   // pier and barge lamps, a hanging lantern at the bend of the alley
   for (const [x, z] of [[-11.8, 62], [-11.8, 72], [-40.4, 66], [-40.4, 78]] as [number, number][]) lamp(scene, x, z, -0.5);

@@ -36,7 +36,7 @@ npm run dev        # http://localhost:5173
 
 ```bash
 npm run check            # tsc + npm test + браузерная проверка коллизий, дверей, маршрута
-npm test                 # sim:baseline + sim:solve + sim:hash + диалоги + скорости (чистая симуляция, tsx)
+npm test                 # sim:baseline + sim:solve + sim:hash + диалоги + скорости + сценарии (чистая симуляция, tsx)
 npm run sim:baseline     # хронология ночи без игрока + проверка, что никто не уходит за карту
 npm run sim:solve        # эталонное прохождение по спеке §11 (≥9 прыжков), 35 проверок
 npm run sim:hash         # детерминизм на 10 сидах
