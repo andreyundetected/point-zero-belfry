@@ -15,7 +15,7 @@ const UAL: Record<string, string> = { idle: 'Idle_Loop', talk: 'Idle_Talking_Loo
   drive: 'Driving_Loop', carry: 'Walk_Carry_Loop', pistol: 'Pistol_Idle_Loop', aim: 'Pistol_Aim_Neutral', no: 'Idle_No_Loop', phone: 'Idle_TalkingPhone_Loop', fix: 'Fixing_Kneeling', pickup: 'PickUp_Table', interact: 'Interact', drink: 'Consume', smoke: 'Consume', wipe: 'Interact', dice: 'Interact', yes: 'Yes', cry: 'Sitting_Idle_Loop', push: 'Push_Loop', punch: 'Punch_Jab', consume: 'Consume', yell: 'Idle_Rail_Call', formal: 'Walk_Formal_Loop', sweep: 'Farm_Harvest', hit2: 'Hit_Chest', walk: 'Walk_Loop', run: 'Jog_Fwd_Loop', sprint: 'Sprint_Loop' };
 // the Mixamo 'walk'/'run' clips in the pack hold a pistol in both hands: they are the armed gait (hunters), never the civilian one
 const MIX: Record<string, string> = { walk_gun: 'walk', run_gun: 'run', shoot: 'idle-shooting', die: 'dying', hit: 'hit-reaction', kneel: 'kneel', creep: 'crouch-walking', reload: 'reloading' };
-const ONCE = new Set(['die', 'hit', 'hit2', 'pickup', 'interact', 'punch', 'consume']);
+const ONCE = new Set(['die', 'hit', 'hit2', 'pickup', 'punch']); // wipe/drink/smoke/dice loop: a clamped last frame of Interact/Consume reads as an A-pose
 
 export interface Look {
   body: 'james' | 'remy' | 'liza' | 'michelle'; coat: number; trou?: number; long?: boolean; skirt?: boolean;
