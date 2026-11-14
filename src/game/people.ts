@@ -11,8 +11,9 @@ const MAP: Record<string, string> = { mixamorigHips: 'pelvis', mixamorigSpine: '
   mixamorigLeftUpLeg: 'thigh_l', mixamorigLeftLeg: 'calf_l', mixamorigLeftFoot: 'foot_l', mixamorigRightUpLeg: 'thigh_r', mixamorigRightLeg: 'calf_r', mixamorigRightFoot: 'foot_r' };
 /** our animation names -> where they come from */
 const UAL: Record<string, string> = { idle: 'Idle_Loop', talk: 'Idle_Talking_Loop', fold: 'Idle_FoldArms_Loop', rail: 'Idle_Rail_Loop', lantern: 'Idle_Lantern_Loop', sit: 'Sitting_Idle_Loop', sittalk: 'Sitting_Talking_Loop',
-  drive: 'Driving_Loop', carry: 'Walk_Carry_Loop', pistol: 'Pistol_Idle_Loop', aim: 'Pistol_Aim_Neutral', no: 'Idle_No_Loop', phone: 'Idle_TalkingPhone_Loop', fix: 'Fixing_Kneeling', pickup: 'PickUp_Table', interact: 'Interact', drink: 'Consume', smoke: 'Consume', wipe: 'Interact', dice: 'Interact', yes: 'Yes', cry: 'Sitting_Idle_Loop', push: 'Push_Loop', punch: 'Punch_Jab', consume: 'Consume', yell: 'Idle_Rail_Call', formal: 'Walk_Formal_Loop', sweep: 'Farm_Harvest', hit2: 'Hit_Chest' };
-const MIX: Record<string, string> = { walk: 'walk', run: 'run', shoot: 'idle-shooting', die: 'dying', hit: 'hit-reaction', kneel: 'kneel', creep: 'crouch-walking', reload: 'reloading' };
+  drive: 'Driving_Loop', carry: 'Walk_Carry_Loop', pistol: 'Pistol_Idle_Loop', aim: 'Pistol_Aim_Neutral', no: 'Idle_No_Loop', phone: 'Idle_TalkingPhone_Loop', fix: 'Fixing_Kneeling', pickup: 'PickUp_Table', interact: 'Interact', drink: 'Consume', smoke: 'Consume', wipe: 'Interact', dice: 'Interact', yes: 'Yes', cry: 'Sitting_Idle_Loop', push: 'Push_Loop', punch: 'Punch_Jab', consume: 'Consume', yell: 'Idle_Rail_Call', formal: 'Walk_Formal_Loop', sweep: 'Farm_Harvest', hit2: 'Hit_Chest', walk: 'Walk_Loop', run: 'Jog_Fwd_Loop', sprint: 'Sprint_Loop' };
+// the Mixamo 'walk'/'run' clips in the pack hold a pistol in both hands: they are the armed gait (hunters), never the civilian one
+const MIX: Record<string, string> = { walk_gun: 'walk', run_gun: 'run', shoot: 'idle-shooting', die: 'dying', hit: 'hit-reaction', kneel: 'kneel', creep: 'crouch-walking', reload: 'reloading' };
 const ONCE = new Set(['die', 'hit', 'hit2', 'pickup', 'interact', 'punch', 'consume']);
 
 export interface Look {
@@ -29,6 +30,21 @@ const clipCache = new Map<string, { clip: THREE.AnimationClip; retargeted: boole
 export class Person {
   root = new THREE.Group(); mixer!: THREE.AnimationMixer; meshMixer!: THREE.AnimationMixer; body!: THREE.SkinnedMesh; cur = ''; action?: THREE.AnimationAction; headY = 1.62; height = 1.75;
   extra: THREE.Object3D[] = []; ghost = false; id = ''; dead = false;
+  headBone?: THREE.Object3D; shadowNear: boolean | undefined; lookW = 0; lookTarget = new THREE.Vector3(); lookOn = false;
+  /** eyes on the player: the head turns toward `target` after the animation has posed it, within a comfortable arc; weight eases in and out */
+  private _lv = new THREE.Vector3(); private _lh = new THREE.Vector3(); private _lm = new THREE.Matrix4(); private _lq = new THREE.Quaternion(); private _up = new THREE.Vector3(0, 1, 0); private _fw = new THREE.Vector3();
+  gaze(dt: number) {
+    const h = this.headBone; if (!h || this.dead) return;
+    let want = 0;
+    if (this.lookOn) { h.getWorldPosition(this._lh); this._lv.copy(this.lookTarget).sub(this._lh); const d = Math.hypot(this._lv.x, this._lv.z);
+      this._fw.set(0, 0, 1).applyQuaternion(this.root.quaternion); const cos = (this._fw.x * this._lv.x + this._fw.z * this._lv.z) / Math.max(1e-3, d);
+      want = d < 7 && d > 0.4 ? Math.max(0, Math.min(1, (cos - 0.1) / 0.5)) : 0; }
+    this.lookW += (want - this.lookW) * Math.min(1, dt * 4); if (this.lookW < 0.01) return;
+    const par = h.parent!; par.updateWorldMatrix(true, false); const tl = this._lv.copy(this.lookTarget); par.worldToLocal(tl);
+    // the head bone's local +Y runs up the neck and +Z is the face: build the frame whose +Z points at the target
+    this._lm.lookAt(tl, h.position, this._up); this._lq.setFromRotationMatrix(this._lm);
+    h.quaternion.slerp(this._lq, this.lookW * 0.8);
+  }
   constructor(public look: Look) {}
   async anim(name: string, speed = 1) {
     if (name === this.cur) return; this.cur = name;
@@ -43,8 +59,8 @@ export class Person {
     const key = this.look.body + '/' + name; const hit = clipCache.get(key); if (hit !== undefined) return hit;
     let out: { clip: THREE.AnimationClip; retargeted: boolean } | null = null;
     try {
-      if (MIX[name]) { const g = await gl('people/mixamo/mixamo_anims'); const c = g.animations.find((a: THREE.AnimationClip) => a.name === MIX[name]); out = c ? { clip: c, retargeted: false } : null; }
-      else if (UAL[name]) { const u = await loadUal(); const src = u.clips.find(c => c.name === UAL[name]); if (src) { const c = SU.retargetClip(this.body, u.skin, src, { names: MAP, hip: 'mixamorigHips', useFirstFramePosition: true }); c.tracks = c.tracks.filter(t => t.name.endsWith('.quaternion'));
+      if (MIX[name]) { const g = await gl('people/mixamo/mixamo_anims'); const c = g.animations.find((a: THREE.AnimationClip) => a.name === MIX[name]); out = c ? { clip: c, retargeted: false } : null; if (out && !/die|kneel|hit/.test(name)) { const c2 = out.clip.clone(); c2.tracks = c2.tracks.filter(t => !t.name.endsWith('.position')); out = { clip: c2, retargeted: false }; } }
+      else if (UAL[name]) { const u = await loadUal(); const src = u.clips.find(c => c.name === UAL[name]); if (src) { this.restore(); /* bake from the rest pose: retargetClip reads the target's current bone matrices, and a body caught mid-animation bakes a broken (T-posed) clip into the shared cache */ const c = SU.retargetClip(this.body, u.skin, src, { names: MAP, hip: 'mixamorigHips', useFirstFramePosition: true }); c.tracks = c.tracks.filter(t => t.name.endsWith('.quaternion'));
         this.restore(); /* retargetClip leaves the target bones scaled x100 (Armature 0.01): put them back */ out = { clip: c, retargeted: true }; } }
     } catch (e) { console.warn('anim', name, e); }
     clipCache.set(key, out); return out;
@@ -54,7 +70,7 @@ export class Person {
   restore() { this.body.skeleton.bones.forEach((b, i) => { const r = this.rest[i]; if (r) { b.position.copy(r.p); b.quaternion.copy(r.q); b.scale.copy(r.s); } }); this.root.updateMatrixWorld(true); }
   /** E2: the stride matches the ground speed (no sliding) */
   setRate(r: number) { if (this.action) this.action.timeScale = r; }
-  update(dt: number) { this.mixer.update(dt); this.meshMixer.update(dt); }
+  update(dt: number) { this.mixer.update(dt); this.meshMixer.update(dt); this.gaze(dt); }
   dispose() { this.root.removeFromParent(); this.mixer.stopAllAction(); this.meshMixer.stopAllAction(); }
 }
 
@@ -72,7 +88,7 @@ export async function createPerson(look0: Look, id = ''): Promise<Person> {
   const BODY_K: Record<string, number> = { james: 1, remy: 0.96, liza: 0.93, michelle: 0.8 };
   const k = (1.62 * (look.scale ?? 1) * BODY_K[look.body]) / Math.max(0.01, hv.y - rv.y); root.scale.multiplyScalar(k); p.root.updateMatrixWorld(true);
   p.height = 1.75 * (look.scale ?? 1); if (look.wide) { root.scale.x *= look.wide; root.scale.z *= look.wide; p.root.updateMatrixWorld(true); }
-  p.body = clothe(root, look); p.snapshot();
+  p.body = clothe(root, look); p.snapshot(); root.traverse(o => { if (o.name === 'mixamorigHead') p.headBone = o; });
   p.mixer = new THREE.AnimationMixer(root); p.meshMixer = new THREE.AnimationMixer(p.body);
   return p;
 }

@@ -7,7 +7,7 @@ import { groundH } from './terrain';
 /** keep pack props out of the red accent: pull albedo toward grey so only real red materials survive the grade */
 const seen = new WeakSet<THREE.Material>();
 export function desat(m: THREE.Material | THREE.Material[], k = 0.4) {
-  for (const mat of Array.isArray(m) ? m : [m]) { if (seen.has(mat)) continue; seen.add(mat); const sm = mat as THREE.MeshStandardMaterial; if (!sm.isMeshStandardMaterial) continue;
+  for (const mat of Array.isArray(m) ? m : [m]) { if (seen.has(mat)) continue; seen.add(mat); const sm = mat as THREE.MeshStandardMaterial; if (!sm.isMeshStandardMaterial || (sm as any).__glow) continue;
     sm.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n diffuseColor.rgb = mix(vec3(dot(diffuseColor.rgb, vec3(0.299,0.587,0.114))), diffuseColor.rgb, ' + k.toFixed(2) + ');'); }; sm.needsUpdate = true; }
 }
 const loader = new GLTFLoader(); const cache = new Map<string, Promise<Model>>();
@@ -20,6 +20,8 @@ export function loadModel(path: string): Promise<Model> {
     const box = new THREE.Box3().setFromObject(g.scene), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
     const norm = new THREE.Matrix4().makeTranslation(-c.x, -box.min.y, -c.z);
     const parts: Part[] = [];
+    // lamp shades and bulbs in the pack are plain white plastic: make them glow (warm, self-lit) so no lamp reads as a black thing that emits light
+    g.scene.traverse(o => { const me = o as THREE.Mesh; if (me.isMesh) for (const m of (Array.isArray(me.material) ? me.material : [me.material]) as THREE.MeshStandardMaterial[]) if (m.isMeshStandardMaterial && /^(Light|White)$/.test(m.name) && /light_/i.test(path)) { m.emissive = new THREE.Color(0xffb070); m.emissiveIntensity = 1.6; m.color.setHex(0xffe0b0); (m as any).__glow = true; } });
     g.scene.traverse(o => { const me = o as THREE.Mesh; if (me.isMesh && !(me as THREE.SkinnedMesh).isSkinnedMesh) parts.push({ geo: me.geometry, mat: me.material, m: norm.clone().multiply(me.matrixWorld) }); });
     return { parts, size, scene: g.scene };
   }));

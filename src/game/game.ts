@@ -202,7 +202,7 @@ export class Game implements StvHost, Ctx {
     const nm = nameOf(npc); this.hud.notify((getLang() === 'ru' ? 'Новый человек: ' : 'New person: ') + nm); this.hud.newPerson(nm, getLang() === 'ru' ? `записано в «Люди» · ${fmt(this.s.t)}` : `added to People · ${fmt(this.s.t)}`);
     this.note('seen_' + npc, `Встретил в ${fmt(this.s.t)}: ${nm}`, `Met at ${fmt(this.s.t)}: ${nm}`, npc, !!d.key);
   }
-  lastMeet = ''; talkHold: { id: string; x: number; y: number; z: number; ry: number } | null = null;
+  lastMeet = ''; talkHold: { id: string; x: number; y: number; z: number; ry: number; a: string } | null = null;
   /** start a conversation: the NPC stops where he is and faces you while it lasts (A7); a 'bark:' answer is a single line, no tree (A1) */
   /** talk to an npc behind a door etc. (no pose needed) */
   talkTo(npc: string, conv: string) { if (this.runner.active) return; if (conv.startsWith('bark:')) { void this.runner.quick(npc, conv.slice(5)); return; } void this.runner.start(conv, npc || undefined); }
@@ -212,7 +212,8 @@ export class Game implements StvHost, Ctx {
     if (this.runner.active) return; const p = this.npcs.pose(npc)!; const b = this.player.body;
     this.player.yaw = Math.atan2(-(p.x - b.x), -(p.z - b.z));
     if (conv.startsWith('bark:')) { void this.runner.quick(npc, conv.slice(5)); return; }
-    this.talkHold = { id: npc, x: p.x, y: p.y, z: p.z, ry: Math.atan2(b.x - p.x, b.z - p.z) };
+    // a seated speaker stays seated (and keeps facing the table); a standing one turns to you
+    const seated = /^sit|^cry/.test(p.a); this.talkHold = { id: npc, x: p.x, y: p.y, z: p.z, ry: seated ? p.ry : Math.atan2(b.x - p.x, b.z - p.z), a: seated ? 'sittalk' : 'talk' };
     void this.runner.start(conv, npc);
   }
   afterTalk() { this.player.apply(); }
@@ -268,7 +269,7 @@ export class Game implements StvHost, Ctx {
     { const f = this.scene.fog as THREE.FogExp2 | null; if (f) f.density = 0.035 - 0.026 * Math.max(0, Math.min(1, (b.y - 4) / 22)); }
     updateDoors(dt, this.s.t, this.s.flags); updateTower(dt, Math.hypot(b.x + 70, b.z + 58) < 70);
     // npcs
-    this.npcs.update(s.t, b.x, b.z, dt, b.y, undefined, id => { const h = this.talkHold; if (h && h.id === id) return { x: h.x, y: h.y, z: h.z, ry: h.ry, a: 'talk', hidden: false }; return this.combat.override(id); });
+    this.npcs.lookAt.set(b.x, b.y + 1.6, b.z); this.npcs.talkingTo = this.talkHold?.id ?? ''; this.npcs.update(s.t, b.x, b.z, dt, b.y, undefined, id => { const h = this.talkHold; if (h && h.id === id) return { x: h.x, y: h.y, z: h.z, ry: h.ry, a: h.a, hidden: false }; return this.combat.override(id); });
     this.combat.update(dt); this.pilot.update(dt); this.markT -= dt; if (this.markT <= 0) { this.markT = 0.08; updateMarks(this); }
     if (this.shakeT > 0) { this.shakeT -= dt; const k = this.shakeA * Math.max(0, this.shakeT); this.cam.position.x += (Math.random() - 0.5) * 0.12 * k; this.cam.position.y += (Math.random() - 0.5) * 0.12 * k; }
     // events seen

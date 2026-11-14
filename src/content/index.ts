@@ -173,7 +173,7 @@ export function onBark(g: Game, evt: string) {
     const td = g.npcs.pose('tilda'); if (td && !td.hidden && t >= at(22, 3) && t < at(22, 20, 30) && td.z < 0 && Math.hypot(td.x - bx, td.z - bz) < 4 && !s.talks.get('tilda') && !s.thoughts.has('tilda_auto')) { s.thoughts.add('tilda_auto'); g.talk('tilda', 'tilda.alley'); }
     // D6: appear in the closed storeroom and Foma hears you after a few seconds
     const fm = g.npcs.pose('foma'); const inStore = insideSite('foma', bx, bz) && bz - (-14.4) < -5.2; // behind the partition = the storeroom
-    if (inStore && fm && !fm.hidden && insideSite('foma', fm.x, fm.z) && t < at(22, 30) && !s.thoughts.has('foma_caught')) { g.fomaT += 1 / 60; if (g.fomaT > 4) { s.thoughts.add('foma_caught'); g.talkHold = { id: 'foma', ...loc('foma', 1.8, -5.0), y: floorY('foma'), ry: Math.PI }; g.talkTo('foma', 'foma.caught'); } } else if (!inStore) g.fomaT = 0;
+    if (inStore && fm && !fm.hidden && insideSite('foma', fm.x, fm.z) && t < at(22, 30) && !s.thoughts.has('foma_caught')) { g.fomaT += 1 / 60; if (g.fomaT > 4) { s.thoughts.add('foma_caught'); g.talkHold = { id: 'foma', ...loc('foma', 1.8, -5.0), y: floorY('foma'), ry: Math.PI, a: 'lantern' }; g.talkTo('foma', 'foma.caught'); } } else if (!inStore) g.fomaT = 0;
   }
   if (s.knows('prologue_done') && b.y > 20) { g.roofT += 1 / 60; if (g.roofT > 30) g.thought('go_orven', 'Орвен. Переулок Ключников.', 'orven_met'); } else g.roofT = 0;
   // --- scenes

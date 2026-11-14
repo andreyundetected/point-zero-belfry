@@ -68,7 +68,7 @@ export class Combat {
       if ((!sees || dist > (d.stand ?? 6)) && d.path?.length) { const [wx, wz] = d.path[0], ddx = wx - d.x, ddz = wz - d.z, dd = Math.hypot(ddx, ddz); if (dd < 0.5) d.path.shift(); else { let vx = ddx / dd, vz = ddz / dd;
         for (const [oid, o] of hunters) { if (oid === id) continue; const ox = d.x - o.x, oz = d.z - o.z, od = Math.hypot(ox, oz); if (od < 1.3 && od > 0.01) { vx += ox / od * 0.8; vz += oz / od * 0.8; } } // do not walk through each other
         const vl = Math.hypot(vx, vz) || 1, sp = (d.speed ?? 2.4) * dt; d.x += vx / vl * sp; d.z += vz / vl * sp; d.ry = Math.atan2(vx, vz); moving = true; } }
-      d.a = moving ? 'run' : sees ? 'shoot' : 'idle';
+      d.a = moving ? 'run_gun' : sees ? 'shoot' : 'pistol';
       d.cool -= dt; if (d.cool <= 0 && sees) { d.cool = 1.5 + (hashId(id) % 5) * 0.25; const lit = this.litAt(b.x, b.z); const hitP = 0.3 * lit * (g.player.crouching ? 0.6 : 1) * (dist > 12 ? 0.5 : 1); g.snd.shot(); if (Math.random() < hitP) { this.hits++; this.lastShooter = id; g.hurt(0.8); if (this.hits >= 2) { s.dead = true; g.finish('dead'); } } }
     }
     // D5: Cord's men are not hostile by sight. Only explicit triggers: a gun out in the tavern hall, a theft seen, a shot, coming back to
