@@ -25,5 +25,12 @@ export const FACTS: Record<string, Fact> = {
   know_tap_man: { ru: 'Около 22:00 человек с чемоданом был в подвале башни', en: 'Around 22:00 a man with a suitcase was in the tower cellar', t: at(22, 0) },
   know_fuse: { ru: 'Красный предохранитель отвода — в подвале башни', en: 'The red fuse of the tap is in the tower cellar' },
   know_anka_orphanage: { ru: 'Анка — в приюте, ещё там', en: 'Anka is at the orphanage, still there', who: 'anka' },
+  know_paper_school: { ru: 'Газета: совет Крайн переводит детей приюта в «монастырскую школу»', en: 'Newspaper: Crane\'s council moves the orphans to a "monastery school"', who: 'crane' },
+  know_helm_board: { ru: 'Доска в конторе: рулевой Ян в 22:35, Тихон — резерв', en: 'Office board: helmsman Yan at 22:35, Tikhon in reserve', t: at(22, 35) },
+  know_barge_shoes: { ru: 'На барже «Вера» детский башмак: детей уже возили', en: 'A child\'s shoe on the barge Vera: children have been carried before' },
+  know_crane_council: { ru: 'Афиши попечительского совета Э. Крайн по всему Затону: «детям города»', en: 'Posters of E. Crane\'s council all over Zaton: "for the children of the city"', who: 'crane' },
+  know_tikhon_pip: { ru: 'Тихон — отец Пип; снимок у катера «Сокол»', en: 'Tikhon is Pip\'s father; a photo by the launch Sokol', who: 'tikhon' },
+  know_ned_debt: { ru: 'Залог №112 у Фомы: часы Неда, долг шесть монет', en: 'Pledge No. 112 at Foma\'s: Ned\'s watch, a six-coin debt', who: 'ned' },
+  know_timofey_bed: { ru: 'В спальне приюта койка с биркой «Тимофей»', en: 'A bunk in the orphanage dormitory is tagged "Timofey"' },
   know_ledger: { ru: 'В книге приюта: «Тимофей, 7 лет — отложен»', en: 'In the ledger: "Timofey, 7 — set aside"' },
 };

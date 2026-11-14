@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { M } from '../render/materials';
+import { M, LIT, LIT_VARIANTS } from '../render/materials';
 import { Batcher, mtx } from './batch';
 import { groundH, hash } from './terrain';
 import { world } from './colliders';
@@ -27,6 +27,8 @@ export function building(bt: Batcher, scene: THREE.Scene, o: BuildingOpts): Buil
   const FH = 3.1, H = floors * FH + 0.6, base = groundH(x, z) - 0.3;
   const P = (lx: number, ly: number, lz: number): [number, number, number] => { const v = new THREE.Vector3(lx, ly, lz).applyAxisAngle(UP, ry); return [x + v.x, base + ly, z + v.z]; };
   const box = (mat: THREE.Material, w_: number, h_: number, d_: number, lx: number, ly: number, lz: number, tile?: number) => { const [X, Y, Z] = P(lx, ly, lz); bt.box(mat, w_, h_, d_, mtx(X, Y, Z, ry), tile); };
+  /** a lit window pane: its own 0..1 UVs into one of the atlas variants (shop = 4..5), never the world-tiled wall UVs */
+  const win = (w_: number, h_: number, lx: number, ly: number, lz: number, variant: number, side = 0) => { const g = new THREE.BoxGeometry(side ? 0.02 : w_, h_, side ? w_ : 0.02); const uv = g.attributes.uv as THREE.BufferAttribute; const v = variant % LIT_VARIANTS; for (let i = 0; i < uv.count; i++) uv.setX(i, (uv.getX(i) + v) / LIT_VARIANTS); const [X, Y, Z] = P(lx, ly, lz); g.applyMatrix4(mtx(X, Y, Z, ry)); bt.geo(LIT, g); };
   const bays = Math.max(2, Math.round(w / 2.3)), bw = w / bays;
   const dbay = Math.floor(bays * door), dcx = -w / 2 + bw * (dbay + 0.5);
   const FD = o.fdn ?? 1.5;
@@ -82,7 +84,7 @@ export function building(bt: Batcher, scene: THREE.Scene, o: BuildingOpts): Buil
     const isDoor = f === 0 && b === Math.floor(bays * door);
     if (f === 0 && shop && !isDoor) {
       const ww = bw * 0.82, wh = 2.2; box(M.frame, ww + 0.16, wh + 0.16, 0.08, cx, y0 + 0.55 + wh / 2, 0.04); const lt = R(b + 9) < 0.6;
-      box(lt ? M.lit2 : M.glass, ww, wh, 0.02, cx, y0 + 0.55 + wh / 2, 0.09); box(M.frame, 0.05, wh, 0.06, cx, y0 + 0.55 + wh / 2, 0.11); continue;
+      if (lt) win(ww, wh, cx, y0 + 0.55 + wh / 2, 0.09, 4 + (b % 2)); else box(M.glass, ww, wh, 0.02, cx, y0 + 0.55 + wh / 2, 0.09); box(M.frame, 0.05, wh, 0.06, cx, y0 + 0.55 + wh / 2, 0.11); continue;
     }
     if (isDoor) {
       const dw = 1.15, dh = 2.35;
@@ -96,11 +98,9 @@ export function building(bt: Batcher, scene: THREE.Scene, o: BuildingOpts): Buil
     if (f === 0 && !shop && R(b) < 0.15) continue;
     const ww = Math.min(1.05, bw * 0.48), wh = f === 0 ? 1.6 : 1.75, wy = y0 + 1.0 + wh / 2; const L_ = R(f * 10 + b) < lit;
     box(M.frame, ww + 0.2, wh + 0.2, 0.06, cx, wy, 0.03);
-    box(L_ ? M.lit : M.glass, ww, wh, 0.02, cx, wy, 0.065);
-    box(M.frame, ww, 0.05, 0.05, cx, wy + wh * 0.18, 0.08); box(M.frame, 0.05, wh, 0.05, cx, wy, 0.08);
+    if (L_) win(ww, wh, cx, wy, 0.065, Math.floor(R(f * 17 + b * 5 + 2) * 4)); else { box(M.glass, ww, wh, 0.02, cx, wy, 0.065); box(M.frame, ww, 0.05, 0.05, cx, wy + wh * 0.18, 0.08); box(M.frame, 0.05, wh, 0.05, cx, wy, 0.08); }
     box(M.cornice, ww + 0.36, 0.08, 0.22, cx, wy - wh / 2 - 0.12, 0.1, 1.2);
     box(M.cornice, ww + 0.3, 0.14, 0.08, cx, wy + wh / 2 + 0.15, 0.05, 1.2);
-    if (L_ && R(b * 3 + f) < 0.5) box(M.dark, ww * 0.45, wh * 0.8, 0.01, cx - ww * 0.27, wy, 0.078);
     if (R(f + b * 5) < 0.35 && !L_) { box(M.wood, ww * 0.55, wh + 0.1, 0.04, cx - ww * 0.8, wy, 0.08, 1); box(M.wood, ww * 0.55, wh + 0.1, 0.04, cx + ww * 0.8, wy, 0.08, 1); }
     if (f >= 1 && R(f * 3 + b) < 0.12) { box(M.stone, ww + 0.9, 0.12, 0.8, cx, y0 + 0.95, 0.4, 1.2); for (let k = 0; k < 7; k++) box(M.iron, 0.025, 0.85, 0.025, cx - (ww + 0.8) / 2 + k * (ww + 0.8) / 6, y0 + 1.42, 0.78); box(M.iron, ww + 0.9, 0.04, 0.04, cx, y0 + 1.85, 0.78); }
   }
@@ -108,11 +108,14 @@ export function building(bt: Batcher, scene: THREE.Scene, o: BuildingOpts): Buil
   if (!o.hollow) for (const sd of [-1, 1]) {
     if (R(40 + sd) < 0.25) continue; const fx = sd * (w / 2 + 0.03), n = Math.max(1, Math.floor((depth - 1.5) / 3));
     for (let f = 0; f < floors; f++) for (let k = 0; k < n; k++) { if (R(f * 7 + k * 3 + sd * 11) < 0.35) continue; const lz = -1.6 - k * ((depth - 2.4) / Math.max(1, n - 1 || 1)), y = f * FH + 0.35 + 1.0 + 0.85, L_ = R(f + k * 13 + sd) < lit * 0.8;
-      box(M.frame, 0.06, 1.85, 1.1, fx, y, lz); box(L_ ? M.lit : M.glass, 0.02, 1.6, 0.86, fx + sd * 0.035, y, lz); box(M.cornice, 0.2, 0.08, 1.3, fx, y - 0.95, lz, 1.2); }
+      box(M.frame, 0.06, 1.85, 1.1, fx, y, lz); if (L_) win(0.86, 1.6, fx + sd * 0.035, y, lz, Math.floor(R(f * 5 + k * 3 + 1) * 4), 1); else box(M.glass, 0.02, 1.6, 0.86, fx + sd * 0.035, y, lz); box(M.cornice, 0.2, 0.08, 1.3, fx, y - 0.95, lz, 1.2); }
     if (R(50 + sd) < 0.5) box(M.iron, 0.09, H, 0.09, fx + sd * 0.05, H / 2, -depth + 0.4);
     if (floors >= 3 && R(60 + sd) < 0.18) { const ad = signMesh(['МЫЛО «СВЕТ»', 'ТАБАК · ГИЛЬЗЫ', 'ШВЕЙНЫЕ МАШИНЫ', 'ПИВО «ЯКОРНОЕ»'][Math.floor(R(61) * 4)], Math.min(depth - 2, 5), 1.6); const [X, Y, Z] = P(fx + sd * 0.06, H * 0.62, -depth / 2); ad.position.set(X, Y, Z); ad.rotation.y = ry + sd * Math.PI / 2; scene.add(ad); }
   }
   if (sign) { const sg = signMesh(sign, Math.min(w * 0.7, 5), 0.6); const [X, Y, Z] = P(0, 3.25, 0.18); sg.position.set(X, Y, Z); sg.rotation.y = ry; scene.add(sg); }
+  if (sign && shop) { // a bracket sign hanging out over the pavement, readable along the street
+    const short = sign.replace(/[«»]/g, '').split(/[\s·]+/)[0]; const bs = signMesh(short, 1.1, 0.45); const [X, Y, Z] = P(-w / 2 + 0.75, 3.75, 0.62); bs.position.set(X, Y, Z); bs.rotation.y = ry + Math.PI / 2; scene.add(bs);
+    box(M.iron, 0.05, 0.05, 1.1, -w / 2 + 0.75, 4.05, 0.55); box(M.iron, 0.05, 0.5, 0.05, -w / 2 + 0.75, 3.8, 1.08); }
   box(M.iron, 0.09, H, 0.09, w / 2 - 0.25, H / 2, 0.12);
   if (roof === 'gable') {
     const hw = w / 2 + 0.25, rh = 2.6 + R(2) * 1.2, d0 = 0.5, d1 = -depth - 0.3, pos: number[] = [];

@@ -14,7 +14,8 @@ canvas{display:block}
 #prompt b{border:1px solid var(--ink);padding:0 6px;margin-right:8px;border-radius:3px}
 #sub{position:fixed;left:50%;bottom:12%;transform:translateX(-50%);max-width:70%;text-align:center;font-size:20px;text-shadow:0 0 8px #000,0 0 3px #000;pointer-events:none;display:none}
 #sub .n{color:var(--dim);font-size:14px;display:block}
-#thread{position:fixed;right:14px;bottom:14px;max-width:34%;text-align:right;font-size:15px;color:var(--red);text-shadow:0 0 6px #000;opacity:0;transition:opacity .6s;pointer-events:none}
+#threadbar{position:fixed;right:14px;bottom:14px;max-width:34%;text-align:right;font-size:13px;color:#a89a7c;text-shadow:0 0 6px #000;opacity:.75;pointer-events:none;letter-spacing:.3px}#threadbar b{color:#c7b48a;font-weight:normal;letter-spacing:2px;font-size:10px;margin-right:6px}
+#thread{position:fixed;right:14px;bottom:36px;max-width:34%;text-align:right;font-size:15px;color:var(--red);text-shadow:0 0 6px #000;opacity:0;transition:opacity .6s;pointer-events:none}
 #toast{position:fixed;left:50%;top:14%;transform:translateX(-50%);font-size:17px;text-shadow:0 0 6px #000;opacity:0;transition:opacity .5s;pointer-events:none;text-align:center;max-width:60%}
 #fade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .5s}
 #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none}
@@ -68,7 +69,7 @@ kbd{font:11px monospace;border:1px solid #4a463c;border-radius:3px;padding:0 4px
 </style></head>
 <body>
 <canvas id="mini" width="176" height="176"></canvas><div id="pocket"><div class="ic">◌</div><div class="nm">Карман пуст</div></div><div id="newp"><img id="newp-img" alt=""><div><div class="t">Встречен новый человек</div><div class="n" id="newp-n"></div><div class="s" id="newp-s"></div></div></div>
-<div id="notes"></div><div id="weapon"><div class="ic">⌐</div><div class="nm"></div><kbd>1</kbd></div><div id="wait">⧗</div><div id="hint"></div><div id="clock"></div><div id="cross"></div><div id="prompt"></div><div id="sub"></div><div id="thread"></div><div id="toast"></div>
+<div id="notes"></div><div id="weapon"><div class="ic">⌐</div><div class="nm"></div><kbd>1</kbd></div><div id="wait">⧗</div><div id="hint"></div><div id="clock"></div><div id="cross"></div><div id="prompt"></div><div id="sub"></div><div id="thread"></div><div id="threadbar"></div><div id="toast"></div>
 <div id="sync"></div><div id="ghost"></div><div id="red"></div><div id="flash"></div><div id="fade"></div>
 <div id="pause" style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;font-size:28px;letter-spacing:4px;cursor:pointer;color:#d8d2c4">ПАУЗА — клик, чтобы продолжить</div>
 <div id="loading" style="position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#8d887c;font-size:22px;letter-spacing:5px;z-index:50"><div>ЗАТОН · 1947</div><div style="font-size:13px;letter-spacing:2px;margin-top:14px;opacity:.6">загрузка…</div></div>

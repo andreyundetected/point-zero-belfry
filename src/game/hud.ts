@@ -10,6 +10,7 @@ export class Hud {
   /** Tik's own voice: at most one line per 30 real seconds (spec 12.3) unless forced */
   bark(text: string, force = false) { const n = performance.now() / 1000; if (!force && n - this.lastBark < 30) return false; this.lastBark = n; this.sub('', `<i>${text}</i>`, 3); return true; }
   toast(text: string, secs = 3) { const t = $('toast'); t.textContent = text; t.style.opacity = '1'; this.toastT = secs; }
+  threadBar(text: string) { const t = $('threadbar'); const h = text ? `<b>НИТЬ</b>${text}` : ''; if (t.innerHTML !== h) t.innerHTML = h; }
   thread(text: string, secs = 6) { const t = $('thread'); t.textContent = text; t.style.opacity = '1'; this.threadT = secs; }
   fade(on: boolean, ms = 500) { const f = $('fade'); f.style.transition = `opacity ${ms}ms`; f.style.opacity = on ? '1' : '0'; }
   flash(on: number) { $('flash').style.opacity = String(on); }

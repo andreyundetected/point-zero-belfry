@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { M } from '../render/materials';
-import { ROADS } from './layout';
+import { ROADS, QUAY_Z, WATER_Y, CANAL_WATER_Y, BARGE } from './layout';
+import { Batcher, mtx } from './batch';
 import { groundH, hash, surfaceAt, walkY } from './terrain';
 import { placed } from './city';
 import { world } from './colliders';
@@ -60,6 +61,25 @@ export function buildDecor(scene: THREE.Scene, props: PropField) {
     for (let i = 0; i < n; i++) { const t = (i + 0.5) / n, p = new THREE.Vector3(ax + (bx - ax) * t, y - Math.sin(t * Math.PI) * 0.35 - 0.35, az + (bz - az) * t); const m = new THREE.Mesh(new THREE.PlaneGeometry(0.6 + hash(i, ax) * 0.5, 0.7 + hash(i, az) * 0.5), new THREE.MeshStandardMaterial({ color: cloth[i % 4], side: THREE.DoubleSide, roughness: 1 })); m.position.copy(p); m.rotation.y = Math.atan2(bx - ax, bz - az) + Math.PI / 2; m.castShadow = true; scene.add(m); } };
   for (const x of [-56, -44, -30]) line(x, 32.4, x + 2, 39.6, groundH(x, 36) + 5.2);
   line(40, -62, 60, -61, groundH(50, -58) + 5.0); line(40, -58, 60, -57, groundH(50, -58) + 4.6);
+  // ---- the harbour front: cast-iron bollards with sagging chains along both quays, boats moored below, a rowboat tied up at the canal stairs
+  { const bb = new Batcher(); const chain: number[] = []; const posts: [number, number][] = [];
+    for (const [x0, x1] of [[-90, -16], [16, 90]] as [number, number][]) for (let x = x0; x <= x1; x += 4.5) { if (Math.abs(x + 42) < 2.5 || Math.abs(x + 9.5) < 3.5) continue; posts.push([x, QUAY_Z - 0.55]); }
+    for (const [x, z] of posts) { const y = groundH(x, z); bb.box(M.iron, 0.24, 0.75, 0.24, mtx(x, y + 0.375, z, 0), 1); const cap = new THREE.SphereGeometry(0.15, 8, 6); cap.translate(x, y + 0.8, z); bb.geo(M.iron, cap); world.add(x, z, 0.13, 0.13, 0, y, y + 0.9, 'solid'); }
+    for (let i = 0; i < posts.length - 1; i++) { const [ax, az] = posts[i], [bx, bz] = posts[i + 1]; if (bx - ax > 5) continue; const ay = groundH(ax, az) + 0.75, by = groundH(bx, bz) + 0.75; for (let k = 0; k < 10; k++) { const t0 = k / 10, t1 = (k + 1) / 10; chain.push(ax + (bx - ax) * t0, ay - Math.sin(t0 * Math.PI) * 0.3, az, ax + (bx - ax) * t1, by - Math.sin(t1 * Math.PI) * 0.3, bz); } }
+    bb.flush(scene); const cg = new THREE.BufferGeometry(); cg.setAttribute('position', new THREE.Float32BufferAttribute(chain, 3)); scene.add(new THREE.LineSegments(cg, new THREE.LineBasicMaterial({ color: 0x202224 })));
+    const boats: [string, number, number, number, number][] = [['boats/boat_watercraft_pack_008', -30, 61.5, 0.4, 2.9], ['boats/boat_watercraft_pack_015', -24.5, 62.2, -0.3, 2.9], ['boats/boat_watercraft_pack_020', 24, 61.8, 0.2, 4.2], ['boats/boat_watercraft_pack_012', 31, 62.6, -0.5, 3.4], ['boats/boat_watercraft_pack_005', 44, 64.5, 0.15, 10.5], ['boats/boat_watercraft_pack_001', -62, 65, 0.9, 5.1], ['boats/boat_watercraft_pack_025', 68, 63, -0.2, 4.6]];
+    for (const [m, x, z, ry, l] of boats) props.add(m, x, z, { y: WATER_Y - 0.12, ry, l });
+    props.add('boats/boat_watercraft_pack_008', 3.2, 8.5, { y: CANAL_WATER_Y - 0.1, ry: 0.25, l: 2.9 }); props.add('boats/boat_watercraft_pack_015', -3.0, -11, { y: CANAL_WATER_Y - 0.1, ry: -0.2, l: 2.9 });
+    void BARGE; }
+  // ---- Rynok market: two covered stalls, sacks, crates, a wheelbarrow; a ladder against Foma's wall
+  props.add('village_q/marketstand_1', -66.5, -3.9, { l: 3.0, ry: 0, collide: true }); props.add('village_q/marketstand_2', -72.5, -3.7, { l: 2.6, ry: 0.1, collide: true });
+  for (const [x, z, r] of [[-64.4, -3.4, 0.3], [-63.9, -4.3, 1.2], [-68.9, -3.5, 2.1], [-70.6, -3.2, 0.8]]) props.add('village_q/bags', x, z, { l: 0.9, ry: r, collide: true });
+  for (const [x, z, r] of [[-69.4, -4.4, 0.4], [-74.6, -3.6, 1.1], [-74.4, -4.5, 0.2]]) props.add('hex_props/crate_a_big', x, z, { l: 0.75, ry: r, collide: true });
+  props.add('hex_props/wheelbarrow', -53.2, -4.6, { l: 1.5, ry: 2.4, collide: true }); props.add('hex_props/sack', -53.8, -3.9, { l: 0.65, ry: 0.5 }); props.add('hex_props/sack', -54.3, -4.3, { l: 0.6, ry: 2.5 });
+  props.add('hex_props/ladder', -37.2, -13.9, { h: 4.2, ry: 0, tilt: -0.28, collide: true });
+  // ---- bare-ish autumn trees: Tower square corners and the Beregovaya walk (trunk-only colliders so the crowns do not block the street)
+  for (const [x, z, k] of [[-72.5, -47.5, 'oak'], [-63.5, -47.5, 'default'], [-72.5, -32.5, 'default'], [-63.5, -32.5, 'oak'], [-17.5, -62, 'oak'], [-17.5, -44, 'default'], [-17.5, -26, 'oak'], [-17.5, 18, 'default'], [-17.5, 36, 'oak'], [17.5, -44, 'default'], [17.5, 28, 'oak'], [12, -20.5, 'default']] as [number, number, string][]) {
+    props.add('nature/tree_' + k + '_fall', x, z, { h: k === 'oak' ? 5.2 : 6.0, ry: hash(x, z) * 6 }); const y = groundH(x, z); world.add(x, z, 0.22, 0.22, 0, y, y + 3, 'solid'); }
   // ---- life: a pug at pier 7, a cat on the tavern step
   props.add('characters/animal_pug', -12.5, 56.2, { h: 0.6, ry: 1.2 }); props.add('characters/animal_cat', 18.9, 13.6, { h: 0.35, ry: -1.4 });
   // ---- far shore across the harbour: dotted lights, a lighthouse with a sweeping beam (Mayak island, spec 4)

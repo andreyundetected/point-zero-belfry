@@ -22,6 +22,8 @@ export function loadModel(path: string): Promise<Model> {
     const parts: Part[] = [];
     // lamp shades and bulbs in the pack are plain white plastic: make them glow (warm, self-lit) so no lamp reads as a black thing that emits light
     g.scene.traverse(o => { const me = o as THREE.Mesh; if (me.isMesh) for (const m of (Array.isArray(me.material) ? me.material : [me.material]) as THREE.MeshStandardMaterial[]) if (m.isMeshStandardMaterial && /^(Light|White)$/.test(m.name) && /light_/i.test(path)) { m.emissive = new THREE.Color(0xffb070); m.emissiveIntensity = 1.6; m.color.setHex(0xffe0b0); (m as any).__glow = true; } });
+    // the pack's autumn trees are bright orange toys: at night they are dark, wet silhouettes
+    if (/nature\/tree_/.test(path)) g.scene.traverse(o => { const me = o as THREE.Mesh; if (me.isMesh) me.material = new THREE.MeshStandardMaterial({ color: /wood|trunk|bark/i.test((me.material as THREE.Material).name || '') ? 0x1a1612 : 0x1e1a14, roughness: 1 }); });
     g.scene.traverse(o => { const me = o as THREE.Mesh; if (me.isMesh && !(me as THREE.SkinnedMesh).isSkinnedMesh) parts.push({ geo: me.geometry, mat: me.material, m: norm.clone().multiply(me.matrixWorld) }); });
     return { parts, size, scene: g.scene };
   }));

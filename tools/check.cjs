@@ -22,7 +22,7 @@ const { chromium } = require('playwright'); const { createServer } = require('vi
       if (!sit) { const f = hit(q.x, q.z, q.y + 0.3, q.y + 1.2, 0.18, new Set(['furn'])); if (f) { out.npcInWalls.push([d.id, t, +q.x.toFixed(1), +q.z.toFixed(1), 'furn']); break; } } }
     // 2. props: explicit y must rest on a support (ground, floor box, shelf board) within 2 cm; nothing solid stands inside a building
     for (const pf of allFields) for (const it of pf.inst) { const y = it.o.y; let sup = groundH(it.x, it.z); for (const bx of world.near(it.x, it.z)) { if (bx.off || bx.y1 > (y ?? sup) + 0.03) continue; const dx = it.x - bx.cx, dz = it.z - bx.cz, lx = dx * bx.cos - dz * bx.sin, lz = dx * bx.sin + dz * bx.cos; if (Math.abs(lx) <= bx.hx && Math.abs(lz) <= bx.hz) sup = Math.max(sup, bx.y1); }
-      if (y !== undefined && y - sup > 0.02 && !/bell|light_ceiling|dungeon\/key/.test(it.path)) out.floating.push([it.path, +it.x.toFixed(2), +it.z.toFixed(2), +(y - sup).toFixed(2)]);
+      if (y !== undefined && y - sup > 0.02 && !/bell|light_ceiling|dungeon\/key|boats\//.test(it.path)) out.floating.push([it.path, +it.x.toFixed(2), +it.z.toFixed(2), +(y - sup).toFixed(2)]);
       if (it.o.collide && hit(it.x, it.z, (y ?? sup) + 0.1, (y ?? sup) + 0.5, 0.05, WALL)) out.propsInWalls.push([it.path, +it.x.toFixed(1), +it.z.toFixed(1)]); }
     for (const bx of world.boxes) if (bx.kind === 'solid' && hit(bx.cx, bx.cz, bx.y0 + 0.2, bx.y1 - 0.1, 0.05, WALL)) out.propsInWalls.push(['solid', +bx.cx.toFixed(1), +bx.cz.toFixed(1)]);
     // 3. doors: closed = blocked, open = walk straight through; a step 1.1 m to the side of the opening is a wall
