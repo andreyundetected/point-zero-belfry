@@ -108,7 +108,11 @@ export class DialogueRunner {
       const n: Node | undefined = conv.nodes[node]; if (!n) break;
       n.fx?.(this.ctx);
       // game time keeps running during a conversation (A7): lines take real reading time, no clock jumps
-      for (const l of n.say ?? []) { if (l.if && !l.if(this.ctx)) continue; await this.ui.show(l); }
+      for (const l of n.say ?? []) { if (l.if && !l.if(this.ctx)) continue;
+        // the speaker gestures with the line: a question keeps the talking loop, a denial shakes the head, an agreement nods, a shout calls out; while Tik speaks the other one listens
+        if (npc) { const t = l.ru; this.ctx.npcAct(npc, l.who === 'tik' || l.act ? 'listen' : /^\(?(нет|не |никого|ничего|отстань|иди|уходи)/i.test(t) || /качает головой/.test(t) ? 'no' : /^(да|ладно|хорошо|так|верно|ага)/i.test(t) || /кивает/.test(t) ? 'yes' : /!{1,}|кричит|орёт/.test(t) && !/\(/.test(t.slice(0, 1)) ? 'yell' : 'talk'); }
+        await this.ui.show(l); }
+      if (npc) this.ctx.npcAct(npc, 'listen');
       if (n.choices && n.choices.length) {
         const vis: Choice[] = n.choices.filter(c => !(c.hide && used.has(node + ':' + c.ru)) && !(c.once && this.ctx.talked(c.once)) && (!c.if || c.if(this.ctx)) && (!c.know || this.ctx.knows(c.know)));
         if (!vis.length) { finished = true; break; }

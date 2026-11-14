@@ -88,7 +88,8 @@ export class Game implements StvHost, Ctx {
   /** B1: small stacked notification, top right */
   notify(ru: string) { this.hud.notify(ru); }
   message(ru: string, en: string) { this.s.messages.push({ t: this.s.t, ru, en }); this.hud.toast(ru, 5); }
-  npcAct() {} end(ending: string) { this.finish(ending); } has(i: ItemId) { return this.s.pocket === i; } knows(id: string) { return this.s.knows(id); } fl(n: FlagName) { return this.s.flags.has(n); }
+  npcAct(npc: string, act: string) { const h = this.talkHold; if (!h || h.id !== npc) return; const seated = /^sit/.test(h.a); h.a = seated ? (act === 'listen' ? 'sit' : 'sittalk') : act === 'listen' ? (this.s.talks.get(npc) ? 'fold' : 'idle') : act; }
+  end(ending: string) { this.finish(ending); } has(i: ItemId) { return this.s.pocket === i; } knows(id: string) { return this.s.knows(id); } fl(n: FlagName) { return this.s.flags.has(n); }
   t() { return this.s.t; } money(d: number) { this.s.money += d; } gun() { return this.s.hasGun; } conv(id: string) { void this.runner.start(id); }
   fomaRuinOn() { return this.fomaRuin; }
   // --- conversation memory (A4) and situation (A1)
@@ -285,7 +286,10 @@ export class Game implements StvHost, Ctx {
     { const f = this.scene.fog as THREE.FogExp2 | null; if (f) f.density = 0.035 - 0.026 * Math.max(0, Math.min(1, (b.y - 4) / 22)); }
     updateDoors(dt, this.s.t, this.s.flags); updateTower(dt, Math.hypot(b.x + 70, b.z + 58) < 70);
     // npcs
-    this.npcs.lookAt.set(b.x, b.y + 1.6, b.z); this.npcs.talkingTo = this.talkHold?.id ?? ''; this.npcs.update(s.t, b.x, b.z, dt, b.y, undefined, id => { const h = this.talkHold; if (h && h.id === id) return { x: h.x, y: h.y, z: h.z, ry: h.ry, a: h.a, hidden: false }; return this.combat.override(id); });
+    this.npcs.lookAt.set(b.x, b.y + 1.6, b.z); this.npcs.talkingTo = this.talkHold?.id ?? ''; this.npcs.panic = this.combat.panic; this.npcs.fireAt = (x, z) => this.burn.nearFire(x, z, 9);
+    this.npcs.update(s.t, b.x, b.z, dt, b.y, undefined, id => { const h = this.talkHold; if (h && h.id === id) return { x: h.x, y: h.y, z: h.z, ry: h.ry, a: h.a, hidden: false }; return this.combat.override(id); });
+    // people are solid-ish: the player is pushed out of a 0.45 m circle around anyone standing (no walking through a crowd)
+    if (!this.pilot.aboard && !this.frozen) for (const [id, per] of this.npcs.active) { if (per.dead) continue; const q = this.npcs.pose(id); if (!q || q.hidden || Math.abs(q.y - b.y) > 1.2) continue; const dx = b.x - q.x, dz = b.z - q.z, d = Math.hypot(dx, dz); if (d < 0.55 && d > 1e-3) { const k = (0.55 - d) * 0.6; b.x += dx / d * k; b.z += dz / d * k; } }
     this.combat.update(dt); this.pilot.update(dt); this.markT -= dt; if (this.markT <= 0) { this.markT = 0.08; updateMarks(this); }
     if (this.shakeT > 0) { this.shakeT -= dt; const k = this.shakeA * Math.max(0, this.shakeT); this.cam.position.x += (Math.random() - 0.5) * 0.12 * k; this.cam.position.y += (Math.random() - 0.5) * 0.12 * k; }
     // events seen

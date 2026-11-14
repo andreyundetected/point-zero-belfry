@@ -25,6 +25,8 @@ export class Combat {
   reload() { const s = this.g.s; if (!s.hasGun || this.reloadT > 0 || s.mag >= 6 || s.ammo <= 0) return; this.reloadT = 3; this.g.hud.toast('Перезарядка…', 3); }
   enemyWatching() { const b = this.g.player.body; for (const d of this.dyn.values()) if (d.mode === 'hunt' && Math.hypot(d.x - b.x, d.z - b.z) < 30 && lineOfSight(d.x, d.z, d.y + 1.5, b.x, b.z, b.y + 1.5)) return true; return false; }
   /** the sim pose can be overridden by a fight */
+  /** where and when the last shot rang out: civilians run from it */
+  panic: { x: number; z: number; t: number } | null = null;
   override(id: string) { const d = this.dyn.get(id); return d ? { x: d.x, y: d.y, z: d.z, ry: d.ry, a: d.a, hidden: d.hidden } : null; }
   alarm(why = '') {
     const g = this.g; if (g.s.flags.has('alarm')) return; g.flag('alarm'); void why;
@@ -34,7 +36,7 @@ export class Combat {
   shoot() {
     const g = this.g, s = g.s; if (!s.hasGun || (g as any).weapon !== 'gun' || g.open || g.runner.active || g.frozen || this.reloadT > 0 || this.fireCool > 0) return;
     if (s.mag <= 0) { g.hud.toast('Пусто', 1); return; }
-    s.mag--; this.fireCool = 0.35; this.muzzle = 0.08; g.snd.shot();
+    s.mag--; this.fireCool = 0.35; this.muzzle = 0.08; g.snd.shot(); this.panic = { x: g.player.body.x, z: g.player.body.z, t: performance.now() / 1000 };
     const o = g.cam.getWorldPosition(new THREE.Vector3()), dir = g.cam.getWorldDirection(new THREE.Vector3());
     // loud: everyone within 60 m hears it (spec 8.10)
     this.alarm('shot');

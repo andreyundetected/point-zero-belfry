@@ -65,6 +65,8 @@ export class Burn {
   rebuild(f: Flags) { this.fv = f.hash(); this.starts.clear(); for (const b of placed) { const s = burnStart(b, f); if (s < Infinity) this.starts.set(b, s); } }
   /** is a point inside a building that is burning hard (the jump is refused there) */
   fireAt(x: number, z: number, t: number, f: Flags): boolean { for (const b of this.starts.keys()) { const s = this.starts.get(b)!; if (t < s + 30 || t > burnEnd(b, s)) continue; const dx = x - b.x, dz = z - b.z, c = Math.cos(b.ry), sn = Math.sin(b.ry), lx = dx * c - dz * sn, lz = dx * sn + dz * c; if (Math.abs(lx) < b.w / 2 + 1 && lz < 1 && lz > -b.depth - 1) return true; } void f; return false; }
+  /** is a strongly burning building within r metres (for people who keep away from flames) */
+  nearFire(x: number, z: number, r: number): boolean { for (const b of this.active) { if (Math.hypot(b.x - x, b.z - z) < r + b.w / 2) return true; } return false; }
   /** burning fraction of the city (for the glow in the sky) and the nearest burning buildings (for lights) */
   update(t: number, f: Flags, px: number, pz: number, dt: number) {
     this.t += dt; this.mat.uniforms.uTime.value = this.t; this.kmat.uniforms.uTime.value = this.t; this.smat.uniforms.uTime.value = this.t;

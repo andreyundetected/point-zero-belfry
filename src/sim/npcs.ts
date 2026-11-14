@@ -199,7 +199,18 @@ const CIVS: { id: string; body: Look['body']; coat: number; hat: Look['hat']; x:
   { id: 'civ6', body: 'remy', coat: COAT.a, hat: 'cap', x: 30, z: 20.4, pts: [[60, 20.4], [20, 20.4]], sp: 1.3, ph: 45 },
   { id: 'civ7', body: 'james', coat: COAT.d, hat: 'fedora', x: -30, z: 38.6, pts: [[-55, 38.6], [-20, 38.6]], sp: 1.1, ph: 15, long: true },
   { id: 'civ8', body: 'liza', coat: COAT.e, hat: 'scarf', x: 20, z: -12, pts: [[24, -22], [18, -6]], sp: 0.9, ph: 90, skirt: true, long: true },
+  { id: 'civ9', body: 'remy', coat: COAT.b, hat: 'fedora', x: 18, z: 14, pts: [[18, 0], [16, 16], [30, 20.4]], sp: 1.25, ph: 20 },
+  { id: 'civ10', body: 'liza', coat: COAT.c, hat: 'scarf', x: -16.5, z: 8, pts: [[-16.5, -16], [-16.5, 26]], sp: 1.05, ph: 75, skirt: true },
+  { id: 'civ11', body: 'remy', coat: COAT.e, hat: 'cap', x: -40, z: -5.4, pts: [[-78, -5.4], [-24, -5.4]], sp: 1.35, ph: 40, long: true },
+  { id: 'civ12', body: 'remy', coat: COAT.a, hat: 'fedora', x: 16.5, z: 40, pts: [[16.5, 50], [16.5, 24], [40, 20.4]], sp: 1.2, ph: 55 },
 ];
+// people who just stand: under a door lantern out of the rain, at the quay rail looking at the water
+const STANDERS: { id: string; body: Look['body']; x: number; z: number; ry: number; a: string; from: number; to: number }[] = [
+  { id: 'st1', body: 'remy', x: -16.6, z: -9.6, ry: Math.PI / 2, a: 'smoke', from: 0, to: at(22, 40) },
+  { id: 'st2', body: 'liza', x: -22, z: 56.6, ry: Math.PI, a: 'rail', from: 0, to: at(22, 33) },
+  { id: 'st3', body: 'remy', x: 17.2, z: 12.9, ry: -Math.PI / 2, a: 'fold', from: at(22, 6), to: at(22, 12) },
+];
+for (const st of STANDERS) add({ id: st.id, name: { ru: 'Прохожий', en: 'Passer-by' }, civ: true, look: { ...vary(st.id, { body: st.body, coat: 0, skirt: st.body === 'liza' }) }, sched: () => { const sc = s(st.x, st.z, st.ry, st.a, 0); if (st.from > 0) sc.hide(0).show(st.from, st.x, st.z, st.a, st.ry); sc.wait(st.to, st.a, st.ry).hide(); return sc.done(); } });
 for (const c of CIVS) add({ id: c.id, name: { ru: 'Прохожий', en: 'Passer-by' }, civ: true, look: { ...vary(c.id, { body: c.body === 'james' ? 'remy' : c.body, coat: 0, skirt: c.skirt }) }, sched: () => walkLoop(c.x, c.z, c.pts, c.sp, c.ph) });
 // tavern regulars
 const reg = [{ id: 'sailor', lx: -5.5, lz: -1.6, body: 'remy' as const, coat: COAT.c, hat: 'cap' as const }, { id: 'docker1', lx: -4.6, lz: -6.0, body: 'james' as const, coat: COAT.d, hat: 'cap' as const }, { id: 'docker2', lx: -3.9, lz: -6.6, body: 'remy' as const, coat: COAT.a, hat: 'cap' as const }, { id: 'oldman', lx: 3.0, lz: -7.0, body: 'james' as const, coat: COAT.b, hat: 'none' as const }];

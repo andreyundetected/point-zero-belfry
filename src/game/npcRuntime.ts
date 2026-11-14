@@ -8,7 +8,7 @@ export class NpcRuntime {
   active = new Map<string, Person>(); loading = new Set<string>(); radius = 24; far = 70; maxPeople = 10; pending: string[] = [];
   /** distant people are cheap dark silhouettes (capsules) - the full Mixamo bodies are 50k triangles each */
   lod = new Map<string, THREE.Mesh>(); capGeo = new THREE.CapsuleGeometry(0.24, 1.2, 2, 6);
-  lookAt = new THREE.Vector3(); talkingTo = '';
+  lookAt = new THREE.Vector3(); talkingTo = ''; panic: { x: number; z: number; t: number } | null = null; fireAt: (x: number, z: number) => boolean = () => false; private side = new Map<string, number>();
   poses = new Map<string, { x: number; y: number; z: number; ry: number; a: string; hidden: boolean; walking?: boolean }>();
   constructor(public scene: THREE.Scene, public sim: SimWorld) {}
   /** world position of an npc right now (even if not spawned) */
@@ -17,6 +17,15 @@ export class NpcRuntime {
     const cand: { d: NpcDef; dist: number }[] = [];
     for (const d of NPCS) {
       let p: { x: number; y: number; z: number; ry: number; a: string; hidden: boolean } = this.sim.pose(d.id, t); const o = override?.(d.id); if (o) p = o;
+      if (d.civ && !o) {
+        // a shot nearby: passers-by run from it for a few seconds and come back to their round (a look-only override: the deterministic sim is untouched)
+        const pn = this.panic; const now = performance.now() / 1000;
+        if (pn && now - pn.t < 9) { const dx = p.x - pn.x, dz = p.z - pn.z, dd = Math.hypot(dx, dz); if (dd < 28 && dd > 0.1) { const age = now - pn.t, run = age < 5 ? Math.min(14, age * 3.4) : Math.max(0, 14 - (age - 5) * 3.5); p = { ...p, x: p.x + dx / dd * run, z: p.z + dz / dd * run, a: age < 5 ? 'run' : 'walk', ry: age < 5 ? Math.atan2(dx, dz) : Math.atan2(-dx, -dz), hidden: false }; (p as any).walking = true; (p as any).speed = age < 5 ? 3.4 : 1.3; } }
+        // nobody strolls past a blazing house: anyone whose round goes within 9 m of flames is not there (he went round the block)
+        else if (!p.hidden && this.fireAt(p.x, p.z)) p = { ...p, hidden: true };
+        // idle variety: standing civilians alternate between idle and folded arms on a slow personal clock
+        if (!p.hidden && p.a === 'idle' && !(p as any).walking) { const k = Math.floor((t + d.id.length * 7) / 9) % 3; if (k === 1) p = { ...p, a: 'fold' }; }
+      }
       this.poses.set(d.id, p); hook?.(d, p);
       if (p.hidden) continue; const dist = Math.hypot(p.x - px, p.z - pz) + Math.abs(p.y - py) * 2; if (dist < this.radius) cand.push({ d, dist });
     }
@@ -32,6 +41,9 @@ export class NpcRuntime {
     }
     for (const [id, per] of this.active) {
       const p = this.poses.get(id)!; per.root.position.set(p.x, p.y, p.z);
+      // a walker steps aside when the player stands in his path (visual only, 0.5 m max, eased back when clear)
+      { let want = 0; if ((p as any).walking) { const fx = Math.sin(p.ry), fz = Math.cos(p.ry), dx = px - p.x, dz = pz - p.z, ahead = dx * fx + dz * fz, lat = dx * fz - dz * fx; if (ahead > 0 && ahead < 2.2 && Math.abs(lat) < 0.9) want = lat >= 0 ? -0.55 : 0.55; }
+        const cur = this.side.get(id) ?? 0, nxt = cur + (want - cur) * Math.min(1, dt * 4); this.side.set(id, nxt); per.root.position.x += Math.cos(p.ry) * nxt; per.root.position.z -= Math.sin(p.ry) * nxt; }
       // ease the turn
       const cur = per.root.rotation.y; let d = p.ry - cur; d = Math.atan2(Math.sin(d), Math.cos(d)); per.root.rotation.y = cur + d * Math.min(1, dt * 8);
       let a = p.a; if (a === 'sit' || a === 'sittalk' || a === 'cry') per.root.position.y -= 0.38 * (per.look.scale ?? 1); per.anim(a === 'v' ? 'idle' : a); if ((p as any).walking && (p as any).speed) { const sp = (p as any).speed; per.setRate(a === 'run' || a === 'run_gun' ? Math.max(0.7, Math.min(1.3, sp / 2.8)) : Math.max(0.75, Math.min(1.3, sp / 1.35))); } else per.setRate(/drink|smoke|wipe|dice/.test(a) ? 0.45 : 1);
