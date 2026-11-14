@@ -29,7 +29,8 @@ export class Menu {
     this.root.addEventListener('input', e => { const el = e.target as HTMLInputElement; if (el.dataset.set) this.set(el.dataset.set, el); });
   }
   get open() { return this.screen !== null; }
-  showTitle() { this.onTitle = true; this.g.frozen = true; this.g.hud.menuMode(true); this.g.handsVisible(false); this.shot = Math.floor(Math.random() * SHOTS.length); this.shotT = 0; this.show('title'); document.exitPointerLock?.(); }
+  showTitle() { try { if (sessionStorage.getItem('okno.continue') === '1' && hasSave()) { sessionStorage.removeItem('okno.continue'); this.onTitle = true; this.g.hud.menuMode(true); if (loadGame(this.g)) { this.startLoaded(); return; } } } catch { /* */ }
+    this.onTitle = true; this.g.frozen = true; this.g.hud.menuMode(true); this.g.handsVisible(false); this.shot = Math.floor(Math.random() * SHOTS.length); this.shotT = 0; this.show('title'); document.exitPointerLock?.(); }
   pause() { if (this.open || this.g.s.ended || this.g.jumpBusy) return; this.g.paused = true; this.g.hud.menuMode(true); this.show('pause'); document.exitPointerLock?.(); }
   resume() { this.hide(); if (this.onTitle) return; this.g.paused = false; this.g.hud.menuMode(false); this.g.player.dom.requestPointerLock?.(); }
   hide() { this.screen = null; this.root.style.display = 'none'; }

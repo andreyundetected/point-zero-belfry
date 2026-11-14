@@ -35,7 +35,7 @@ import { FACTS } from '../content/knowledge';
 import { Menu } from './menu';
 import { ROOF_Y } from '../sim/npcs';
 import { TOWER } from '../world/tower';
-import { saveGame } from './save';
+import { saveGame, hasSave } from './save';
 
 const INTRO = new Set(['lidia', 'crane', 'agata', 'orven', 'tilda', 'anna', 'anka', 'lukyan', 'tikhon', 'stern', 'yan', 'misha']); // people who give their name when you talk to them
 export class Game implements StvHost, Ctx {
@@ -122,7 +122,7 @@ export class Game implements StvHost, Ctx {
     for (let r = 0.3; r <= 1.5; r += 0.3) for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (ok(px, pz, y)) return { x: px, z: pz, y }; }
     return null;
   }
-  menu!: Menu; saveT = 0; jumpFx = 0; onHands?: (v: boolean) => void;
+  menu!: Menu; saveT = 0; jumpFx = 0; stuckT = 0; lastPx = 0; lastPz = 0; onHands?: (v: boolean) => void;
   handsVisible(v: boolean) { this.onHands?.(v); }
   /** autosave: after jumps, finished talks and every 20 s; `force` from the pause menu */
   autosave(force = false) { if (!force && (this.menu.open || this.runner.active || this.jumpBusy)) return false; const ok = saveGame(this); if (ok) this.saveT = 20; return ok; }
@@ -267,6 +267,8 @@ export class Game implements StvHost, Ctx {
     // D8: 23:00 is not the end: the world freezes and the Stvorka asks where to go back to; 'The Empty Hour' only if you choose to stay
     if (s.t >= WINDOW && !s.ended && !this.frozen && !this.open && !this.jumpBusy) { this.hud.toast(getLang() === 'ru' ? 'Окно закрывается.' : 'The window is closing.', 3); this.openTab('time'); }
     p.frozen = this.open || talking || this.jumpBusy || this.frozen || this.pilot.aboard || this.paused || this.waitHeld; this.hud.waiting(this.waitHeld); if (!this.pilot.aboard) p.update(dt); else p.apply();
+    { const k = p.keys, pushing = k['KeyW'] || k['KeyA'] || k['KeyS'] || k['KeyD']; const b0 = p.body; const moved = Math.hypot(b0.x - this.lastPx, b0.z - this.lastPz); this.lastPx = b0.x; this.lastPz = b0.z;
+      if (pushing && !p.frozen && moved < 0.002) { this.stuckT += dt; if (this.stuckT > 2.5) { this.stuckT = 0; const sp = this.freeSpot(b0.x, b0.z, b0.y); if (sp && (sp.x !== b0.x || sp.z !== b0.z)) { b0.x = sp.x; b0.z = sp.z; } else { for (let r = 0.6; r <= 3; r += 0.6) { const q = this.freeSpot(b0.x + r, b0.z, b0.y) ?? this.freeSpot(b0.x - r, b0.z, b0.y) ?? this.freeSpot(b0.x, b0.z + r, b0.y) ?? this.freeSpot(b0.x, b0.z - r, b0.y); if (q) { b0.x = q.x; b0.z = q.z; break; } } } } } else this.stuckT = 0; }
     this.hud.clock(s.t); this.hud.update(dt); if (!this.frozen && !this.paused) { this.saveT -= dt; if (this.saveT <= 0) { this.saveT = 20; this.autosave(); } }
     if (this.menu.onTitle) this.menu.cinematic(dt);
     this.seenT -= dt; if (this.seenT <= 0) { this.seenT = 1; for (const id of this.s.met) { const q = this.npcs.pose(id); if (q && !q.hidden && Math.hypot(q.x - p.body.x, q.z - p.body.z) < 25 && lineOfSight(p.body.x, p.body.z, p.body.y + 1.6, q.x, q.z, q.y + 1.5)) this.s.lastSeen.set(id, { x: q.x, z: q.z, t: s.t }); } }
@@ -299,6 +301,8 @@ export class Game implements StvHost, Ctx {
     if (this.open) this.stv.drawMapIfOpen();
     // thread nag + generic thread hint
     this.sinceThread += dt; onBark(this, 'tick');
+    if (this.sinceThread > 150 && !this.s.thoughts.has('nudge:' + s.thread) && !this.runner.active && !this.combat.aiming && THREADS[s.thread]) { this.s.thoughts.add('nudge:' + s.thread); this.hud.thread(pick(THREADS[s.thread]), 7); this.hud.bark(getLang() === 'ru' ? 'Так. Что дальше.' : 'Right. What next.', true); }
+    if (s.t >= at(22, 50) && !s.knows('msg_last') && !this.pilot.aboard && !s.ended) { s.learn('msg_last'); this.message('Без десяти. Если Харроу не на пирсе 7 в этой ветке — вернись назад и сделай это в другой.', 'Ten to. If Harrow is not at pier 7 in this branch, go back and do it in another.'); }
     this.hud.sync(this.s.flags.has('alarm') && false);
   }
   insideRoom(): string | null {
@@ -331,6 +335,9 @@ export class Game implements StvHost, Ctx {
       utro: ['Утро', ru ? 'Катер уходит в гавань. Город горит. Рассвет нескоро.' : 'The launch leaves for the harbour. The city burns. Dawn is far.'],
     };
     const [h, p] = T[ending] ?? [ending, '']; const facts = ending === 'otlozhen' || ending === 'utro' ? `<h3 style="font-weight:400;color:#8d887c">${ru ? 'Что изменилось этой ночью' : 'What changed tonight'}</h3><ul>${this.facts().map(x => `<li>${x}</li>`).join('')}</ul>` : `<p>${fmt(this.s.t, true)}${ending === 'dead' ? ` · ${this.placeName()} · ${ru ? 'стрелял' : 'shot by'}: ${this.combat.lastShooter ? (NPCS.find(n => n.id === this.combat.lastShooter) ? pick(NPCS.find(n => n.id === this.combat.lastShooter)!.name) : this.combat.lastShooter) : '—'}` : ''}</p>`;
-    e.innerHTML = `<h1>${h}</h1><p>${p}</p>${facts}<p><a href="" style="color:#e01818">${ru ? 'Новая игра' : 'New game'}</a></p>`;
+    const save = hasSave() ? `<a href="#" id="end-load" style="color:#d8d2c4;margin-right:28px">${ru ? 'Вернуться к последнему сохранению' : 'Back to the last save'}</a>` : '';
+    e.innerHTML = `<h1>${h}</h1><p>${p}</p>${facts}<p style="margin-top:28px">${save}<a href="#" id="end-menu" style="color:#e01818">${ru ? 'В главное меню' : 'Main menu'}</a></p>`;
+    document.getElementById('end-menu')!.onclick = ev => { ev.preventDefault(); location.reload(); };
+    const ld = document.getElementById('end-load'); if (ld) ld.onclick = ev => { ev.preventDefault(); try { sessionStorage.setItem('okno.continue', '1'); } catch { /* */ } location.reload(); };
   }
 }
