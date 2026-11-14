@@ -19,7 +19,7 @@ export function mtx(x: number, y: number, z: number, ry = 0) {
   tmp.position.set(x, y, z); tmp.rotation.set(0, ry, 0); tmp.updateMatrix(); return tmp.matrix.clone();
 }
 /** Collects static geometry per (material, 48 m chunk) and merges it: one mesh each, so frustum + shadow culling work */
-export const CHUNK = 48;
+export const CHUNK = 80;
 export class Batcher {
   private b = new Map<string, { mat: THREE.Material; gs: THREE.BufferGeometry[] }>(); private ids = new Map<THREE.Material, number>();
   geo(mat: THREE.Material, g: THREE.BufferGeometry) {

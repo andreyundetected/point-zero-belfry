@@ -7,7 +7,7 @@ import { placed } from './city';
 import { world } from './colliders';
 import { PropField } from './props';
 import { roomLights } from './interiors';
-import { halo } from './lamps';
+import { A } from '../render/materials';
 
 // Street and facade dressing, pass 2: the small things a real street has and a generated one lacks.
 // Everything static is merged (Batcher) or instanced (PropField); the only per-item objects are the door lanterns' halos (sprites).
@@ -15,7 +15,7 @@ const plaqueTex = (text: string, w = 256, h = 64) => { const c = document.create
 const STREET_OF: Record<string, string> = { rynok: 'Рыночная', bashn: 'Башенная', klyuch: 'пер. Ключников', bereg: 'Береговая', kanat: 'Канатная', gavan: 'Гаванная', nab: 'Набережная', sklad: 'Складская', priyut: 'Приютская', gavanE: 'Гаванная', eastS: 'Восточная', eastN: 'Восточная', westS: 'Западная', westN: 'Западная', lodoch: 'Лодочный пер.', tower_sq: 'Башенная пл.' };
 
 export function buildDressing(scene: THREE.Scene, props: PropField) {
-  const bt = new Batcher();
+  const bt = new Batcher(); const halos: number[] = [];
   const plaqueMat = new Map<string, THREE.Material>(); const plaque = (t: string) => plaqueMat.get(t) ?? plaqueMat.set(t, new THREE.MeshStandardMaterial({ map: plaqueTex(t), roughness: 0.6 })).get(t)!;
   const numMat = new Map<string, THREE.Material>(); const num = (t: string) => numMat.get(t) ?? numMat.set(t, new THREE.MeshStandardMaterial({ map: plaqueTex(t, 96, 96), roughness: 0.6 })).get(t)!;
   // ---- kerbs: a granite lip along every road edge (the walk sits 12 cm above the carriageway in the look, not in the physics)
@@ -44,7 +44,7 @@ export function buildDressing(scene: THREE.Scene, props: PropField) {
     if (shop || R(2) < 0.35) { const [X, , Z] = P(dcx - 0.9, 0, 0.3); const y = b.base + 0.35 + 2.75;
       bt.box(M.iron, 0.04, 0.04, 0.5, mtx(X - nx * 0.12, y + 0.2, Z - nz * 0.12, b.ry), 1); bt.box(M.iron, 0.16, 0.04, 0.16, mtx(X, y + 0.2, Z, b.ry), 1);
       const glass = new THREE.BoxGeometry(0.14, 0.2, 0.14); glass.applyMatrix4(mtx(X, y, Z, b.ry)); bt.geo(doorGlass, glass);
-      halo(scene, X, y, Z, 1.4, 0xffb070, 0.5); roomLights.push({ room: 'street', x: X, y: y - 0.1, z: Z, color: 0xffb070, intensity: shop ? 4 : 2.5, dist: shop ? 7 : 5, on: () => true }); }
+      halos.push(X, y, Z); roomLights.push({ room: 'street', x: X, y: y - 0.1, z: Z, color: 0xffb070, intensity: shop ? 4 : 2.5, dist: shop ? 7 : 5, on: () => true }); }
     // awning over a shop window
     if (shop && R(3) < 0.55 && b.w >= 5) { const side = dcx > 0 ? -1 : 1; const aw = Math.min(3.2, b.w / 2 - 1.2), ax = dcx + side * (Math.abs(dcx) + aw / 2 + 0.8) * (dcx === 0 ? 1 : 1); const cx = side * (b.w / 4) + (dcx === 0 ? side * 0.4 : 0); void ax;
       const [X, , Z] = P(cx, 0, 0.55); const g = new THREE.BoxGeometry(aw, 0.04, 1.1); g.applyMatrix4(new THREE.Matrix4().makeRotationX(0.32)); g.applyMatrix4(mtx(X, b.base + 0.35 + 3.0, Z, b.ry)); bt.geo(awningMat(R(4)), g);
@@ -79,6 +79,7 @@ export function buildDressing(scene: THREE.Scene, props: PropField) {
   const ct = placed.find(p => p.id === 'contora'); if (ct?.toWorld && ct.floorY) { const fy = ct.floorY(0); for (const [lx, lz, k] of [[-1.6, -3.1, 0], [1.4, -3.3, 1], [-0.2, -3.0, 2]] as [number, number, number][]) { const [X, , Z] = ct.toWorld(lx, 0, lz); const g = new THREE.BoxGeometry(0.3, 0.04 + k * 0.01, 0.42); g.applyMatrix4(mtx(X, fy + 1.05 + 0.03, Z, ct.ry + k * 0.2)); bt.geo(k === 1 ? M.dark : paperMat, g); } }
   const tk = placed.find(p => p.id === 'tikhon'); if (tk?.toWorld && tk.floorY) { const fy = tk.floorY(0); const [X, , Z] = tk.toWorld(-1.1, 0, -3.6); props.add('tavern_kitchen/bowl', X, Z, { l: 0.22, y: fy + 0.76 + 0.004 }); const [X2, , Z2] = tk.toWorld(-1.7, 0, -3.2); props.add('items_adventurer/mug_empty', X2, Z2, { h: 0.11, y: fy + 0.76 + 0.004 }); }
   bt.flush(scene);
+  if (halos.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(halos, 3)); const pts = new THREE.Points(g, new THREE.PointsMaterial({ map: new THREE.TextureLoader().load(A + 'textures/procedural/lamp_halo.png'), size: 1.4, sizeAttenuation: true, color: 0xffb070, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.5, fog: false })); pts.frustumCulled = false; scene.add(pts); }
 }
 const doorGlass = new THREE.MeshBasicMaterial({ color: 0xffc080 });
 const ropeMat = new THREE.MeshStandardMaterial({ color: 0x6a5a3a, roughness: 1 });

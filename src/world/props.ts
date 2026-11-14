@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { A } from '../render/materials';
 import { world } from './colliders';
 import { groundH } from './terrain';
@@ -36,7 +37,7 @@ export class PropField {
   inst: Inst[] = []; constructor() { allFields.push(this); }
   add(path: string, x: number, z: number, o: PropOpts = {}) { this.inst.push({ path, x, z, o }); }
   async build(scene: THREE.Object3D) {
-    const by = new Map<string, Inst[]>(); for (const i of this.inst) (by.get(i.path) ?? by.set(i.path, []).get(i.path)!).push(i);
+    const baked = new Map<THREE.Material, THREE.BufferGeometry[]>(); const by = new Map<string, Inst[]>(); for (const i of this.inst) (by.get(i.path) ?? by.set(i.path, []).get(i.path)!).push(i);
     await Promise.all([...by].map(async ([path, list]) => {
       let model: Model; try { model = await loadModel(path); } catch (e) { console.warn('prop missing', path); return; }
       const mats: THREE.Matrix4[] = [];
@@ -48,11 +49,16 @@ export class PropField {
         if (o.collide) world.add(it.x, it.z, model.size.x * sc / 2, model.size.z * sc / 2, ry, y, y + model.size.y * sc, o.kind ?? 'prop');
       }
       for (const p of model.parts) {
-        desat(p.mat); const im = new THREE.InstancedMesh(p.geo, p.mat, mats.length);
+        desat(p.mat);
+        if (mats.length <= 3) { // few copies: bake into one static mesh per material (dozens of one-off props were one draw call each per part)
+          for (const m of mats) { const g = p.geo.clone(); g.applyMatrix4(m.clone().multiply(p.m)); for (const mat of (Array.isArray(p.mat) ? p.mat : [p.mat])) (baked.get(mat) ?? baked.set(mat, []).get(mat)!).push(g); }
+          continue; }
+        const im = new THREE.InstancedMesh(p.geo, p.mat, mats.length);
         mats.forEach((m, i) => im.setMatrixAt(i, m.clone().multiply(p.m)));
         im.castShadow = im.receiveShadow = true; im.frustumCulled = false; scene.add(im);
       }
     }));
+    for (const [mat, gs] of baked) { const merged = mergeGeometries(gs.map(g => { const n = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(n.attributes)) if (!['position', 'normal', 'uv'].includes(k)) n.deleteAttribute(k); if (!n.attributes.uv) n.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(n.attributes.position.count * 2), 2)); if (!n.attributes.normal) n.computeVertexNormals(); return n; }), false); if (!merged) continue; const m = new THREE.Mesh(merged, mat); m.castShadow = m.receiveShadow = true; scene.add(m); }
   }
 }
 /** clone a single model into the scene (for things that move or are recoloured) */
