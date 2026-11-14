@@ -10,6 +10,7 @@ import { nameOf } from './dialogue';
 import { drawMain } from './mapview';
 import { threadMarkers } from '../content/threads';
 import { branchHtml, mapPlaces } from '../content/branch';
+import { FACTS } from '../content/knowledge';
 
 const $ = (id: string) => document.getElementById(id)!;
 export type Tab = 'time' | 'thread' | 'people' | 'map' | 'pocket' | 'messages' | 'branch';
@@ -56,15 +57,19 @@ export class Stvorka {
   }
   private renderTime(b: HTMLElement) {
     const s = this.host.s, lang = getLang(); const x = (t: number) => (t / WINDOW * 100).toFixed(2) + '%';
-    const seen = EVENTS.filter(e => s.seenEvents.has(e.id)).map(e => ({ t: e.t, big: !!e.big, label: pick(e) }));
-    const marks = seen.map(m => `<div class="mk ${m.big ? 'big' : ''}" style="left:${x(m.t)}" title="${fmt(m.t)} ${m.label}"></div>`).join('');
+    // the scale carries what Tik knows with a time: events he saw (●/○), facts he was told (⟲) and the thread's own hint (↩)
+    const seen: { t: number; big: boolean; label: string; kind: 'seen' | 'told' | 'thread' }[] = EVENTS.filter(e => s.seenEvents.has(e.id)).map(e => ({ t: e.t, big: !!e.big, label: pick(e), kind: 'seen' as const }));
+    for (const [k, f] of Object.entries(FACTS)) if (f.t !== undefined && s.knows(k) && !seen.some(m => Math.abs(m.t - f.t!) < 20 && m.label === pick(f))) seen.push({ t: f.t, big: false, label: pick(f), kind: 'told' });
+    const th = THREADS[s.thread]; if (th?.timeHint !== undefined) seen.push({ t: th.timeHint, big: false, label: (lang === 'ru' ? 'Нить: ' : 'Thread: ') + pick(th), kind: 'thread' });
+    const glyph = (m: { big: boolean; kind: string }) => m.kind === 'thread' ? '<span class="red">↩</span>' : m.kind === 'told' ? '<span class="dim">⟲</span>' : m.big ? '<span class="red">●</span>' : '○';
+    const marks = seen.map(m => `<div class="mk ${m.big || m.kind === 'thread' ? 'big' : ''}" style="left:${x(m.t)}" title="${fmt(m.t)} ${m.label}"></div>`).join('');
     const hours = [0, 15, 30, 45, 60].map(m => `<div class="lbl" style="left:${x(m * 60)}">${fmt(m * 60)}</div>`).join('');
     const closing = s.t >= WINDOW; const banner = closing ? `<div style="border:1px solid #a01810;padding:8px 12px;margin-bottom:10px"><b class="red">${lang === 'ru' ? 'Окно закрывается. Вернуться?' : 'The window is closing. Go back?'}</b> <span class="dim">${lang === 'ru' ? 'Выберите минуту и прыгайте — или останьтесь.' : 'Pick a minute and jump — or stay.'}</span> <button id="stay" style="float:right">${lang === 'ru' ? 'Остаться' : 'Stay'}</button></div>` : '';
     b.innerHTML = banner + `<div style="display:flex;justify-content:space-between"><div>${tr('now')}: <b>${fmt(this.nowT, true)}</b></div><div>${tr('target')}: <b class="red" id="tsel">${fmt(this.host.targetT, true)}</b></div></div>
     <div class="tl"><div class="bar"></div>${marks}<div class="now" style="left:${x(this.nowT)}"></div><div class="sel" id="selmark" style="left:${x(this.host.targetT)}"></div>${hours}</div>
     <input id="rng" type="range" min="0" max="${WINDOW}" step="10" value="${Math.round(this.host.targetT / 10) * 10}">
     <p><button class="go" id="jbtn">${tr('jump')} <kbd>Enter</kbd></button><span class="dim" style="font-size:13px">${lang === 'ru' ? '← → шаг 10 с · Shift+← → минута' : '← → 10 s · Shift+← → a minute'}</span></p>
-    <div>${seen.sort((a, c) => a.t - c.t).map(m => `<div class="ev" data-t="${m.t}"><span class="dim">${fmt(m.t)}</span> ${m.big ? '<span class="red">●</span>' : '○'} ${m.label}</div>`).join('') || `<span class="dim">${lang === 'ru' ? 'Событий пока не видел.' : 'No events seen yet.'}</span>`}</div>`;
+    <div>${seen.sort((a, c) => a.t - c.t).map(m => `<div class="ev" data-t="${m.t}"><span class="dim">${fmt(m.t)}</span> ${glyph(m)} ${m.label}</div>`).join('') || `<span class="dim">${lang === 'ru' ? 'Отметки появятся, когда узнаешь о событиях с точным временем: увидишь сам или услышишь от людей. Клик по отметке ставит минуту.' : 'Marks appear as you learn of events with an exact time: seen yourself or told by people. Click a mark to set the minute.'}</span>`}</div>`;
     const rng = $('rng') as HTMLInputElement; rng.oninput = () => this.setTarget(+rng.value);
     b.querySelectorAll('.ev').forEach(el => (el as HTMLElement).onclick = () => { this.setTarget(+(el as HTMLElement).dataset.t!); rng.value = String(this.host.targetT); });
     $('jbtn').onclick = () => this.host.jumpTo(this.host.targetT, false); if (closing) { $('stay').onclick = () => this.host.stay?.(); if (this.host.targetT >= WINDOW - 5) this.setTarget(WINDOW - 600); }
