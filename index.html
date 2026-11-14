@@ -66,12 +66,28 @@ kbd{font:11px monospace;border:1px solid #4a463c;border-radius:3px;padding:0 4px
 #mini{bottom:104px!important}
 #wait{position:fixed;left:50%;top:40%;transform:translateX(-50%);font-size:46px;color:#d8c9a0;text-shadow:0 0 12px #000;display:none;animation:spin 2s linear infinite;pointer-events:none}@keyframes spin{from{transform:translateX(-50%) rotate(0)}to{transform:translateX(-50%) rotate(180deg)}}
 #stv .tab kbd{margin-left:6px}
+
+/* ---- menu (title + pause) */
+#menu{position:fixed;inset:0;display:none;align-items:center;justify-content:flex-start;padding-left:9vw;z-index:40;background:linear-gradient(90deg,rgba(4,5,7,.92) 0%,rgba(4,5,7,.72) 42%,rgba(4,5,7,.15) 100%)}
+#mfade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .4s}
+.mpanel{position:relative;width:min(560px,80vw);max-height:92vh;overflow:auto;padding:10px 0}
+.mtitle{margin-bottom:34px}.mt1{font-size:92px;letter-spacing:18px;line-height:1;color:#e8e2d4;text-shadow:0 0 30px #000,0 2px 0 #3a1010}.mt1.small{font-size:38px;letter-spacing:10px}
+.mt2{font-size:15px;letter-spacing:6px;color:#a89a7c;margin-top:12px;text-transform:uppercase}.mt2::before{content:'';display:inline-block;width:46px;height:1px;background:#8a2a20;vertical-align:middle;margin-right:14px}
+.mlist{display:flex;flex-direction:column;gap:2px}.mi{font-size:22px;padding:9px 16px 9px 22px;color:#bdb6a4;cursor:pointer;border-left:2px solid transparent;transition:all .15s;letter-spacing:1px}
+.mi.on{color:#fff;border-left-color:var(--red);background:linear-gradient(90deg,rgba(160,20,16,.22),transparent);padding-left:30px}.mi .ms{display:block;font-size:12px;color:var(--dim);letter-spacing:.5px;margin-top:2px}
+.mfoot{margin-top:40px;font-size:13px;color:#7d786c;max-width:440px;line-height:1.5}.mver{position:absolute;right:16px;bottom:12px;font:11px monospace;color:#5a564c}
+.mform label{display:block;margin:0 0 18px 22px;font-size:15px;color:#bdb6a4}.mform input[type=range]{display:block;width:320px;margin-top:6px;accent-color:#e01818}.mform b{color:#fff;font-weight:normal;margin-left:8px}
+.segs{display:flex;gap:6px;margin-top:6px}.seg{padding:4px 12px;border:1px solid #3a3228;color:#9a9484;cursor:pointer;font-size:14px}.seg.on{border-color:var(--red);color:#fff;background:rgba(160,20,16,.2)}.mhint{font-size:12px;color:#6d685c;margin-top:6px;max-width:420px}
+.mkeys{margin:0 0 20px 22px;border-collapse:collapse;font-size:15px}.mkeys td{padding:4px 14px 4px 0;color:#bdb6a4;vertical-align:top}.mkeys kbd{font-size:12px;padding:1px 7px;margin:0}
+.mabout{margin:0 0 20px 22px;font-size:16px;line-height:1.5;max-width:470px;color:#bdb6a4}.mabout .dim{font-size:13px}
+body.menu-on #hint,body.menu-on #clock,body.menu-on #mini,body.menu-on #pocket,body.menu-on #cross,body.menu-on #threadbar,body.menu-on #weapon,body.menu-on #prompt,body.menu-on #thread,body.menu-on #notes,body.menu-on #newp{display:none!important}
+body.no-hints #hint{display:none}
 </style></head>
 <body>
 <canvas id="mini" width="176" height="176"></canvas><div id="pocket"><div class="ic">◌</div><div class="nm">Карман пуст</div></div><div id="newp"><img id="newp-img" alt=""><div><div class="t">Встречен новый человек</div><div class="n" id="newp-n"></div><div class="s" id="newp-s"></div></div></div>
 <div id="notes"></div><div id="weapon"><div class="ic">⌐</div><div class="nm"></div><kbd>1</kbd></div><div id="wait">⧗</div><div id="hint"></div><div id="clock"></div><div id="cross"></div><div id="prompt"></div><div id="sub"></div><div id="thread"></div><div id="threadbar"></div><div id="toast"></div>
 <div id="sync"></div><div id="ghost"></div><div id="red"></div><div id="flash"></div><div id="fade"></div>
-<div id="pause" style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;font-size:28px;letter-spacing:4px;cursor:pointer;color:#d8d2c4">ПАУЗА — клик, чтобы продолжить</div>
+<div id="menu"></div>
 <div id="loading" style="position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#8d887c;font-size:22px;letter-spacing:5px;z-index:50"><div>ЗАТОН · 1947</div><div style="font-size:13px;letter-spacing:2px;margin-top:14px;opacity:.6">загрузка…</div></div>
 <div id="dlg"></div><div id="stv"></div><div id="end"></div>
 <script type="module" src="/src/main.ts"></script></body></html>

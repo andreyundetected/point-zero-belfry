@@ -1,10 +1,11 @@
 import { A } from '../render/materials';
+import { settings, onSettings } from './settings';
 /** WebAudio: synthesised rain/wind/fire (spec 14) + a few one-shots from the pack */
 export class Sound {
   ctx?: AudioContext; master?: GainNode; rain?: GainNode; fire?: GainNode; lowpass?: BiquadFilterNode; buffers = new Map<string, AudioBuffer>(); muffled = false;
   init() {
     if (this.ctx) return; try {
-      const c = this.ctx = new AudioContext(); this.master = c.createGain(); this.master.gain.value = 0.7; this.master.connect(c.destination);
+      const c = this.ctx = new AudioContext(); this.master = c.createGain(); this.master.gain.value = settings.volume; this.master.connect(c.destination); onSettings(st => { if (this.master) this.master.gain.value = st.volume; });
       this.lowpass = c.createBiquadFilter(); this.lowpass.type = 'lowpass'; this.lowpass.frequency.value = 18000; this.lowpass.connect(this.master);
       const noise = (secs: number) => { const b = c.createBuffer(1, c.sampleRate * secs, c.sampleRate), d = b.getChannelData(0); let last = 0; for (let i = 0; i < d.length; i++) { const w = Math.random() * 2 - 1; last = (last + 0.02 * w) / 1.02; d[i] = last * 3.5 + w * 0.15; } return b; };
       const mk = (freq: number, q: number, gain: number, type: BiquadFilterType) => { const s = c.createBufferSource(); s.buffer = noise(4); s.loop = true; const f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q; const g = c.createGain(); g.gain.value = gain; s.connect(f); f.connect(g); g.connect(this.lowpass!); s.start(); return g; };

@@ -32,6 +32,10 @@ import { drawMini } from './mapview';
 import { updateMarks } from '../world/marks';
 import { addInteract } from '../world/interiors';
 import { FACTS } from '../content/knowledge';
+import { Menu } from './menu';
+import { ROOF_Y } from '../sim/npcs';
+import { TOWER } from '../world/tower';
+import { saveGame } from './save';
 
 const INTRO = new Set(['lidia', 'crane', 'agata', 'orven', 'tilda', 'anna', 'anka', 'lukyan', 'tikhon', 'stern', 'yan', 'misha']); // people who give their name when you talk to them
 export class Game implements StvHost, Ctx {
@@ -50,14 +54,15 @@ export class Game implements StvHost, Ctx {
       if (!c.s.knows('helm_ok') && c.s.pocket !== 'cap') { c.hud.bark('Охрана не подпустит. Надо сказать «Я».', true); const d = c.npcs.pose('dock1'); if (d && !d.hidden) c.runner.start('guard.pier3'); return; }
       c.pilot.board(); } });
     addEventListener('keydown', e => this.key(e));
-    document.addEventListener('pointerlockchange', () => { const locked = !!document.pointerLockElement; if (locked) { this.hadLock = true; this.paused = false; document.getElementById('pause')!.style.display = 'none'; } else if (this.hadLock && !this.open && !this.ui.open && !this.runner.active && !this.s.ended && !this.jumpBusy) { this.paused = true; document.getElementById('pause')!.style.display = 'flex'; } });
-    document.getElementById('pause')!.addEventListener('click', () => { this.paused = false; document.getElementById('pause')!.style.display = 'none'; this.player.dom.requestPointerLock?.(); });
+    this.menu = new Menu(this);
+    // losing the pointer lock (Esc, alt-tab) opens the pause menu; the menu itself asks for the lock back
+    document.addEventListener('pointerlockchange', () => { const locked = !!document.pointerLockElement; if (locked) { this.hadLock = true; if (!this.menu.open) this.paused = false; } else if (this.hadLock && !this.menu.onTitle && !this.open && !this.ui.open && !this.runner.active && !this.s.ended && !this.jumpBusy && !this.menu.open) this.menu.pause(); });
     addEventListener('keyup', e => { if (e.code === 'KeyT') this.waitHeld = false; });
     addEventListener('mousedown', () => this.snd.init()); addEventListener('keydown', () => this.snd.init(), { once: true });
     player.onRespawn = () => { this.hud.bark('Холодная вода. Вылез.', true); this.hurt(0.6); };
     this.runner.onEnd = (npc, finished) => {
       if (npc) { const q = this.npcs.pose(npc); if (q) this.s.lastSeen.set(npc, { x: q.x, z: q.z, t: this.s.t }); }
-    if (npc && finished) { this.s.talks.set(npc, (this.s.talks.get(npc) ?? 0) + 1); this.s.everTalks.set(npc, (this.s.everTalks.get(npc) ?? 0) + 1); this.s.flags.put(`talk_${npc}`, this.s.t); this.sim.setFlags(this.s.flags); if (INTRO.has(npc)) this.s.learn('name_' + npc); this.meet(npc); }
+    if (npc && finished) { this.s.talks.set(npc, (this.s.talks.get(npc) ?? 0) + 1); this.s.everTalks.set(npc, (this.s.everTalks.get(npc) ?? 0) + 1); this.s.flags.put(`talk_${npc}`, this.s.t); this.sim.setFlags(this.s.flags); if (INTRO.has(npc)) this.s.learn('name_' + npc); this.meet(npc); setTimeout(() => this.autosave(), 200); }
       this.talkHold = null; setTimeout(() => { try { (this.player.dom.requestPointerLock() as any)?.catch?.(() => {}); } catch { /* needs a gesture */ } }, 60); };
     setNameKnown(id => ['tik', 'device', 'mitya', 'guard1', 'guard2', 'pg', ''].includes(id) || this.s.knows('name_' + id));
     player.canClickMove = () => !this.combat.aiming && !this.open && !this.runner.active;
@@ -68,7 +73,7 @@ export class Game implements StvHost, Ctx {
   getPos() { return { x: this.player.body.x, z: this.player.body.z }; }
   // ---------------- Ctx (for dialogues and content)
   advance(sec: number) { this.s.t = Math.min(WINDOW, this.s.t + sec); }
-  bark(ru: string, force = false) { return this.hud.bark(ru, force); }
+  bark(ru: string, force = false) { if (this.menu?.onTitle) return false; return this.hud.bark(ru, force); }
   thread(key: string) { if (this.s.thread === key) return; this.s.thread = key; const th = THREADS[key]; if (th) this.hud.thread(pick(th), 7); this.sinceThread = 0; }
   flag(n: FlagName) { this.s.setFlag(n); this.sim.flags = this.s.flags; }
   give(i: ItemId) { this.s.give(i); this.hud.toast(itemName(i)); }
@@ -116,6 +121,12 @@ export class Game implements StvHost, Ctx {
     for (let r = 0.3; r <= 1.5; r += 0.3) for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (ok(px, pz, y)) return { x: px, z: pz, y }; }
     return null;
   }
+  menu!: Menu; saveT = 0; onHands?: (v: boolean) => void;
+  handsVisible(v: boolean) { this.onHands?.(v); }
+  /** autosave: after jumps, finished talks and every 20 s; `force` from the pause menu */
+  autosave(force = false) { if (!force && (this.menu.open || this.runner.active || this.jumpBusy)) return false; const ok = saveGame(this); if (ok) this.saveT = 20; return ok; }
+  /** New game from the menu: the roof at 22:03, the prologue */
+  startNewGame() { this.player.place(TOWER.roofSpawn.x, TOWER.roofSpawn.z, -70, -63, 0, ROOF_Y()); this.s.t = at(22, 3); this.applyCity(this.s.t, true); setTimeout(() => { this.player.dom.requestPointerLock?.(); void this.runner.start('prologue'); }, 400); }
   seenT = 0; fomaT = 0; roofT = 0; tAt = 0; meetT = 0; miniT = 0; bellShown = false; markT = 0; paused = false; hadLock = false; holdT = 0; holding = false;
   /** spec 2.2: hold the jump button for 1 real second = preview; released earlier = cancel; held through = jump */
   togglePreview() { if (this.previewing) { this.hideGhosts(); this.previewing = false; } else { this.showGhosts(this.targetT); this.previewing = true; } }
@@ -143,7 +154,7 @@ export class Game implements StvHost, Ctx {
     for (const d of doors) { d.open = false; (d.pivot as any).inner.rotation.y = 0; }
     this.player.apply(); this.applyCity(target, true); this.onUniverse(); if (this.open) { this.open = false; this.stv.hide(); }
     this.hud.flash(0); this.hud.fade(false, 500); await new Promise(r => setTimeout(r, 450)); this.jumpBusy = false;
-    this.hud.toast(`${fmt(oldT)} → ${fmt(target)}`, 2.5);
+    this.hud.toast(`${fmt(oldT)} → ${fmt(target)}`, 2.5); this.autosave();
   }
   onUniverse() { onBark(this, 'universe'); }
   showGhosts(t: number) {
@@ -207,7 +218,7 @@ export class Game implements StvHost, Ctx {
   /** talk to an npc behind a door etc. (no pose needed) */
   talkTo(npc: string, conv: string) { if (this.runner.active) return; if (conv.startsWith('bark:')) { void this.runner.quick(npc, conv.slice(5)); return; } void this.runner.start(conv, npc || undefined); }
   /** Tik thinks aloud (B6): once per event in a branch, never if he already knows it */
-  thought(key: string, ru: string, know?: string) { if (this.s.thoughts.has(key) || (know && this.s.knows(know))) return; this.s.thoughts.add(key); this.hud.bark(ru, true); }
+  thought(key: string, ru: string, know?: string) { if (this.menu?.onTitle || this.s.thoughts.has(key) || (know && this.s.knows(know))) return; this.s.thoughts.add(key); this.hud.bark(ru, true); }
   talk(npc: string, conv: string) {
     if (this.runner.active) return; const p = this.npcs.pose(npc)!; const b = this.player.body;
     this.player.yaw = Math.atan2(-(p.x - b.x), -(p.z - b.z));
@@ -254,7 +265,8 @@ export class Game implements StvHost, Ctx {
     // D8: 23:00 is not the end: the world freezes and the Stvorka asks where to go back to; 'The Empty Hour' only if you choose to stay
     if (s.t >= WINDOW && !s.ended && !this.frozen && !this.open && !this.jumpBusy) { this.hud.toast(getLang() === 'ru' ? 'Окно закрывается.' : 'The window is closing.', 3); this.openTab('time'); }
     p.frozen = this.open || talking || this.jumpBusy || this.frozen || this.pilot.aboard || this.paused || this.waitHeld; this.hud.waiting(this.waitHeld); if (!this.pilot.aboard) p.update(dt); else p.apply();
-    this.hud.clock(s.t); this.hud.update(dt);
+    this.hud.clock(s.t); this.hud.update(dt); if (!this.frozen && !this.paused) { this.saveT -= dt; if (this.saveT <= 0) { this.saveT = 20; this.autosave(); } }
+    if (this.menu.onTitle) this.menu.cinematic(dt);
     this.seenT -= dt; if (this.seenT <= 0) { this.seenT = 1; for (const id of this.s.met) { const q = this.npcs.pose(id); if (q && !q.hidden && Math.hypot(q.x - p.body.x, q.z - p.body.z) < 25 && lineOfSight(p.body.x, p.body.z, p.body.y + 1.6, q.x, q.z, q.y + 1.5)) this.s.lastSeen.set(id, { x: q.x, z: q.z, t: s.t }); } }
     this.miniT -= dt; if (this.miniT <= 0) { this.miniT = 0.1; drawMini(document.getElementById('mini') as HTMLCanvasElement, { x: p.body.x, z: p.body.z, yaw: p.yaw, thread: s.thread, time: performance.now() / 1000, t: s.t }); this.hud.pocket(s.pocket ? itemName(s.pocket) : null); this.hud.threadBar(THREADS[s.thread] && !this.open && !talking ? pick(THREADS[s.thread]) : ''); this.hud.weapon(s.hasGun ? `${this.weapon === 'gun' ? '▸ ' : ''}${getLang() === 'ru' ? 'Револьвер' : 'Revolver'} ${s.mag}/${s.ammo}` : null); }
     { const b0 = p.body, sp = Math.hypot(b0.vx, b0.vz); if (b0.grounded && sp > 0.8 && !p.frozen) { this.stepT -= dt * (sp > 4 ? 1.6 : 1); if (this.stepT <= 0) { this.stepT = 0.5; const kind = this.sceneInside || b0.y > 20 ? 'wood' : 'concrete'; this.snd.play(`impact/footstep_${kind}_00${(Math.random() * 5) | 0}`, p.crouching ? 0.12 : 0.28); } } }
@@ -263,7 +275,7 @@ export class Game implements StvHost, Ctx {
     else if (this.cs.lampsFlicker) this.applyCity(s.t);
     const b = p.body; const inside = this.insideRoom(); this.sceneInside = inside ?? ''; this.hemi.intensity = inside ? 0.12 : 0.7; this.moon.intensity = inside ? 0.0 : 1.0; this.snd.setMuffled(!!inside);
     // the moon's shadow box (48 m) follows the player, snapped to shadow texels so the shadows do not swim; indoors the shadow pass is skipped altogether
-    this.moon.castShadow = !inside; { const tx = 48 / 2048; const sx = Math.round((b.x + 10) / tx) * tx, sz = Math.round((b.z + 8) / tx) * tx; this.moon.target.position.set(sx, 0, sz); this.moon.position.set(sx - 18, 30, sz - 12); this.moon.target.updateMatrixWorld(); }
+    this.moon.castShadow = !inside && this.renderer.shadowMap.enabled; { const tx = 48 / 2048; const sx = Math.round((b.x + 10) / tx) * tx, sz = Math.round((b.z + 8) / tx) * tx; this.moon.target.position.set(sx, 0, sz); this.moon.position.set(sx - 18, 30, sz - 12); this.moon.target.updateMatrixWorld(); }
     const extra = roomLights.filter(l => l.on(s.t, s.flags) && !l.shot && (inside ? l.room === inside : Math.hypot(l.x - b.x, l.z - b.z) < 14 && (l.room !== 'cellar' || b.y < -2))).map(l => ({ x: l.x, y: l.y, z: l.z, color: l.color, intensity: l.intensity, dist: l.dist }));
     if (this.pilot.aboard) { const m = this.pilot.mesh.position, ry = this.pilot.s.ry; extra.push({ x: m.x + Math.sin(ry) * 1.2, y: m.y + 2.6, z: m.z + Math.cos(ry) * 1.2, color: 0xffd0a0, intensity: 6, dist: 9 }); }
     this.burn.update(s.t, s.flags, b.x, b.z, dt); const fl = this.burn.lights(this.time); this.pool.update(b.x, b.z, [...extra, ...fl], !!inside);

@@ -35,6 +35,8 @@ export class Hud {
   tickNotes(dt: number) { for (const n of this.notes) { n.t -= dt; if (n.t < 0.6) n.el.style.opacity = String(Math.max(0, n.t / 0.6)); } this.notes = this.notes.filter(n => { if (n.t <= 0) { n.el.remove(); return false; } return true; }); }
   weapon(label: string | null) { const w = $('weapon'); w.style.display = label ? 'flex' : 'none'; if (label) (w.querySelector('.nm') as HTMLElement).textContent = label; }
   waiting(on: boolean) { $('wait').style.display = on ? 'block' : 'none'; }
+  /** title/pause: the HUD steps aside */
+  menuMode(on: boolean) { document.body.classList.toggle('menu-on', on); }
   lang() { return getLang(); }
   refresh() { $('hint').textContent = tr('hint.controls'); }
 }

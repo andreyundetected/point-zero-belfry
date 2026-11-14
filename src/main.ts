@@ -11,6 +11,7 @@ import { ROOF_Y } from './sim/npcs';
 import { TOWER } from './world/tower';
 import { groundH } from './world/terrain';
 import { toggleDebug } from './world/debugview';
+import { onSettings, PRESET } from './game/settings';
 
 const q = new URLSearchParams(location.search), SAT = +(q.get('sat') ?? 0.2);
 const W = innerWidth, H = innerHeight;
@@ -33,7 +34,7 @@ const gun = new THREE.Group(); { const steel = new THREE.MeshStandardMaterial({ 
   const frame = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.035, 0.07), steel); frame.position.set(0, 0.02, -0.03); const grip = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.08, 0.035), wood); grip.position.set(0, -0.03, 0.02); grip.rotation.x = -0.35;
   const glove = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.07), new THREE.MeshStandardMaterial({ color: 0x17140f, roughness: 0.85 })); glove.position.set(0, -0.03, 0.03);
   gun.add(barrel, drum, frame, grip, glove); gun.position.set(0.2, -0.2, -0.38); gun.visible = false; cam.add(gun); }
-game.onWeapon = w => { gun.visible = w === 'gun'; };
+game.onWeapon = w => { gun.visible = w === 'gun'; }; game.onHands = v => { dev.obj.visible = v; if (!v) gun.visible = false; else gun.visible = game.weapon === 'gun'; };
 
 // start: tower roof, 22:03:30 - the prologue (spec 11.1). ?at=x,z,lookX,lookZ&t=mm:ss for debug viewpoints
 const at4 = q.get('at')?.split(',').map(Number); const tq = q.get('t');
@@ -49,15 +50,18 @@ if (q.get('gun')) { game.s.hasGun = true; game.s.mag = 6; game.s.ammo = 18; game
 const clock = new THREE.Clock(); let t = 0;
 declare global { interface Window { done?: boolean; info?: string; FREEZE?: boolean; player?: Player; game?: Game; dbg?: any } }
 window.player = player; window.game = game; (window as any).renderer = renderer; window.dbg = { createPerson, scene, THREE, fmt };
-let lastShown = ''; let scale = +(q.get('scale') ?? 1), acc = 0, accN = 0; setScale(scale);
+let lastShown = ''; let scale = +(q.get('scale') ?? 1), acc = 0, accN = 0; setScale(scale); let fixedScale = false;
+onSettings(st => { cam.fov = W < H ? st.fov + 10 : st.fov; cam.updateProjectionMatrix(); document.body.classList.toggle('no-hints', !st.hints);
+  if (st.quality === 'auto') { fixedScale = false; renderer.shadowMap.enabled = true; moon.castShadow = true; moon.shadow.mapSize.set(2048, 2048); game.npcs.maxPeople = 10; game.npcs.far = 70; }
+  else { const pr = PRESET[st.quality]; fixedScale = true; scale = pr.scale; setScale(scale); const sh = pr.shadow > 0; renderer.shadowMap.enabled = sh; moon.castShadow = sh; if (sh) { moon.shadow.mapSize.set(pr.shadow, pr.shadow); moon.shadow.map?.dispose(); (moon.shadow as any).map = null; } game.npcs.maxPeople = pr.people; game.npcs.far = pr.far; } });
 function frame() {
   for (const p of (window as any).__lp ?? []) p.update(0.016);
   const dt = Math.min(clock.getDelta(), 0.05); t += dt;
-  acc += dt; accN++; if (accN >= 90) { const avg = acc / accN; acc = 0; accN = 0; if (!q.get('scale')) { const ns = avg > 0.026 ? Math.max(0.5, scale - 0.15) : avg < 0.0155 ? Math.min(1, scale + 0.1) : scale; if (Math.abs(ns - scale) > 0.01) { scale = ns; setScale(scale); } } }
+  acc += dt; accN++; if (accN >= 90) { const avg = acc / accN; acc = 0; accN = 0; if (!q.get('scale') && !fixedScale) { const ns = avg > 0.026 ? Math.max(0.5, scale - 0.15) : avg < 0.0155 ? Math.min(1, scale + 0.1) : scale; if (Math.abs(ns - scale) > 0.01) { scale = ns; setScale(scale); } } }
   game.update(dt); { const bm = (scene as any).__beam; if (bm) bm.material.opacity = 0.15 + 0.85 * Math.max(0, Math.sin(t * 0.9) ** 3); } const shown = fmt(game.s.t, true); if (shown !== lastShown) { lastShown = shown; dev.setTime(shown); } (rain as any).mesh.visible = !game.sceneInside; rain(t, cam.position.x, cam.position.z); grade.uniforms.time.value = t; comp.render();
   if (!window.FREEZE) requestAnimationFrame(frame);
 }
 frame();
 if (q.get('lineup')) { const Lt = new THREE.PointLight(0xfff2e0, 60, 20); Lt.position.set(-60, 3, -38); scene.add(Lt); const looks: any[] = [{ body: 'remy', coat: 0x2b2a28, hat: 'fedora' }, { body: 'remy', coat: 0x4a4238, hat: 'cap', long: true }, { body: 'liza', coat: 0x26292d, skirt: true, long: true, hat: 'scarf' }, { body: 'michelle', coat: 0x3a352e, hat: 'none' }, { body: 'liza', coat: 0x4a4238, hat: 'veil', long: true }, { body: 'james', coat: 0x1d1e20, hat: 'peaked' }]; looks.forEach((l, i) => createPerson(l, 'L' + i).then(p => { p.root.position.set(-63 + i * 1.2, 0, -42); p.root.position.y = groundH(-63 + i * 1.2, -42); p.root.rotation.y = 0; scene.add(p.root); p.anim(q.get('anim') ?? 'idle'); (window as any).__lp = ((window as any).__lp ?? []).concat(p); })); }
 addEventListener('keydown', e => { if (e.code === 'F3') { e.preventDefault(); toggleDebug(scene); } });
-zaton.ready.then(() => { if (q.get('debug')) toggleDebug(scene, true); const ld = document.getElementById('loading'); if (ld) ld.style.display = 'none'; window.done = true; window.info = 'ok'; if (q.get('board')) { game.s.pocket = 'cap'; game.s.learn('helm_ok'); game.pilot.board(); } window.done = true; window.info = 'ok'; if (!debugPos && !q.get('noprologue')) setTimeout(() => game.runner.start('prologue'), 1200); });
+zaton.ready.then(() => { if (q.get('debug')) toggleDebug(scene, true); const ld = document.getElementById('loading'); if (ld) ld.style.display = 'none'; window.done = true; window.info = 'ok'; if (q.get('board')) { game.s.pocket = 'cap'; game.s.learn('helm_ok'); game.pilot.board(); } window.done = true; window.info = 'ok'; if (!debugPos && !q.get('noprologue')) setTimeout(() => game.menu.showTitle(), 300); });
