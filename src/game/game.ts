@@ -202,7 +202,7 @@ export class Game implements StvHost, Ctx {
     const nm = nameOf(npc); this.hud.notify((getLang() === 'ru' ? 'Новый человек: ' : 'New person: ') + nm); this.hud.newPerson(nm, getLang() === 'ru' ? `записано в «Люди» · ${fmt(this.s.t)}` : `added to People · ${fmt(this.s.t)}`);
     this.note('seen_' + npc, `Встретил в ${fmt(this.s.t)}: ${nm}`, `Met at ${fmt(this.s.t)}: ${nm}`, npc, !!d.key);
   }
-  lastMeet = ''; talkHold: { id: string; x: number; y: number; z: number; ry: number; a: string } | null = null;
+  bumpT = 0; lastMeet = ''; talkHold: { id: string; x: number; y: number; z: number; ry: number; a: string } | null = null;
   /** start a conversation: the NPC stops where he is and faces you while it lasts (A7); a 'bark:' answer is a single line, no tree (A1) */
   /** talk to an npc behind a door etc. (no pose needed) */
   talkTo(npc: string, conv: string) { if (this.runner.active) return; if (conv.startsWith('bark:')) { void this.runner.quick(npc, conv.slice(5)); return; } void this.runner.start(conv, npc || undefined); }
@@ -294,7 +294,7 @@ export class Game implements StvHost, Ctx {
   /** the final screen (spec 13.3 / 15.3): neutral facts, no judgement */
   facts(): string[] {
     const f = this.s.flags, ru = getLang() === 'ru'; const L: string[] = []; const has = (n: any) => f.has(n);
-    L.push(ru ? `Нед: ${has('nedSaved') ? 'жив, остался на мосту' : 'прыгнул со Старого моста в 22:16'}` : `Ned: ${has('nedSaved') ? 'alive, stayed on the bridge' : 'jumped from the Old Bridge at 22:16'}`);
+    L.push(ru ? `Нед: ${has('nedSaved') ? 'жив, остался на мосту' : 'прыгнул со Старого моста в 22:14'}` : `Ned: ${has('nedSaved') ? 'alive, stayed on the bridge' : 'jumped from the Old Bridge at 22:14'}`);
     L.push(ru ? `Гейл: ${has('gaylWarned') || has('annaWarned') || has('jetonStolen') ? 'ушёл к жене' : 'ранен, лежит во дворе склада'}` : `Gayl: ${has('gaylWarned') || has('annaWarned') || has('jetonStolen') ? 'went to his wife' : 'wounded in the warehouse yard'}`);
     const tk = has('tikhonDead') ? 'мёртв' : has('tikhonHurt') ? 'без сознания' : has('tikhonLocked') ? 'заперт в доме' : has('tikhonTurned') ? 'дома с Пип' : 'ушёл на пристань';
     L.push(ru ? `Тихон: ${tk}. Пип: ${has('tikhonTurned') ? 'с отцом' : has('tikhonDead') || has('tikhonHurt') ? 'одна' : 'спит одна'}` : `Tikhon: ${tk}. Pip: ${has('tikhonTurned') ? 'with her father' : 'alone'}`);

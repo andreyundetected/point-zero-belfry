@@ -5,7 +5,7 @@ import { loc, inSite, insideSite, floorY, SITES } from '../sim/sites';
 import { BARGE } from '../world/layout';
 import { at, fmt } from '../sim/time';
 import { TOWER, world3 } from '../world/tower';
-import { ROOF_Y, BASEMENT_Y } from '../sim/npcs';
+import { ROOF_Y, BASEMENT_Y, NPCS } from '../sim/npcs';
 import { groundH } from '../world/terrain';
 import { FOMA_SPOT } from '../world/ruins';
 import { prologue, prologue2 } from './d_prologue';
@@ -196,6 +196,11 @@ export function onBark(g: Game, evt: string) {
   if (s.knows('prologue_done') && b.y > 20) { g.roofT += 1 / 60; if (g.roofT > 30) g.thought('go_orven', 'Орвен. Переулок Ключников.', 'orven_met'); } else g.roofT = 0;
   // --- scenes
   SCENES.forEach((sc, i) => { if (!shown.has(i) && t >= sc.t && t < sc.t + 6 && Math.hypot(sc.x - b.x, sc.z - b.z) < (sc.r ?? 8)) { shown.add(i); g.hud.sub(nameOf(sc.who), sc.ru, 3.2); } });
+  // --- passers-by react when you walk into them: a short line (one per person per branch, not more than one every 8 s), fitting the night
+  { g.bumpT = Math.max(0, (g.bumpT ?? 0) - 1 / 60); const sp = Math.hypot(b.vx, b.vz);
+    if (g.bumpT <= 0 && sp > 0.6 && !g.runner.active) for (const d of NPCS) { if (!d.civ) continue; const q = g.npcs.pose(d.id); if (!q || q.hidden) continue; const dd = Math.hypot(q.x - bx, q.z - bz); if (dd > 0.9 || Math.abs(q.y - b.y) > 1) continue; if (s.thoughts.has('bump_' + d.id)) continue; s.thoughts.add('bump_' + d.id); g.bumpT = 8;
+      const late = t >= at(22, 30), blast = t >= at(22, 12); const pool = late ? ['Куда прёшь! Горит же всё!', 'Не видишь — пожар! Дорогу!', 'С дороги, с дороги!'] : blast ? ['Осторожней! Слыхал, на складе рвануло?', 'Эй! Смотри под ноги.', 'Что там бахнуло — не знаешь?'] : ['Эй! Смотри, куда идёшь.', 'Осторожней, молодой человек.', 'Ну и погодка… Извините.', 'Пардон.'];
+      g.hud.sub(nameOf(d.id), pool[(d.id.length + Math.floor(t / 7)) % pool.length], 2.5); break; } }
   // --- B6: Tik thinks aloud, once per event per branch
   { const nd = g.npcs.pose('ned'); if (nd && !nd.hidden && nd.a === 'rail' && Math.hypot(nd.x - bx, nd.z - bz) < 16) { const fx = -Math.sin(g.player.yaw), fz = -Math.cos(g.player.yaw), dd = Math.hypot(nd.x - bx, nd.z - bz); if ((nd.x - bx) * fx / dd + (nd.z - bz) * fz / dd > 0.6) g.thought('ned_seen', s.knows('know_ned_desc') ? 'Рыжий, фуражка с бляхой… Курьер Орвена.' : 'Парень у перил. Мокнет, не уходит.'); } }
   if (g.fomaRuinOn() && insideSite('foma', bx, bz, -0.5)) g.thought('foma_ruin', s.knows('know_foma_guns') ? 'Всё выгорело. А стволы он держал… в кладовке. Где-то тут.' : 'Всё выгорело. Ничего не осталось.');
